@@ -1,3 +1,10 @@
 # Copie para senha-local.properties (que fica fora do git) e troque o valor.
 # Mínimo de 8 caracteres. Usado só no perfil local.
 APP_SENHA=troque-esta-senha
+
+# Pix automático pelo Mercado Pago (opcional). Sem MP_ACCESS_TOKEN o caixa usa
+# Pix manual. Use as credenciais de TESTE da sua aplicação (veja o README);
+# os valores abaixo são só o formato, não funcionam.
+# MP_ACCESS_TOKEN=APP_USR-0000000000000000-000000-00000000000000000000000000000000-000000000
+# MP_WEBHOOK_SECRET=exemplo-de-assinatura-secreta
+# MP_PAYER_EMAIL=caixa@exemplo.org

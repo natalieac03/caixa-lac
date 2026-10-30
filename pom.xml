@@ -76,6 +76,13 @@
             <version>1.64.0</version>
             <scope>test</scope>
         </dependency>
+        <!-- Servidor HTTP falso: os testes nunca chamam o Mercado Pago de verdade. -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>mockwebserver</artifactId>
+            <version>4.12.0</version>
+            <scope>test</scope>
+        </dependency>
         <!-- Regras de camadas verificadas nos testes (ArquiteturaTest). -->
         <dependency>
             <groupId>com.tngtech.archunit</groupId>

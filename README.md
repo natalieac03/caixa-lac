@@ -133,6 +133,21 @@ um POST (um link em outra página não consegue deslogar ninguém). O perfil loc
 escuta apenas em `127.0.0.1`, que é o que protege o console do H2: ele é um
 servlet à parte e não passa pelo interceptor de login.
 
+## Pix automático (Mercado Pago)
+
+Opcional. Com as variáveis abaixo, a tela de venda gera o QR do Pix pelo Mercado
+Pago e confirma sozinha quando o pagamento cai. Sem `MP_ACCESS_TOKEN`, o recurso
+fica desligado e tudo continua como antes (Pix manual, conferido no app).
+
+| Variável | Para quê |
+|---|---|
+| `MP_ACCESS_TOKEN` | Access Token da aplicação no Mercado Pago (liga o recurso) |
+| `MP_WEBHOOK_SECRET` | Assinatura secreta dos webhooks (valida os avisos de pagamento) |
+| `MP_PAYER_EMAIL` | E-mail fixo da LAC usado como pagador (a API exige um) |
+
+Ficam só em variável de ambiente (Variables no Railway, ou o
+`senha-local.properties` no computador), nunca no código nem no log.
+
 ## Editar cadastro
 
 - **Produto** (Estoque → Editar): nome, preço e categoria (escolher uma ou criar
