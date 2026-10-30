@@ -7,7 +7,11 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
+import jakarta.validation.constraints.Positive;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -31,14 +35,15 @@ public class Promocao {
     private Long id;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @jakarta.persistence.JoinColumn(name = "promocao_id", nullable = false)
+    @JoinColumn(name = "promocao_id", nullable = false)
     private List<PromocaoItem> itens = new ArrayList<>();
 
-    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.VARCHAR)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
     private TipoPromocao tipo = TipoPromocao.A_PARTIR_DE;
 
     /** Preço unitário (A_PARTIR_DE) ou total do pacote (PACOTE). */
+    @Positive(message = "Preço deve ser maior que zero.")
     private BigDecimal preco;
 
     private boolean ativo = true;

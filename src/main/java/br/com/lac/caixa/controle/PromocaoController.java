@@ -3,6 +3,7 @@ package br.com.lac.caixa.controle;
 import br.com.lac.caixa.modelo.TipoPromocao;
 import br.com.lac.caixa.servico.CategoriaService;
 import br.com.lac.caixa.servico.PromocaoService;
+import br.com.lac.caixa.util.Dinheiro;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -43,17 +44,17 @@ public class PromocaoController {
                        @RequestParam TipoPromocao tipo,
                        @RequestParam String preco,
                        RedirectAttributes flash) {
-            BigDecimal valor = br.com.lac.caixa.util.Dinheiro.parse(preco);
-            Map<Long, Integer> qtdPorCat = new LinkedHashMap<>();
-            for (Map.Entry<String, String> e : params.entrySet()) {
-                if (e.getKey().startsWith("qtdCat_")) {
-                    Long catId = Long.valueOf(e.getKey().substring(7));
-                    int qtd = Integer.parseInt(e.getValue().trim());
-                    if (qtd > 0) qtdPorCat.put(catId, qtd);
-                }
+        BigDecimal valor = Dinheiro.parse(preco);
+        Map<Long, Integer> qtdPorCat = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : params.entrySet()) {
+            if (e.getKey().startsWith("qtdCat_")) {
+                Long catId = Long.valueOf(e.getKey().substring(7));
+                int qtd = Quantidades.inteiro(e.getValue());
+                if (qtd > 0) qtdPorCat.put(catId, qtd);
             }
-            promocoes.criar(qtdPorCat, tipo, valor);
-            flash.addFlashAttribute("sucesso", "Promoção criada.");
+        }
+        promocoes.criar(qtdPorCat, tipo, valor);
+        flash.addFlashAttribute("sucesso", "Promoção criada.");
         return "redirect:/descontos";
     }
 

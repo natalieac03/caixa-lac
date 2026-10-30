@@ -34,6 +34,19 @@ class VendaHttpTest {
         assertEquals(0,new BigDecimal("18").compareTo(v.getValorCalculado()));
         assertEquals(0,new BigDecimal("1234.56").compareTo(v.getValorCobrado())); assertEquals("Combinado",v.getMotivoAjuste());
     }
+    @Test void itemSemEstoqueDesfazAVendaInteira() throws Exception {
+        var pouco=produtos.save(new Produto("Pouco",new BigDecimal("3"),1)); long antes=vendas.count();
+        mvc.perform(post("/venda").sessionAttr("autenticado",true).param("token",java.util.UUID.randomUUID().toString())
+                .param("qtd_"+p.getId(),"4").param("qtd_"+pouco.getId(),"2").param("formaPagamento","PIX"))
+            .andExpect(redirectedUrl("/venda/nova")).andExpect(flash().attribute("erro",org.hamcrest.Matchers.containsString("Estoque insuficiente de Pouco")));
+        assertEquals(antes,vendas.count());
+        assertEquals(10,produtos.findById(p.getId()).orElseThrow().getQuantidade());
+        assertEquals(1,produtos.findById(pouco.getId()).orElseThrow().getQuantidade());
+    }
+    @Test void quantidadeNaoNumericaViraMensagem() throws Exception {
+        mvc.perform(post("/venda").sessionAttr("autenticado",true).param("token",java.util.UUID.randomUUID().toString()).param("qtd_"+p.getId(),"abc").param("formaPagamento","PIX"))
+            .andExpect(redirectedUrl("/venda/nova")).andExpect(flash().attribute("erro","Quantidade inválida: abc"));
+    }
     @Test void previaCalculadaNoServidor() throws Exception {
         mvc.perform(post("/venda/previa").sessionAttr("autenticado",true).param("qtd_"+p.getId(),"3"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(18));

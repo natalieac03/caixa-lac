@@ -1,10 +1,15 @@
 package br.com.lac.caixa.modelo;
 
+import br.com.lac.caixa.servico.EstoqueInsuficienteException;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Version;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import java.math.BigDecimal;
 
 /**
@@ -18,16 +23,19 @@ public class Produto {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @jakarta.persistence.Column(nullable = false)
+    @Column(nullable = false)
     private String nome;
 
+    @Positive(message = "Preço deve ser maior que zero.")
     private BigDecimal preco;
 
+    @PositiveOrZero(message = "Quantidade não pode ser negativa.")
     private int quantidade;
-    @jakarta.persistence.Version
-    @jakarta.persistence.Column(columnDefinition = "bigint default 0")
-    private long versao;
 
+    /** Controle otimista: duas baixas simultâneas do mesmo produto não passam juntas. */
+    @Version
+    @Column(columnDefinition = "bigint default 0")
+    private long versao;
 
     @ManyToOne
     private Categoria categoria;
@@ -73,11 +81,17 @@ public class Produto {
         return quantidade;
     }
 
+    /** Tira unidades do estoque; nunca deixa negativo. */
     public void baixar(int qtd) {
         if (qtd < 1) throw new IllegalArgumentException("Quantidade deve ser maior que zero.");
-        if (qtd > quantidade) throw new br.com.lac.caixa.servico.EstoqueInsuficienteException("Estoque insuficiente de " + nome + " (disponível: " + quantidade + ").");
+        if (qtd > quantidade) {
+            throw new EstoqueInsuficienteException(
+                    "Estoque insuficiente de " + nome + " (disponível: " + quantidade + ").");
+        }
         quantidade -= qtd;
     }
+
+    /** Devolve ou soma unidades ao estoque. */
     public void repor(int qtd) {
         if (qtd < 1) throw new IllegalArgumentException("Quantidade deve ser maior que zero.");
         quantidade = Math.addExact(quantidade, qtd);

@@ -5,6 +5,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
+import jakarta.validation.constraints.Min;
 
 /**
  * Um "ramo" de um combo: quantas unidades de qual categoria são exigidas.
@@ -20,6 +21,7 @@ public class PromocaoItem {
     @ManyToOne
     private Categoria categoria;
 
+    @Min(value = 1, message = "Quantidade deve ser maior que zero.")
     private int quantidade;
 
     public PromocaoItem() {

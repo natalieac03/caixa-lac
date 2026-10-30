@@ -3,11 +3,11 @@ package br.com.lac.caixa.controle;
 import br.com.lac.caixa.modelo.Categoria;
 import br.com.lac.caixa.servico.CategoriaService;
 import br.com.lac.caixa.servico.EstoqueService;
+import br.com.lac.caixa.util.Dinheiro;
 import br.com.lac.caixa.util.ExportadorCSV;
-import org.springframework.core.io.ByteArrayResource;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.PositiveOrZero;
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
-import java.nio.charset.StandardCharsets;
 
 @Controller
 public class EstoqueController {
@@ -47,32 +46,32 @@ public class EstoqueController {
     @PostMapping("/estoque/novo")
     public String novo(@RequestParam String nome,
                        @RequestParam String preco,
-                       @RequestParam int quantidade,
+                       @RequestParam @PositiveOrZero(message = "Quantidade não pode ser negativa.") int quantidade,
                        @RequestParam(required = false) Long categoriaId,
                        @RequestParam(required = false) String novaCategoria,
                        RedirectAttributes flash) {
-            BigDecimal valor = br.com.lac.caixa.util.Dinheiro.parse(preco);
+        BigDecimal valor = Dinheiro.parse(preco);
 
-            Categoria categoria;
-            if (novaCategoria != null && !novaCategoria.isBlank()) {
-                categoria = categorias.obterOuCriar(novaCategoria);
-            } else if (categoriaId != null) {
-                categoria = categorias.buscar(categoriaId);
-            } else {
-                flash.addFlashAttribute("erro", "Escolha uma categoria ou crie uma nova.");
-                return "redirect:/estoque";
-            }
+        Categoria categoria;
+        if (novaCategoria != null && !novaCategoria.isBlank()) {
+            categoria = categorias.obterOuCriar(novaCategoria);
+        } else if (categoriaId != null) {
+            categoria = categorias.buscar(categoriaId);
+        } else {
+            flash.addFlashAttribute("erro", "Escolha uma categoria ou crie uma nova.");
+            return "redirect:/estoque";
+        }
 
-            estoque.criarNovo(nome, valor, quantidade, categoria);
-            flash.addFlashAttribute("sucesso",
-                    "Produto \"" + nome + "\" cadastrado na categoria " + categoria.getNome() + ".");
+        estoque.criarNovo(nome, valor, quantidade, categoria);
+        flash.addFlashAttribute("sucesso",
+                "Produto \"" + nome + "\" cadastrado na categoria " + categoria.getNome() + ".");
         return "redirect:/estoque";
     }
 
     /** Soma unidades a um produto existente. */
     @PostMapping("/estoque/{id}/adicionar")
     public String adicionar(@PathVariable Long id,
-                            @RequestParam int quantidade,
+                            @RequestParam @Min(value = 1, message = "Quantidade deve ser maior que zero.") int quantidade,
                             RedirectAttributes flash) {
         estoque.adicionarUnidades(id, quantidade);
         flash.addFlashAttribute("sucesso", "Estoque atualizado.");
@@ -82,19 +81,19 @@ public class EstoqueController {
     /** Tira unidades de um produto existente (sem apagar o produto). */
     @PostMapping("/estoque/{id}/remover-unidades")
     public String removerUnidades(@PathVariable Long id,
-                                  @RequestParam int quantidade,
+                                  @RequestParam @Min(value = 1, message = "Quantidade deve ser maior que zero.") int quantidade,
                                   RedirectAttributes flash) {
-            estoque.removerUnidades(id, quantidade);
-            flash.addFlashAttribute("sucesso", "Estoque atualizado.");
+        estoque.removerUnidades(id, quantidade);
+        flash.addFlashAttribute("sucesso", "Estoque atualizado.");
         return "redirect:/estoque";
     }
 
     @PostMapping("/estoque/{id}/remover")
     public String remover(@PathVariable Long id, RedirectAttributes flash) {
-            boolean arquivado = estoque.remover(id);
-            flash.addFlashAttribute("sucesso", arquivado
-                    ? "Produto arquivado: ele já aparece em vendas antigas, então saiu do estoque mas continua no histórico."
-                    : "Produto removido.");
+        boolean arquivado = estoque.remover(id);
+        flash.addFlashAttribute("sucesso", arquivado
+                ? "Produto arquivado: ele já aparece em vendas antigas, então saiu do estoque mas continua no histórico."
+                : "Produto removido.");
         return "redirect:/estoque";
     }
 
@@ -104,5 +103,4 @@ public class EstoqueController {
         String csv = ExportadorCSV.doEstoque(estoque.listar());
         return ExportadorCSV.arquivoCsv(csv, "estoque.csv");
     }
-
 }
