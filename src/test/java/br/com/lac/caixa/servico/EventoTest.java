@@ -199,8 +199,8 @@ class EventoTest {
         mvc.perform(get("/historico").param("evento", evento.getId().toString()).sessionAttr("autenticado", true))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("evento-da-venda")))
-                .andExpect(content().string(containsString(">" + dentro.getId() + "<")))
-                .andExpect(content().string(not(containsString(">" + fora.getId() + "<"))));
+                .andExpect(content().string(containsString("<td class=\"num suave\">" + dentro.getId() + "</td>")))
+                .andExpect(content().string(not(containsString("<td class=\"num suave\">" + fora.getId() + "</td>"))));
         mvc.perform(get("/fechamento")
                         .param("evento", evento.getId().toString())
                         .sessionAttr("autenticado", true))

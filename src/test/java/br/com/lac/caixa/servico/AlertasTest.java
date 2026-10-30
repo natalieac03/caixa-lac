@@ -97,7 +97,7 @@ class AlertasTest {
     void semNada() throws Exception {
         estoque.criarNovo("Bóton Tranquilo", r("6"), 10, null, r("2"));
         assertFalse(alertas.calcular().isTemAlgo());
-        assertFalse(inicio().contains("id=\"atencao\""));
+        assertTrue(inicio().contains("class=\"selo-avisos oculto\""), "sino sem selo");
     }
 
     @Test
@@ -108,7 +108,7 @@ class AlertasTest {
         assertTrue(html.contains("id=\"alerta-sem-custo\"") && html.contains("Caneca Sem Custo"), html);
 
         estoque.editar(p.getId(), p.getNome(), r("30"), null, r("12"));
-        assertFalse(inicio().contains("id=\"atencao\""));
+        assertTrue(inicio().contains("class=\"selo-avisos oculto\""), "sino sem selo");
     }
 
     @Test

@@ -1100,11 +1100,6 @@ table.ordenavel th[aria-sort="descending"] button::after { content: " ▼"; }
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
-/* Cartão "Atenção" da tela inicial */
-.cartao-atencao { border-left: 6px solid var(--laranja); margin-bottom: 20px; }
-.cartao-atencao h2 { margin-top: 0; }
-.cartao-atencao h3 { font-size: 16px; margin: 12px 0 4px; }
-.cartao-atencao ul { margin: 0 0 4px; padding-left: 20px; }
 
 /* Metas do evento */
 .metas { display: grid; gap: 12px; margin: 0 0 20px; }
@@ -1140,4 +1135,36 @@ table.ordenavel th[aria-sort="descending"] button::after { content: " ▼"; }
         padding: 10px; box-shadow: var(--sombra-menu);
     }
     .nav-links .menu-grupo-itens a { padding: 12px 14px; font-size: 16px; }
+}
+
+/* ---------- Sininho de avisos ---------- */
+.avisos { order: 3; position: relative; flex: none; }
+.botao-sino {
+    position: relative; display: inline-grid; place-items: center; width: 38px; height: 38px;
+    border-radius: 50%; border: 1px solid var(--linha-forte); background: var(--papel); color: var(--roxo-forte); cursor: pointer;
+}
+.botao-sino:hover, .botao-sino[aria-expanded="true"] { background: var(--roxo-fundo); }
+.selo-avisos {
+    position: absolute; top: -5px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px;
+    background: var(--coral-texto); color: var(--papel); font-size: 12px; font-weight: 700; line-height: 20px; text-align: center;
+    border: 2px solid var(--papel);
+}
+.painel-avisos {
+    position: absolute; right: 0; top: calc(100% + 8px); z-index: 50; width: min(380px, 92vw); max-height: 70vh; overflow-y: auto;
+    padding: 14px 16px; background: var(--papel); border: 1px solid var(--linha); border-radius: var(--raio-md);
+    box-shadow: var(--sombra-menu); color: var(--tinta);
+}
+.painel-avisos h2 { font-size: 18px; margin: 0 0 6px; }
+.painel-avisos h3 { font-size: 14px; margin: 12px 0 4px; color: var(--roxo-forte); }
+.painel-avisos ul { margin: 0; padding-left: 18px; }
+.painel-avisos li { margin: 4px 0; }
+.painel-avisos li a { margin-left: 4px; white-space: nowrap; }
+.painel-avisos li.aviso-novo::marker { color: var(--coral-texto); }
+.painel-avisos .vazio { padding: 10px 0; }
+@media (max-width: 640px) {
+    .avisos { order: 2; margin-left: auto; }
+    .avisos + .botao-tema { margin-left: 0; }
+    .botao-sino { width: 36px; height: 36px; }
+    /* No celular o painel ocupa a largura da tela, logo abaixo da barra. */
+    .painel-avisos { position: fixed; left: 0; right: 0; width: auto; top: var(--topo-avisos, 96px); border-radius: 0 0 var(--raio-md) var(--raio-md); max-height: calc(100vh - var(--topo-avisos, 96px)); }
 }

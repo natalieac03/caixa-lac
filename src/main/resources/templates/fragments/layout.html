@@ -47,6 +47,7 @@
 <nav th:fragment="nav(ativo)" class="topo" aria-label="Navegação principal">
     <div class="topo-interno">
         <a class="marca" th:href="@{/}">Caixa LAC</a>
+        <div th:replace="~{fragments/layout :: sino}"></div>
         <button th:replace="~{fragments/layout :: tema}"></button>
         <div class="nav-links">
             <a th:href="@{/caixa}" th:classappend="${ativo == 'caixa'} ? 'ativo'"
@@ -102,6 +103,35 @@
         </div>
     </div>
 </nav>
+
+<!--/* Sininho: avisos calculados no servidor (AlertasService via AvisosNaTela); o painel já vem
+     desenhado e o avisos.js só conta os novos (localStorage), abre/fecha e atualiza a cada 60 s. */-->
+<div th:fragment="sino" class="avisos" th:with="al=${avisosDaTela.alertas}">
+    <button type="button" id="botao-sino" class="botao-sino" aria-expanded="false" aria-controls="painel-avisos"
+            th:attr="data-url=@{/avisos}" title="Avisos">
+        <svg class="icone" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <span class="sr-only">Avisos:</span>
+        <span class="selo-avisos" id="selo-avisos" aria-hidden="true" th:classappend="${al.total == 0} ? 'oculto'" th:text="${al.total}">3</span>
+        <span class="sr-only" id="texto-avisos-novos"
+              th:text="${al.total == 0} ? 'nenhum aviso novo' : (${al.total == 1} ? '1 aviso novo' : ${al.total} + ' avisos novos')">3 avisos novos</span>
+    </button>
+    <div id="painel-avisos" class="painel-avisos oculto" role="region" aria-labelledby="titulo-avisos" tabindex="-1">
+        <h2 id="titulo-avisos">Avisos</h2>
+        <p class="vazio" id="avisos-vazio" th:classappend="${al.total > 0} ? 'oculto'">Nenhum aviso agora.</p>
+        <div id="lista-avisos">
+            <section th:each="s : ${al.secoes}" th:id="${s.id}" class="secao-avisos">
+                <h3 th:text="${s.titulo}">Estoque acabando</h3>
+                <ul>
+                    <li th:each="a : ${s.avisos}" th:attr="data-aviso-id=${a.id}">
+                        <span th:text="${a.texto}">Bóton: 2 un.</span>
+                        <a th:href="@{${a.link}}" th:text="${a.linkTexto}">Ver</a>
+                    </li>
+                </ul>
+            </section>
+        </div>
+    </div>
+    <script th:src="@{/js/avisos.js}" defer></script>
+</div>
 
 <button th:fragment="tema" type="button" class="botao-tema" onclick="alternarTema()"
         aria-label="Alternar modo claro e escuro" title="Modo claro / escuro">
