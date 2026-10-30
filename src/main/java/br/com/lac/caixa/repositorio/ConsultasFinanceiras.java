@@ -3,6 +3,8 @@ package br.com.lac.caixa.repositorio;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.util.List;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -143,5 +145,31 @@ public class ConsultasFinanceiras {
                 "SELECT COALESCE(SUM(valor), 0) FROM despesa WHERE data >= :de AND data <= :ate",
                 new MapSqlParameterSource().addValue("de", f.inicio()).addValue("ate", f.fim()),
                 BigDecimal.class);
+    }
+
+    // ---------------------------------------------------------------- séries
+
+    /** Um balde de dia e hora: receita líquida, CMV (itens com custo) e vendas distintas. */
+    public record Balde(LocalDate dia, int hora, BigDecimal liquido, BigDecimal cmv, long vendas) {}
+
+    /** Por dia e hora (o serviço junta por dia, por hora ou por dia da semana). */
+    public List<Balde> porDiaEHora(FiltroFinancas f) {
+        Onde o = onde(f);
+        return jdbc.query(
+                "SELECT CAST(v.data_hora AS DATE) AS dia, EXTRACT(HOUR FROM v.data_hora) AS hora,"
+                        + " COALESCE(SUM(i.valor_liquido), 0) AS liquido,"
+                        + " COALESCE(SUM(CASE WHEN i.custo_unitario IS NOT NULL THEN i.custo_unitario * i.quantidade END), 0) AS cmv,"
+                        + " COUNT(DISTINCT v.id) AS vendas"
+                        + " FROM item_venda i JOIN venda v ON v.id = i.venda_id JOIN produto p ON p.id = i.produto_id"
+                        + " WHERE " + o.vendas() + o.itens()
+                        + " GROUP BY CAST(v.data_hora AS DATE), EXTRACT(HOUR FROM v.data_hora)"
+                        + " ORDER BY dia, hora",
+                o.parametros(),
+                (r, n) -> new Balde(
+                        r.getObject("dia", LocalDate.class),
+                        r.getInt("hora"),
+                        dec(r, "liquido"),
+                        dec(r, "cmv"),
+                        r.getLong("vendas")));
     }
 }

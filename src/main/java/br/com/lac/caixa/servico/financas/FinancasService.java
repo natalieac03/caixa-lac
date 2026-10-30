@@ -1,22 +1,30 @@
 package br.com.lac.caixa.servico.financas;
 
 import br.com.lac.caixa.repositorio.ConsultasFinanceiras;
+import br.com.lac.caixa.repositorio.ConsultasFinanceiras.Balde;
 import br.com.lac.caixa.repositorio.EventoRepository;
 import br.com.lac.caixa.repositorio.FiltroFinancas;
 import br.com.lac.caixa.repositorio.PeriodoDoEvento;
 import br.com.lac.caixa.repositorio.PromocaoRepository;
+import br.com.lac.caixa.servico.financas.Financas.Celula;
 import br.com.lac.caixa.servico.financas.Financas.Cobertura;
 import br.com.lac.caixa.servico.financas.Financas.Comparacao;
+import br.com.lac.caixa.servico.financas.Financas.Ponto;
 import br.com.lac.caixa.servico.financas.Financas.Resumo;
+import br.com.lac.caixa.servico.financas.Financas.Serie;
 import br.com.lac.caixa.servico.financas.Financas.Variacao;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.function.Function;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -151,5 +159,55 @@ public class FinancasService {
             lista.add(new Variacao(nome, a, b, diferenca, diferenca == null ? null : percentual(diferenca, b.abs())));
         });
         return lista;
+    }
+
+    // ---------------------------------------------------------------- B: séries
+
+    /** Por dia (ou por hora, se o período tem até 2 dias), com zeros onde não houve venda. */
+    public Serie serie(FiltroFinancas f) {
+        boolean porHora = f.porHora();
+        Map<LocalDateTime, BigDecimal[]> somas = new TreeMap<>();
+        Map<LocalDateTime, Long> vendas = new TreeMap<>();
+        for (Balde b : consultas.porDiaEHora(f)) {
+            LocalDateTime chave =
+                    porHora ? b.dia().atTime(b.hora(), 0) : b.dia().atStartOfDay();
+            somas.merge(chave, new BigDecimal[] {b.liquido(), b.cmv()}, (x, y) ->
+                    new BigDecimal[] {x[0].add(y[0]), x[1].add(y[1])});
+            vendas.merge(chave, b.vendas(), Long::sum);
+        }
+        List<Ponto> pontos = new ArrayList<>();
+        LocalDateTime cursor = porHora
+                ? f.inicioConsulta().withMinute(0).withSecond(0).withNano(0)
+                : f.inicioConsulta().toLocalDate().atStartOfDay();
+        while (cursor.isBefore(f.fimConsulta())) {
+            BigDecimal[] s = somas.getOrDefault(cursor, new BigDecimal[] {BigDecimal.ZERO, BigDecimal.ZERO});
+            BigDecimal liquido = dinheiro(s[0]);
+            pontos.add(new Ponto(cursor, liquido, liquido.subtract(dinheiro(s[1])), vendas.getOrDefault(cursor, 0L)));
+            cursor = porHora ? cursor.plusHours(1) : cursor.plusDays(1);
+        }
+        return new Serie(porHora, pontos);
+    }
+
+    /** Vendas e receita por dia da semana x hora (7 x 24 células, segunda a domingo). */
+    public List<Celula> mapaDeCalor(FiltroFinancas f) {
+        Map<DayOfWeek, long[]> vendas = new EnumMap<>(DayOfWeek.class);
+        Map<DayOfWeek, BigDecimal[]> receita = new EnumMap<>(DayOfWeek.class);
+        for (DayOfWeek d : DayOfWeek.values()) {
+            vendas.put(d, new long[24]);
+            BigDecimal[] zeros = new BigDecimal[24];
+            java.util.Arrays.fill(zeros, BigDecimal.ZERO);
+            receita.put(d, zeros);
+        }
+        // Cada venda está num único dia e hora: somar os baldes por dia da semana é exato.
+        for (Balde b : consultas.porDiaEHora(f)) {
+            DayOfWeek d = b.dia().getDayOfWeek();
+            vendas.get(d)[b.hora()] += b.vendas();
+            receita.get(d)[b.hora()] = receita.get(d)[b.hora()].add(b.liquido());
+        }
+        List<Celula> celulas = new ArrayList<>();
+        for (DayOfWeek d : DayOfWeek.values()) {
+            for (int h = 0; h < 24; h++) celulas.add(new Celula(d, h, vendas.get(d)[h], dinheiro(receita.get(d)[h])));
+        }
+        return celulas;
     }
 }
