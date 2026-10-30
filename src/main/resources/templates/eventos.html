@@ -10,6 +10,7 @@
             <h1>Eventos</h1>
             <p>Feiras e encontros. Uma venda é do evento quando a data e a hora dela estão dentro do horário do evento.</p>
         </div>
+        <a class="botao botao-secundario botao-pequeno" th:href="@{/eventos/comparativo}" th:unless="${eventos.isEmpty()}">Comparativo de eventos</a>
     </div>
 
     <div class="cartao tabela-area">
@@ -26,6 +27,7 @@
                     <a class="botao botao-secundario botao-pequeno" th:href="@{/eventos(editar=${e.id})} + '#evento-form'">Editar</a>
                     <a class="botao botao-fantasma botao-pequeno" th:href="@{/historico(evento=${e.id})}">Vendas</a>
                     <a class="botao botao-fantasma botao-pequeno" th:href="@{/fechamento(evento=${e.id})}">Fechamento</a>
+                    <a class="botao botao-fantasma botao-pequeno" th:href="@{'/eventos/' + ${e.id} + '/relatorio'}">Relatório</a>
                 </td>
             </tr>
             </tbody>

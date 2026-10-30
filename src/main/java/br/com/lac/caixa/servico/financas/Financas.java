@@ -166,4 +166,19 @@ public final class Financas {
     /** Linha do demonstrativo: operador "(-)", "(+/-)", "=" ou ""; valor null = não se aplica ao filtro. */
     public record LinhaDemonstrativo(
             String rotulo, String operador, BigDecimal valor, BigDecimal percentualDaReceita, boolean resultado) {}
+
+    public record LinhaCancelamento(
+            Long vendaId, LocalDateTime dataHora, BigDecimal valor, LocalDateTime canceladaEm, String motivo) {}
+
+    /** diferenca = cobrado - calculado (negativo: cobrou menos). */
+    public record LinhaAjuste(
+            Long vendaId,
+            LocalDateTime dataHora,
+            BigDecimal calculado,
+            BigDecimal cobrado,
+            BigDecimal diferenca,
+            String motivo) {}
+
+    /** Um evento com o resumo dele, para o comparativo entre eventos. */
+    public record ResumoDoEvento(Long eventoId, String nome, LocalDateTime inicio, LocalDateTime fim, Resumo resumo) {}
 }

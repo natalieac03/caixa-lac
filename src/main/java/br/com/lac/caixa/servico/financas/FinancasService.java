@@ -508,4 +508,41 @@ public class FinancasService {
             String rotulo, String operador, BigDecimal valor, BigDecimal base, boolean resultado) {
         return new Financas.LinhaDemonstrativo(rotulo, operador, valor, percentual(valor, base), resultado);
     }
+
+    // ---------------------------------------------------------------- relatório do evento
+
+    /** Vendas canceladas do período (pela data da venda). */
+    public List<Financas.LinhaCancelamento> cancelamentos(FiltroFinancas f) {
+        return consultas.cancelamentos(f).stream()
+                .map(c -> new Financas.LinhaCancelamento(
+                        c.vendaId(), c.dataHora(), dinheiro(c.valor()), c.canceladaEm(), c.motivo()))
+                .toList();
+    }
+
+    /** Vendas válidas com ajuste manual, com o motivo e a diferença (cobrado - calculado). */
+    public List<Financas.LinhaAjuste> ajustesManuais(FiltroFinancas f) {
+        return consultas.ajustesManuais(f).stream()
+                .map(a -> new Financas.LinhaAjuste(
+                        a.vendaId(),
+                        a.dataHora(),
+                        dinheiro(a.calculado()),
+                        dinheiro(a.cobrado()),
+                        dinheiro(a.cobrado().subtract(a.calculado())),
+                        a.motivo()))
+                .toList();
+    }
+
+    /** Todos os eventos, do mais antigo ao mais novo, cada um com o seu resumo. */
+    public List<Financas.ResumoDoEvento> comparativoDeEventos() {
+        return eventos.findAll().stream()
+                .sorted(Comparator.comparing(br.com.lac.caixa.modelo.Evento::getInicio))
+                .map(e -> new Financas.ResumoDoEvento(
+                        e.getId(),
+                        e.getNome(),
+                        e.getInicio(),
+                        e.getFim(),
+                        resumo(FiltroFinancas.doEvento(
+                                new PeriodoDoEvento(e.getId(), e.getNome(), e.getInicio(), e.getFim())))))
+                .toList();
+    }
 }

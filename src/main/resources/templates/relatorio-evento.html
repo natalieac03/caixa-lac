@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Relatório do evento')}"></head>
+<body class="pagina-relatorio">
+<main class="relatorio" th:with="R=${T(br.com.lac.caixa.util.Dinheiro)}">
+    <div class="barra-relatorio nao-imprimir">
+        <a class="botao botao-fantasma botao-pequeno" th:href="@{/eventos}">← Eventos</a>
+        <a class="botao botao-fantasma botao-pequeno" th:href="@{/financas(evento=${evento.id})}">Ver nas Finanças</a>
+        <button type="button" class="botao botao-principal botao-pequeno" onclick="window.print()">Imprimir ou salvar em PDF</button>
+    </div>
+
+    <header class="cabecalho-relatorio">
+        <p class="marca-relatorio">Caixa LAC · Relatório do evento</p>
+        <h1 th:text="${evento.nome}">Feira</h1>
+        <p id="periodo-relatorio" th:text="${#temporals.format(evento.inicio, 'dd/MM/yyyy HH:mm')} + ' a ' + ${#temporals.format(evento.fim, 'dd/MM/yyyy HH:mm')}">01/03/2025 09:00 a 18:00</p>
+        <p class="suave" th:if="${evento.observacao != null}" th:text="${evento.observacao}"></p>
+    </header>
+
+    <p class="vazio" th:if="${painel.vazio}">Nenhuma venda neste evento.</p>
+
+    <section class="bloco-relatorio">
+        <div th:replace="~{fragments/financas :: cartoes(${painel})}"></div>
+        <div th:replace="~{fragments/financas :: aviso-parcial(${painel})}"></div>
+    </section>
+
+    <section class="bloco-relatorio">
+        <h2>Demonstrativo</h2>
+        <table th:replace="~{fragments/financas :: demonstrativo(${painel})}"></table>
+    </section>
+
+    <section class="bloco-relatorio" th:unless="${painel.vazio}">
+        <h2>Top 10 produtos</h2>
+        <div class="imagem-grafico" th:utext="${graficoProdutos}"></div>
+        <table class="dados" id="relatorio-top">
+            <thead><tr><th>Pos.</th><th>Produto</th><th class="num">Qtd</th><th class="num">Receita líquida</th><th class="num">Lucro bruto</th><th class="num">Participação</th></tr></thead>
+            <tbody><tr th:each="p : ${top}">
+                <td class="num" th:text="${p.posicao}">1</td>
+                <td><span th:text="${p.nome}">Bóton</span> <span class="selo selo-arquivado" th:if="${p.arquivado}">Arquivado</span></td>
+                <td class="num" th:text="${p.quantidade}">1</td>
+                <td class="num" th:text="${R.reais(p.receitaLiquida)}">R$ 0,00</td>
+                <td class="num" th:text="${R.reais(p.lucroBruto)}">R$ 0,00</td>
+                <td class="num" th:text="${p.participacaoPercentual == null} ? '—' : ${#numbers.formatDecimal(p.participacaoPercentual, 1, 2, 'COMMA')} + '%'">0%</td>
+            </tr></tbody>
+        </table>
+    </section>
+
+    <section class="bloco-relatorio" th:unless="${painel.vazio}">
+        <h2>Categorias</h2>
+        <div class="imagem-grafico" th:utext="${graficoCategorias}"></div>
+        <table class="dados" id="relatorio-categorias">
+            <thead><tr><th>Categoria</th><th class="num">Qtd</th><th class="num">Vendas</th><th class="num">Receita líquida</th><th class="num">Lucro bruto</th><th class="num">Participação</th></tr></thead>
+            <tbody><tr th:each="c : ${painel.categorias}">
+                <td th:text="${c.categoria}">Bóton</td><td class="num" th:text="${c.quantidade}">1</td><td class="num" th:text="${c.vendas}">1</td>
+                <td class="num" th:text="${R.reais(c.receitaLiquida)}">R$ 0,00</td><td class="num" th:text="${R.reais(c.lucroBruto)}">R$ 0,00</td>
+                <td class="num" th:text="${c.participacaoPercentual == null} ? '—' : ${#numbers.formatDecimal(c.participacaoPercentual, 1, 2, 'COMMA')} + '%'">0%</td>
+            </tr></tbody>
+        </table>
+    </section>
+
+    <section class="bloco-relatorio" th:unless="${painel.vazio}">
+        <h2>Formas de pagamento</h2>
+        <div class="imagem-grafico" th:utext="${graficoFormas}"></div>
+        <table class="dados" id="relatorio-formas">
+            <thead><tr><th>Forma</th><th class="num">Valor</th><th class="num">Vendas</th><th class="num">Taxa estimada</th></tr></thead>
+            <tbody><tr th:each="l : ${painel.formas}" th:if="${l.vendas > 0}">
+                <td th:text="${l.forma.rotulo}">Pix</td><td class="num" th:text="${R.reais(l.valor)}">R$ 0,00</td>
+                <td class="num" th:text="${l.vendas}">0</td><td class="num" th:text="${R.reais(l.taxas)}">R$ 0,00</td>
+            </tr></tbody>
+        </table>
+    </section>
+
+    <section class="bloco-relatorio">
+        <h2>Despesas</h2>
+        <p class="vazio" th:if="${despesas.isEmpty()}">Nenhuma despesa ligada a este evento.</p>
+        <table class="dados" id="relatorio-despesas" th:unless="${despesas.isEmpty()}">
+            <thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th class="num">Valor</th></tr></thead>
+            <tbody><tr th:each="d : ${despesas}">
+                <td th:text="${#temporals.format(d.data, 'dd/MM/yyyy')}">01/03/2025</td>
+                <td><span th:text="${d.descricao}">Lona</span><span class="suave" th:if="${d.observacao != null}" th:text="' · ' + ${d.observacao}"></span></td>
+                <td th:text="${d.categoria.nome}">Material</td><td class="num" th:text="${R.reais(d.valor)}">R$ 0,00</td>
+            </tr></tbody>
+            <tfoot><tr><th colspan="3">Total</th><td class="num"><strong th:text="${R.reais(totalDespesas)}">R$ 0,00</strong></td></tr></tfoot>
+        </table>
+    </section>
+
+    <section class="bloco-relatorio">
+        <h2>Cancelamentos</h2>
+        <p class="vazio" th:if="${cancelamentos.isEmpty()}">Nenhuma venda cancelada.</p>
+        <table class="dados" id="relatorio-cancelamentos" th:unless="${cancelamentos.isEmpty()}">
+            <thead><tr><th>Venda</th><th>Data da venda</th><th class="num">Valor</th><th>Cancelada em</th><th>Motivo</th></tr></thead>
+            <tbody><tr th:each="c : ${cancelamentos}">
+                <td th:text="'#' + ${c.vendaId}">#1</td><td th:text="${#temporals.format(c.dataHora, 'dd/MM HH:mm')}">01/03</td>
+                <td class="num" th:text="${R.reais(c.valor)}">R$ 0,00</td>
+                <td th:text="${#temporals.format(c.canceladaEm, 'dd/MM/yyyy HH:mm')}">01/03</td><td th:text="${c.motivo}">Motivo</td>
+            </tr></tbody>
+        </table>
+    </section>
+
+    <section class="bloco-relatorio">
+        <h2>Ajustes manuais</h2>
+        <p class="vazio" th:if="${ajustes.isEmpty()}">Nenhum ajuste manual de valor.</p>
+        <table class="dados" id="relatorio-ajustes" th:unless="${ajustes.isEmpty()}">
+            <thead><tr><th>Venda</th><th>Data</th><th class="num">Calculado</th><th class="num">Cobrado</th><th class="num">Diferença</th><th>Motivo</th></tr></thead>
+            <tbody><tr th:each="a : ${ajustes}">
+                <td th:text="'#' + ${a.vendaId}">#1</td><td th:text="${#temporals.format(a.dataHora, 'dd/MM HH:mm')}">01/03</td>
+                <td class="num" th:text="${R.reais(a.calculado)}">R$ 0,00</td><td class="num" th:text="${R.reais(a.cobrado)}">R$ 0,00</td>
+                <td class="num" th:text="${R.reais(a.diferenca)}">R$ 0,00</td><td th:text="${a.motivo}">Motivo</td>
+            </tr></tbody>
+        </table>
+    </section>
+
+    <footer class="rodape-relatorio">
+        Valores calculados pelo Caixa LAC. Venda pertence ao evento quando a data e a hora dela estão no horário do
+        evento (o fim não entra). Despesas: as ligadas ao evento. Taxas: estimadas pela taxa vigente no dia de cada venda.
+    </footer>
+</main>
+</body>
+</html>

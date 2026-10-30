@@ -361,4 +361,47 @@ public class ConsultasFinanceiras {
                 params,
                 (r, n) -> new ValorEstoque(dec(r, "a_custo"), dec(r, "a_preco"), r.getLong("sem_custo")));
     }
+
+    /** Venda cancelada do período (pela data da venda), com o motivo. */
+    public record Cancelamento(
+            Long vendaId,
+            java.time.LocalDateTime dataHora,
+            BigDecimal valor,
+            java.time.LocalDateTime canceladaEm,
+            String motivo) {}
+
+    public List<Cancelamento> cancelamentos(FiltroFinancas f) {
+        var params =
+                new MapSqlParameterSource().addValue("ini", f.inicioConsulta()).addValue("fim", f.fimConsulta());
+        return jdbc.query(
+                "SELECT v.id, v.data_hora, v.valor_cobrado, v.data_cancelamento, v.motivo_cancelamento FROM venda v"
+                        + " WHERE v.cancelada = TRUE AND v.data_hora >= :ini AND v.data_hora < :fim ORDER BY v.data_hora, v.id",
+                params,
+                (r, n) -> new Cancelamento(
+                        r.getLong("id"),
+                        r.getObject("data_hora", java.time.LocalDateTime.class),
+                        dec(r, "valor_cobrado"),
+                        r.getObject("data_cancelamento", java.time.LocalDateTime.class),
+                        r.getString("motivo_cancelamento")));
+    }
+
+    /** Venda válida do filtro com ajuste manual (cobrado diferente do calculado), com o motivo. */
+    public record Ajuste(
+            Long vendaId, java.time.LocalDateTime dataHora, BigDecimal calculado, BigDecimal cobrado, String motivo) {}
+
+    public List<Ajuste> ajustesManuais(FiltroFinancas f) {
+        Onde o = onde(f);
+        return jdbc.query(
+                "SELECT v.id, v.data_hora, v.valor_calculado, v.valor_cobrado, v.motivo_ajuste FROM venda v"
+                        + " WHERE " + o.vendas()
+                        + " AND v.valor_calculado IS NOT NULL AND v.valor_cobrado <> v.valor_calculado"
+                        + " ORDER BY v.data_hora, v.id",
+                o.parametros(),
+                (r, n) -> new Ajuste(
+                        r.getLong("id"),
+                        r.getObject("data_hora", java.time.LocalDateTime.class),
+                        dec(r, "valor_calculado"),
+                        dec(r, "valor_cobrado"),
+                        r.getString("motivo_ajuste")));
+    }
 }

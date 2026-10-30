@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Comparativo de eventos')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav('eventos')}"></nav>
+<main class="conteudo" th:with="R=${T(br.com.lac.caixa.util.Dinheiro)}">
+    <div class="cabecalho-pagina">
+        <div>
+            <h1>Comparativo de eventos</h1>
+            <p>Os indicadores principais de cada evento, do mais antigo ao mais recente.</p>
+        </div>
+        <button type="button" class="botao botao-secundario botao-pequeno nao-imprimir" onclick="window.print()">Imprimir</button>
+    </div>
+    <div class="cartao vazio" th:if="${eventos.isEmpty()}">Nenhum evento cadastrado.</div>
+    <th:block th:unless="${eventos.isEmpty()}">
+    <div class="cartao">
+        <div class="imagem-grafico" th:utext="${grafico}"></div>
+    </div>
+    <div class="cartao tabela-area">
+        <table class="dados comparativo" id="tabela-comparativo">
+            <caption class="sr-only">Indicadores por evento</caption>
+            <thead><tr><th scope="col">Indicador</th>
+                <th scope="col" class="num" th:each="e : ${eventos}">
+                    <a th:href="@{'/eventos/' + ${e.eventoId} + '/relatorio'}" th:text="${e.nome}">Feira</a><br>
+                    <span class="suave" th:text="${#temporals.format(e.inicio, 'dd/MM/yyyy')}">01/03/2025</span></th></tr></thead>
+            <tbody>
+            <tr><th scope="row">Receita líquida</th><td class="num" th:each="e : ${eventos}" th:text="${R.reais(e.resumo.receitaLiquida)}">R$ 0,00</td></tr>
+            <tr><th scope="row">Lucro líquido</th><td class="num" th:each="e : ${eventos}"
+                th:text="${e.resumo.lucroLiquido == null} ? '—' : ${R.reais(e.resumo.lucroLiquido)} + (${e.resumo.lucroParcial} ? ' (parcial)' : '')">R$ 0,00</td></tr>
+            <tr><th scope="row">Margem bruta</th><td class="num" th:each="e : ${eventos}"
+                th:text="${e.resumo.margemBrutaPercentual == null} ? '—' : ${#numbers.formatDecimal(e.resumo.margemBrutaPercentual, 1, 2, 'COMMA')} + '%'">0%</td></tr>
+            <tr><th scope="row">Lucro líquido %</th><td class="num" th:each="e : ${eventos}"
+                th:text="${e.resumo.lucroLiquidoPercentual == null} ? '—' : ${#numbers.formatDecimal(e.resumo.lucroLiquidoPercentual, 1, 2, 'COMMA')} + '%'">0%</td></tr>
+            <tr><th scope="row">Vendas</th><td class="num" th:each="e : ${eventos}" th:text="${e.resumo.vendas}">0</td></tr>
+            <tr><th scope="row">Itens vendidos</th><td class="num" th:each="e : ${eventos}" th:text="${e.resumo.itensVendidos}">0</td></tr>
+            <tr><th scope="row">Ticket médio</th><td class="num" th:each="e : ${eventos}" th:text="${e.resumo.ticketMedio == null} ? '—' : ${R.reais(e.resumo.ticketMedio)}">R$ 0,00</td></tr>
+            <tr><th scope="row">Taxas estimadas</th><td class="num" th:each="e : ${eventos}" th:text="${R.reais(e.resumo.taxas)}">R$ 0,00</td></tr>
+            <tr><th scope="row">CMV</th><td class="num" th:each="e : ${eventos}" th:text="${R.reais(e.resumo.cmv)}">R$ 0,00</td></tr>
+            <tr><th scope="row">Despesas</th><td class="num" th:each="e : ${eventos}" th:text="${R.reais(e.resumo.despesas)}">R$ 0,00</td></tr>
+            <tr><th scope="row">Cortesias</th><td class="num" th:each="e : ${eventos}" th:text="${e.resumo.cortesias}">0</td></tr>
+            </tbody>
+        </table>
+    </div>
+    </th:block>
+</main>
+</body>
+</html>

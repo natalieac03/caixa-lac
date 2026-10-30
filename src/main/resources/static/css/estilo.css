@@ -1057,3 +1057,38 @@ table.ordenavel th[aria-sort="descending"] button::after { content: " ▼"; }
 .drill h3 { margin: 10px 0; }
 .cabecalho-secao { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
 .cabecalho-secao h2, .cabecalho-secao h3 { margin: 0; }
+
+/* ---------- Relatório do evento (tela e impressão A4) ---------- */
+.relatorio { max-width: 980px; margin: 0 auto; padding: 20px 16px 40px; }
+.barra-relatorio { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.cabecalho-relatorio { border-bottom: 3px solid var(--roxo); margin-bottom: 16px; padding-bottom: 8px; }
+.cabecalho-relatorio h1 { margin: 2px 0; }
+.marca-relatorio { font-family: var(--font-display); color: var(--roxo-forte); margin: 0; }
+.bloco-relatorio { margin-bottom: 22px; }
+.bloco-relatorio h2 { font-size: 18px; margin: 0 0 8px; }
+.imagem-grafico { background: #fff; border-radius: var(--raio-sm); padding: 8px; margin-bottom: 10px; max-width: 700px; }
+.imagem-grafico svg { display: block; height: auto; }
+.rodape-relatorio { font-size: 12px; color: var(--tinta-suave); border-top: 1px solid var(--linha); padding-top: 8px; }
+.comparativo th a { color: inherit; }
+
+@media print {
+    @page { size: A4; margin: 14mm 12mm; }
+    html:root:not(.x), html:root[data-tema] {
+        --fundo: #ffffff; --papel: #ffffff; --papel-hover: #ffffff; --linha: #c9c2d6; --linha-forte: #6f6488;
+        --tinta: #000000; --tinta-suave: #3a3346; --roxo: #6a00bd; --roxo-forte: #4b0087; --roxo-fundo: #f0e4ff;
+        --verde-texto: #2c5200; --coral-texto: #8f1b14; --laranja-fundo: #fff1de; --laranja-texto: #6e3b00;
+        color-scheme: light;
+    }
+    body { background: #fff !important; color: #000; font-size: 11pt; }
+    nav.topo, .botao-tema, .botao-tema-flutuante, .nao-imprimir, .exportar-csv { display: none !important; }
+    .relatorio, .conteudo { max-width: none; padding: 0; margin: 0; }
+    .cartao, .indicador { box-shadow: none !important; border: 1px solid var(--linha); }
+    .bloco-relatorio, .indicador, tr, .imagem-grafico { break-inside: avoid; page-break-inside: avoid; }
+    h2 { break-after: avoid; page-break-after: avoid; }
+    .indicadores { grid-template-columns: repeat(3, 1fr) !important; gap: 6px; }
+    .indicador { padding: 8px 10px; }
+    .indicador-valor { font-size: 16pt; }
+    table.dados { font-size: 9.5pt; }
+    .tabela-area { overflow: visible; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
