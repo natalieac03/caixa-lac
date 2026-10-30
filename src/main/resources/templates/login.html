@@ -13,22 +13,52 @@
         <h1>Caixa LAC</h1>
         <p>Digite a senha da Liga para entrar.</p>
 
-        <div th:if="${param.erro != null}" class="aviso aviso-erro" role="alert" style="margin:16px 0 0; text-align:left;">
+        <div th:if="${param.erro != null or param.espera != null or param.bloqueado != null}"
+             class="aviso aviso-erro" role="alert" style="margin:16px 0 0; text-align:left;">
             <svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>
-            <span>Senha incorreta. Tenta de novo.</span>
+            <span>
+                <span th:if="${param.erro != null}">Senha incorreta.</span>
+                <span th:if="${param.espera != null}">Calma: ainda não dá para tentar de novo.</span>
+                <span th:if="${param.bloqueado != null}">Muitas tentativas erradas. Este aparelho ficou bloqueado.</span>
+                <span th:if="${segundos != null}" id="aviso-espera" th:attr="data-segundos=${segundos}">
+                    Tente de novo em <strong id="segundos-restantes" th:text="${segundos}">4</strong> s.
+                </span>
+            </span>
         </div>
 
         <form th:action="@{/login}" method="post" style="margin-top:18px;">
             <div class="campo campo-senha">
                 <label for="senha" class="sr-only">Senha</label>
-                <input type="password" id="senha" name="senha" placeholder="••••••"
-                       inputmode="numeric" autocomplete="current-password" autofocus required>
+                <input type="password" id="senha" name="senha" placeholder="••••••••"
+                       autocomplete="current-password" autofocus required>
             </div>
-            <button type="submit" class="botao botao-principal botao-grande botao-largo" style="margin-top:14px;">
+            <button type="submit" id="botao-entrar" class="botao botao-principal botao-grande botao-largo" style="margin-top:14px;">
                 Entrar
             </button>
         </form>
     </div>
 </main>
+<script th:inline="none">
+    /* Contagem regressiva da espera; o servidor recusa de qualquer jeito antes do tempo. */
+    (function () {
+        const aviso = document.getElementById('aviso-espera');
+        if (!aviso) return;
+        let restantes = parseInt(aviso.getAttribute('data-segundos'), 10);
+        const numero = document.getElementById('segundos-restantes');
+        const botao = document.getElementById('botao-entrar');
+        if (!(restantes > 0)) return;
+        botao.disabled = true;
+        const timer = setInterval(function () {
+            restantes--;
+            if (restantes <= 0) {
+                clearInterval(timer);
+                botao.disabled = false;
+                aviso.textContent = 'Pode tentar de novo.';
+                return;
+            }
+            numero.textContent = String(restantes);
+        }, 1000);
+    })();
+</script>
 </body>
 </html>

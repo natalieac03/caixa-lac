@@ -11,7 +11,6 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import java.util.Set;
-import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -42,15 +41,6 @@ class SegurancaHttpTest {
             }
         }
         assertTrue(conferidas >= 15, "rotas conferidas: " + conferidas);
-    }
-
-    @Test void sextaTentativaErradaEBloqueadaMesmoComSenhaCerta() throws Exception {
-        String ip = "10.0.0." + (UUID.randomUUID().hashCode() & 0xff);
-        for (int i = 0; i < 5; i++) {
-            mvc.perform(doIp(post("/login").param("senha", "errada"), ip)).andExpect(redirectedUrl("/login?erro"));
-        }
-        mvc.perform(doIp(post("/login").param("senha", SenhaDeTeste.VALOR), ip)).andExpect(redirectedUrl("/login?erro"));
-        mvc.perform(doIp(post("/login").param("senha", SenhaDeTeste.VALOR), "192.0.2.77")).andExpect(redirectedUrl("/"));
     }
 
     @Test void logoutSoPorPostEEncerraASessao() throws Exception {

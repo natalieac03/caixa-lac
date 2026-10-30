@@ -112,9 +112,12 @@ estiver usando o caixa precisa entrar de novo com a senha nova. Troque fora do
 horário de vendas e avise a equipe antes. Os testes usam uma senha própria, em
 `src/test/resources/application-test.properties`.
 
-Após cinco erros por IP em uma janela móvel de dez minutos, o IP fica bloqueado
-por dez minutos. Um login correto limpa as falhas anteriores e renova o ID da
-sessão. O controle fica em memória e reinicia junto com a aplicação. O endereço
+Erro de senha não trava o caixa do evento: cada erro só impõe uma **espera
+progressiva** por IP antes da próxima tentativa (1 s, 2 s, 4 s, 8 s, 16 s e daí
+30 s no máximo), e a tela de login mostra quantos segundos faltam. Tentar durante
+a espera não conta como erro. Só **20 erros em 10 minutos** bloqueiam o IP, por 10
+minutos. Um login correto zera o contador daquele IP e renova o ID da sessão. O
+controle fica em memória e reinicia junto com a aplicação. O endereço
 usado é o IP remoto: no Railway, com `server.forward-headers-strategy=native`, o
 Tomcat lê o `X-Forwarded-For` só quando a conexão vem do proxy (rede privada);
 cabeçalho vindo direto da internet é ignorado. Sem isso, todo mundo apareceria
