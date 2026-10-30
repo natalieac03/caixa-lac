@@ -2,6 +2,7 @@ package br.com.lac.caixa.controle;
 
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.servico.*;
+import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.util.ExportadorCSV;
 import org.springframework.core.io.Resource;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -54,7 +55,7 @@ public class HistoricoController {
             @RequestParam(defaultValue="0") int pagina, RedirectAttributes flash) {
         LocalDateTime nova;
         try { nova = LocalDateTime.of(LocalDate.parse(data), LocalTime.parse(hora)); }
-        catch (DateTimeException ex) { throw new IllegalArgumentException("Informe dia e hora válidos."); }
+        catch (DateTimeException ex) { throw new RegraDeNegocioException("Informe dia e hora válidos."); }
         caixa.alterarDataHora(id, nova);
         flash.addFlashAttribute("sucesso", "Venda #" + id + " agora está em " + nova.format(DIA_E_HORA) + ".");
         if (forma != null) flash.addAttribute("forma", forma);

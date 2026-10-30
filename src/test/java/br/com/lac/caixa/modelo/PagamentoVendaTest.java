@@ -1,5 +1,6 @@
 package br.com.lac.caixa.modelo;
 
+import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.pagamento.PagamentoFactory;
 import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
@@ -19,10 +20,10 @@ class PagamentoVendaTest {
 
     @Test void somaTemQueSerExatamenteOCobradoAoCentavo() {
         var v = venda("18.00", null);
-        var falta = assertThrows(IllegalArgumentException.class,
+        var falta = assertThrows(RegraDeNegocioException.class,
                 () -> v.registrarPagamentos(List.of(parte(FormaPagamento.PIX, "10"), parte(FormaPagamento.DINHEIRO, "7.99"))));
         assertTrue(falta.getMessage().contains("falta R$ 0,01"), falta.getMessage());
-        var sobra = assertThrows(IllegalArgumentException.class,
+        var sobra = assertThrows(RegraDeNegocioException.class,
                 () -> v.registrarPagamentos(List.of(parte(FormaPagamento.PIX, "10"), parte(FormaPagamento.DINHEIRO, "8.01"))));
         assertTrue(sobra.getMessage().contains("sobra R$ 0,01"), sobra.getMessage());
         assertTrue(v.getPagamentos().isEmpty());
@@ -39,23 +40,23 @@ class PagamentoVendaTest {
         assertEquals("Dinheiro R$ 8,00 (troco R$ 2,00)", dinheiro.getTexto());
         assertNull(parte(FormaPagamento.DINHEIRO, "8").getTroco());
         assertEquals(0, BigDecimal.ZERO.compareTo(new PagamentoVenda(FormaPagamento.DINHEIRO, r("8"), null, r("8")).getTroco()));
-        var menor = assertThrows(IllegalArgumentException.class, () -> new PagamentoVenda(FormaPagamento.DINHEIRO, r("8"), null, r("7.99")));
+        var menor = assertThrows(RegraDeNegocioException.class, () -> new PagamentoVenda(FormaPagamento.DINHEIRO, r("8"), null, r("7.99")));
         assertTrue(menor.getMessage().contains("menor"));
-        assertThrows(IllegalArgumentException.class, () -> new PagamentoVenda(FormaPagamento.PIX, r("8"), null, r("10")));
+        assertThrows(RegraDeNegocioException.class, () -> new PagamentoVenda(FormaPagamento.PIX, r("8"), null, r("10")));
     }
 
     @Test void partesInvalidas() {
-        assertThrows(IllegalArgumentException.class, () -> new PagamentoVenda(null, r("1"), null, null));
-        assertThrows(IllegalArgumentException.class, () -> parte(FormaPagamento.PIX, "0"));
-        assertThrows(IllegalArgumentException.class, () -> parte(FormaPagamento.PIX, "-1"));
-        assertThrows(IllegalArgumentException.class, () -> new PagamentoVenda(FormaPagamento.OUTRO, r("1"), "  ", null));
+        assertThrows(RegraDeNegocioException.class, () -> new PagamentoVenda(null, r("1"), null, null));
+        assertThrows(RegraDeNegocioException.class, () -> parte(FormaPagamento.PIX, "0"));
+        assertThrows(RegraDeNegocioException.class, () -> parte(FormaPagamento.PIX, "-1"));
+        assertThrows(RegraDeNegocioException.class, () -> new PagamentoVenda(FormaPagamento.OUTRO, r("1"), "  ", null));
         assertEquals("Vale R$ 1,00", new PagamentoVenda(FormaPagamento.OUTRO, r("1"), " Vale ", null).getTexto());
         assertNull(new PagamentoVenda(FormaPagamento.PIX, r("1"), "ignorada", null).getDescricao());
         var muitas = new ArrayList<PagamentoVenda>();
         for (int i = 0; i < 11; i++) muitas.add(parte(FormaPagamento.PIX, "1"));
         var v = venda("11", null);
-        assertThrows(IllegalArgumentException.class, () -> v.registrarPagamentos(muitas));
-        assertThrows(IllegalArgumentException.class, () -> venda("18", null).registrarPagamentos(List.of()));
+        assertThrows(RegraDeNegocioException.class, () -> v.registrarPagamentos(muitas));
+        assertThrows(RegraDeNegocioException.class, () -> venda("18", null).registrarPagamentos(List.of()));
     }
 
     @Test void cortesiaNaoTemPagamentoEExigeMotivo() {
@@ -64,9 +65,9 @@ class PagamentoVendaTest {
         assertTrue(comMotivo.isCortesia());
         assertEquals("Cortesia", comMotivo.getPagamentoTexto());
         assertEquals("Cortesia: nada a receber.", PagamentoFactory.mensagem(comMotivo.getPagamentos()));
-        assertThrows(IllegalArgumentException.class, () -> venda("0", "Brinde").registrarPagamentos(List.of(parte(FormaPagamento.PIX, "1"))));
-        assertThrows(IllegalArgumentException.class, () -> venda("0", " ").registrarPagamentos(List.of()));
-        assertThrows(IllegalArgumentException.class, () -> venda("0", null).registrarPagamentos(List.of()));
+        assertThrows(RegraDeNegocioException.class, () -> venda("0", "Brinde").registrarPagamentos(List.of(parte(FormaPagamento.PIX, "1"))));
+        assertThrows(RegraDeNegocioException.class, () -> venda("0", " ").registrarPagamentos(List.of()));
+        assertThrows(RegraDeNegocioException.class, () -> venda("0", null).registrarPagamentos(List.of()));
     }
 
     @Test void mensagemUmaPartePorLinha() {

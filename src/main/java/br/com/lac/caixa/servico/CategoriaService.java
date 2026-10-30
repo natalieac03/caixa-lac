@@ -1,5 +1,6 @@
 package br.com.lac.caixa.servico;
 
+import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.Categoria;
 import br.com.lac.caixa.repositorio.CategoriaRepository;
 import org.springframework.stereotype.Service;
@@ -22,7 +23,7 @@ public class CategoriaService {
 
     public Categoria buscar(Long id) {
         return categorias.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Categoria não encontrada: " + id));
+                .orElseThrow(() -> new RegraDeNegocioException("Categoria não encontrada: " + id));
     }
 
     /**
@@ -33,7 +34,7 @@ public class CategoriaService {
     public Categoria obterOuCriar(String nomeDigitado) {
         String normalizado = Categoria.normalizar(nomeDigitado);
         if (normalizado.isEmpty()) {
-            throw new IllegalArgumentException("Nome de categoria vazio.");
+            throw new RegraDeNegocioException("Nome de categoria vazio.");
         }
         return categorias.findByNomeNormalizado(normalizado)
                 .orElseGet(() -> categorias.save(new Categoria(nomeDigitado)));

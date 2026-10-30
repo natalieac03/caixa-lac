@@ -1,5 +1,6 @@
 package br.com.lac.caixa.modelo;
 
+import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -52,7 +53,7 @@ public class Promocao {
     }
 
     public Promocao(List<PromocaoItem> itens, TipoPromocao tipo, BigDecimal preco) {
-        if (preco == null || preco.signum() <= 0) throw new IllegalArgumentException("Preço deve ser maior que zero.");
+        if (preco == null || preco.signum() <= 0) throw new RegraDeNegocioException("Preço deve ser maior que zero.");
         this.itens = itens;
         this.tipo = tipo;
         this.preco = preco;

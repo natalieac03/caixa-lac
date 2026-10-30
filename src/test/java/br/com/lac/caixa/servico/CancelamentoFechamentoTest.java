@@ -1,5 +1,6 @@
 package br.com.lac.caixa.servico;
 
+import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.*;
 import br.com.lac.caixa.repositorio.*;
 import br.com.lac.caixa.util.ExportadorCSV;
@@ -51,7 +52,7 @@ class CancelamentoFechamentoTest {
     }
     @Test void motivoVazioNaoCancelaNemDevolveEstoque() {
         var p=produtos.save(new Produto("Produto",BigDecimal.TEN,10)); var v=registrar(p,2,FormaPagamento.PIX,null);
-        assertThrows(IllegalArgumentException.class,()->caixa.cancelarVenda(v.getId()," "));
+        assertThrows(RegraDeNegocioException.class,()->caixa.cancelarVenda(v.getId()," "));
         assertFalse(v.isCancelada()); assertEquals(8,p.getQuantidade());
     }
     @Test void fechamentoSomaFormasDescontosEAjustesSemCanceladas() {

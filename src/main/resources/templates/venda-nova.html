@@ -374,6 +374,24 @@
         const preco = document.createElement('span'); preco.textContent = valor;
         div.append(nome, preco); document.getElementById('carrinho').append(div);
     }
+    const SEM_PREVIA = 'Não foi possível calcular a prévia. Confira a conexão e tente novamente.';
+
+    /* Sessão expirada: avisa e oferece o login, sem perder o que está na tela. */
+    function sessaoExpirada() {
+        totalPrevia = null; unidades = 0;
+        const aviso = document.createElement('p');
+        aviso.className = 'aviso aviso-erro';
+        aviso.id = 'sessaoExpirada';
+        aviso.setAttribute('role', 'alert');
+        aviso.append('Sessão expirou. Entre de novo. ');
+        const entrar = document.createElement('a');
+        entrar.href = '/login';
+        entrar.textContent = 'Entrar';
+        aviso.append(entrar);
+        document.getElementById('carrinho').replaceChildren(aviso);
+        atualizarPagamento();
+    }
+
     /* Prévia em andamento: cancelada quando outra é pedida (só a última desenha). */
     let previaEmAndamento = null;
     function recalcular() {
@@ -387,9 +405,12 @@
             try {
                 const resposta = await fetch('/venda/previa', {method:'POST', signal: controle.signal,
                         body:new URLSearchParams(new FormData(document.getElementById('formVenda')))});
-                if (!resposta.ok || !resposta.headers.get('content-type')?.includes('application/json')) throw new Error('Não foi possível calcular a prévia.');
-                const o = await resposta.json();
+                const json = (resposta.headers.get('content-type') || '').includes('application/json');
+                const o = json ? await resposta.json() : null;
                 if (atual !== versao) return;
+                if (resposta.status === 401) { sessaoExpirada(); return; }
+                // Erro com mensagem do servidor ({"erro": "..."}) aparece como veio.
+                if (!resposta.ok || !o || o.erro) throw new Error(o && o.erro ? o.erro : SEM_PREVIA);
                 document.getElementById('carrinho').replaceChildren();
                 unidades = 0;
                 o.itens.forEach(i => { unidades += i.quantidade; linha(i.nome + ' · ' + i.categoria + ' · ' + i.quantidade + ' × ' + reais(Number(i.precoUnitario)), reais(i.quantidade * Number(i.precoUnitario))); });
@@ -402,7 +423,9 @@
             } catch (e) {
                 if (e.name === 'AbortError' || atual !== versao) return;
                 totalPrevia = null; unidades = 0;
-                document.getElementById('carrinho').replaceChildren(); linha('Não foi possível calcular a prévia. Confira a conexão e tente novamente.', '');
+                document.getElementById('carrinho').replaceChildren();
+                linha(e instanceof TypeError ? SEM_PREVIA : e.message, '');
+                atualizarPagamento();
             }
         }, 200);
     }

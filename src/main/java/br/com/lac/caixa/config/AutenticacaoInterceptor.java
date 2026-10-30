@@ -3,15 +3,22 @@ package br.com.lac.caixa.config;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import java.nio.charset.StandardCharsets;
+
 /**
  * Antes de cada tela, confere se a pessoa ja digitou a senha.
- * Se nao, manda para a tela de login.
+ * Se nao, manda para a tela de login. Chamadas do JS (a previa da venda, ou
+ * quem pede JSON) recebem 401 com {"erro":"Sessão expirada"}: um redirect
+ * para a tela de login seria lido como resposta da previa.
  */
 @Component
 public class AutenticacaoInterceptor implements HandlerInterceptor {
+
+    static final String SESSAO_EXPIRADA = "{\"erro\":\"Sessão expirada\"}";
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
@@ -21,7 +28,20 @@ public class AutenticacaoInterceptor implements HandlerInterceptor {
         if (autenticado) {
             return true;
         }
+        if (querJson(request)) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+            response.getWriter().write(SESSAO_EXPIRADA);
+            return false;
+        }
         response.sendRedirect(request.getContextPath() + "/login");
         return false;
+    }
+
+    private static boolean querJson(HttpServletRequest request) {
+        String accept = request.getHeader("Accept");
+        return request.getRequestURI().equals(request.getContextPath() + "/venda/previa")
+                || (accept != null && accept.contains("application/json"));
     }
 }

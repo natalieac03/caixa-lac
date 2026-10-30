@@ -1,5 +1,6 @@
 package br.com.lac.caixa.servico;
 
+import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.FormaPagamento;
 
 import java.time.LocalDate;
@@ -16,7 +17,7 @@ public record FiltroHistorico(FormaPagamento forma, LocalDate inicio, LocalDate 
 
     public FiltroHistorico {
         if (inicio != null && fim != null && inicio.isAfter(fim))
-            throw new IllegalArgumentException("A data inicial deve ser anterior ou igual à final.");
+            throw new RegraDeNegocioException("A data inicial deve ser anterior ou igual à final.");
         produto = produto == null ? "" : produto.trim().toLowerCase(Locale.ROOT);
     }
 
@@ -43,7 +44,7 @@ public record FiltroHistorico(FormaPagamento forma, LocalDate inicio, LocalDate 
         try {
             return LocalDate.parse(texto.trim());
         } catch (DateTimeParseException ex) {
-            throw new IllegalArgumentException("Data inválida.");
+            throw new RegraDeNegocioException("Data inválida.");
         }
     }
 }

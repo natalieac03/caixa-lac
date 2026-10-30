@@ -1,5 +1,6 @@
 package br.com.lac.caixa.util;
 
+import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -24,7 +25,7 @@ public final class Dinheiro {
         if (texto == null || texto.isBlank()) return null;
         String valor = texto.trim();
         if (!valor.matches(FORMATO_VALIDO)) {
-            throw new IllegalArgumentException("Valor monetário inválido: " + valor);
+            throw new RegraDeNegocioException("Valor monetário inválido: " + valor);
         }
         if (valor.contains(",")) valor = valor.replace(".", "").replace(",", ".");
         return new BigDecimal(valor);

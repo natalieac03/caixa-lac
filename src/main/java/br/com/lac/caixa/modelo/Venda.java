@@ -1,5 +1,6 @@
 package br.com.lac.caixa.modelo;
 
+import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.util.Dinheiro;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -83,8 +84,8 @@ public class Venda {
     public void cancelar(String motivo, LocalDateTime quando) {
         if (cancelada) return;
         if (motivo == null || motivo.isBlank() || motivo.trim().length() > 255)
-            throw new IllegalArgumentException("Informe um motivo de cancelamento com até 255 caracteres.");
-        if (quando == null) throw new IllegalArgumentException("Informe a data do cancelamento.");
+            throw new RegraDeNegocioException("Informe um motivo de cancelamento com até 255 caracteres.");
+        if (quando == null) throw new RegraDeNegocioException("Informe a data do cancelamento.");
         cancelada = true; dataCancelamento = quando; motivoCancelamento = motivo.trim();
     }
 
@@ -110,20 +111,20 @@ public class Venda {
         BigDecimal cobrado = getValorCobrado();
         if (cobrado == null) throw new IllegalStateException("Registre os valores da venda antes do pagamento.");
         if (cobrado.signum() == 0) {
-            if (!partes.isEmpty()) throw new IllegalArgumentException("Cortesia (valor zero) não tem pagamento.");
+            if (!partes.isEmpty()) throw new RegraDeNegocioException("Cortesia (valor zero) não tem pagamento.");
             if (motivoAjuste == null || motivoAjuste.isBlank()) {
-                throw new IllegalArgumentException("Cortesia (valor zero) exige o motivo do ajuste.");
+                throw new RegraDeNegocioException("Cortesia (valor zero) exige o motivo do ajuste.");
             }
         } else {
-            if (partes.isEmpty()) throw new IllegalArgumentException("Escolha a forma de pagamento.");
+            if (partes.isEmpty()) throw new RegraDeNegocioException("Escolha a forma de pagamento.");
             if (partes.size() > MAXIMO_DE_PAGAMENTOS) {
-                throw new IllegalArgumentException("No máximo " + MAXIMO_DE_PAGAMENTOS + " partes no pagamento.");
+                throw new RegraDeNegocioException("No máximo " + MAXIMO_DE_PAGAMENTOS + " partes no pagamento.");
             }
             BigDecimal soma = partes.stream().map(PagamentoVenda::getValor).reduce(BigDecimal.ZERO, BigDecimal::add);
             int diferenca = soma.compareTo(cobrado);
             if (diferenca != 0) {
                 String quanto = Dinheiro.reais(soma.subtract(cobrado).abs());
-                throw new IllegalArgumentException("A soma do pagamento (" + Dinheiro.reais(soma)
+                throw new RegraDeNegocioException("A soma do pagamento (" + Dinheiro.reais(soma)
                         + ") não bate com o total (" + Dinheiro.reais(cobrado) + "): "
                         + (diferenca < 0 ? "falta " : "sobra ") + quanto + ".");
             }

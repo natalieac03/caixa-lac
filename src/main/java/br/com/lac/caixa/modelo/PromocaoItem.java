@@ -1,5 +1,6 @@
 package br.com.lac.caixa.modelo;
 
+import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -28,7 +29,7 @@ public class PromocaoItem {
     }
 
     public PromocaoItem(Categoria categoria, int quantidade) {
-        if (quantidade < 1) throw new IllegalArgumentException("Quantidade deve ser maior que zero.");
+        if (quantidade < 1) throw new RegraDeNegocioException("Quantidade deve ser maior que zero.");
         this.categoria = categoria;
         this.quantidade = quantidade;
     }

@@ -1,5 +1,6 @@
 package br.com.lac.caixa.controle;
 
+import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -14,7 +15,7 @@ final class Quantidades {
         try {
             return Integer.parseInt(texto.trim());
         } catch (NumberFormatException ex) {
-            throw new IllegalArgumentException("Quantidade inválida: " + texto.trim());
+            throw new RegraDeNegocioException("Quantidade inválida: " + texto.trim());
         }
     }
 
@@ -24,7 +25,7 @@ final class Quantidades {
         params.forEach((chave, valor) -> {
             if (!chave.startsWith("qtd_")) return;
             int qtd = inteiro(valor);
-            if (qtd < 0) throw new IllegalArgumentException("Quantidade inválida: " + qtd);
+            if (qtd < 0) throw new RegraDeNegocioException("Quantidade inválida: " + qtd);
             if (qtd > 0) resultado.put(Long.valueOf(chave.substring(4)), qtd);
         });
         return resultado;

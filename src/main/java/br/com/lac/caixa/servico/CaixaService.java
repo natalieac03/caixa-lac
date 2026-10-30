@@ -1,5 +1,6 @@
 package br.com.lac.caixa.servico;
 
+import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.ItemVenda;
 import br.com.lac.caixa.modelo.PagamentoVenda;
 import br.com.lac.caixa.modelo.Produto;
@@ -47,10 +48,10 @@ public class CaixaService {
     @Transactional
     public void alterarDataHora(Long vendaId, LocalDateTime novaDataHora) {
         if (novaDataHora == null) {
-            throw new IllegalArgumentException("Informe o dia e a hora da venda.");
+            throw new RegraDeNegocioException("Informe o dia e a hora da venda.");
         }
         Venda venda = vendas.findById(vendaId)
-                .orElseThrow(() -> new IllegalArgumentException("Venda não encontrada: " + vendaId));
+                .orElseThrow(() -> new RegraDeNegocioException("Venda não encontrada: " + vendaId));
 
         // A tela só edita até os minutos: se o minuto não mudou, mantém os
         // segundos originais para não embaralhar vendas do mesmo minuto.
@@ -65,7 +66,7 @@ public class CaixaService {
     public ResultadoVenda registrarVenda(Map<Long, Integer> quantidades,
                                          List<PagamentoInformado> pagamentos,
                                          BigDecimal totalManual, String motivoAjuste, String token) {
-        if (token == null || !UUID.fromString(token).toString().equals(token)) throw new IllegalArgumentException("Token de venda inválido.");
+        if (token == null || !UUID.fromString(token).toString().equals(token)) throw new RegraDeNegocioException("Token de venda inválido.");
         var existente = vendas.findByToken(token);
         if (existente.isPresent()) return new ResultadoVenda(existente.get(), "Venda já registrada.");
 
@@ -79,15 +80,15 @@ public class CaixaService {
 
         for (Map.Entry<Long, Integer> e : quantidades.entrySet()) {
             int qtd = e.getValue() == null ? 0 : e.getValue();
-            if (qtd < 0) throw new IllegalArgumentException("Quantidade inválida.");
+            if (qtd < 0) throw new RegraDeNegocioException("Quantidade inválida.");
             if (qtd == 0) continue;
             Produto p = estoque.buscar(e.getKey());
-            if (!p.isAtivo()) throw new IllegalArgumentException("Produto arquivado.");
+            if (!p.isAtivo()) throw new RegraDeNegocioException("Produto arquivado.");
             selecionados.put(e.getKey(), p);
         }
 
         if (selecionados.isEmpty()) {
-            throw new IllegalArgumentException("Selecione ao menos um produto.");
+            throw new RegraDeNegocioException("Selecione ao menos um produto.");
         }
 
         var carrinho = new Carrinho(selecionados.values().stream()
@@ -95,9 +96,9 @@ public class CaixaService {
         var orcamento = calculadora.calcular(carrinho, ativas);
         BigDecimal calculado = orcamento.total();
         BigDecimal total = totalManual != null ? totalManual : calculado;
-        if (total.signum() < 0) throw new IllegalArgumentException("O valor ajustado não pode ser negativo.");
+        if (total.signum() < 0) throw new RegraDeNegocioException("O valor ajustado não pode ser negativo.");
         if (total.compareTo(calculado) != 0 && (motivoAjuste == null || motivoAjuste.isBlank()))
-            throw new IllegalArgumentException("Informe o motivo do ajuste de valor.");
+            throw new RegraDeNegocioException("Informe o motivo do ajuste de valor.");
         venda.registrarValores(calculado, orcamento.descontos().stream().map(Orcamento.Desconto::valor)
                 .reduce(BigDecimal.ZERO, BigDecimal::add), total, motivoAjuste);
         // O servidor confere o pagamento de novo: soma, formas, descrição do Outro, recebido.
@@ -126,7 +127,7 @@ public class CaixaService {
         }
         List<PagamentoVenda> partes = new ArrayList<>();
         for (PagamentoInformado p : informados) {
-            if (p.valor() == null) throw new IllegalArgumentException("Informe o valor de cada parte do pagamento.");
+            if (p.valor() == null) throw new RegraDeNegocioException("Informe o valor de cada parte do pagamento.");
             partes.add(new PagamentoVenda(p.forma(), p.valor(), p.descricao(), p.recebido()));
         }
         return partes;
@@ -135,7 +136,7 @@ public class CaixaService {
     public Orcamento previa(Map<Long,Integer> quantidades) {
         var linhas = new ArrayList<Carrinho.Linha>();
         quantidades.forEach((id,qtd) -> {
-            if (qtd < 0) throw new IllegalArgumentException("Quantidade inválida.");
+            if (qtd < 0) throw new RegraDeNegocioException("Quantidade inválida.");
             if (qtd > 0) linhas.add(new Carrinho.Linha(estoque.buscar(id), qtd));
         });
         return calculadora.calcular(new Carrinho(linhas), promocoes.listarAtivas());

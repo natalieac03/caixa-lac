@@ -1,5 +1,6 @@
 package br.com.lac.caixa.servico;
 
+import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.Venda;
 import br.com.lac.caixa.repositorio.IndicadoresHistorico;
 import br.com.lac.caixa.repositorio.VendaRepository;
@@ -29,7 +30,7 @@ public class ConsultaHistorico {
 
     /** Página com canceladas (riscadas na tela); indicadores sem canceladas. */
     public Resultado consultar(FiltroHistorico filtro, int pagina) {
-        if (pagina < 0) throw new IllegalArgumentException("Página inválida.");
+        if (pagina < 0) throw new RegraDeNegocioException("Página inválida.");
         var cortada = vendas.findAll(VendaSpecs.doFiltro(filtro),
                 PageRequest.of(pagina, TAMANHO_PAGINA, VendaRepository.MAIS_RECENTES));
         List<Long> ids = cortada.getContent().stream().map(Venda::getId).toList();

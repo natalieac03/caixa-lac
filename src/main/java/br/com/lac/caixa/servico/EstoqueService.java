@@ -1,5 +1,6 @@
 package br.com.lac.caixa.servico;
 
+import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.Categoria;
 import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.repositorio.ItemVendaRepository;
@@ -32,7 +33,7 @@ public class EstoqueService {
 
     public Produto buscar(Long id) {
         return produtos.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Produto não encontrado: " + id));
+                .orElseThrow(() -> new RegraDeNegocioException("Produto não encontrado: " + id));
     }
 
     @Transactional

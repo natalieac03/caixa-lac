@@ -1,5 +1,6 @@
 package br.com.lac.caixa.controle;
 
+import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.servico.PagamentoInformado;
 import br.com.lac.caixa.util.Dinheiro;
@@ -28,7 +29,7 @@ final class PagamentosDoFormulario {
             try {
                 formas.put(Integer.parseInt(chave.substring(FORMA.length())), valor);
             } catch (NumberFormatException ex) {
-                throw new IllegalArgumentException("Campo de pagamento inválido.");
+                throw new RegraDeNegocioException("Campo de pagamento inválido.");
             }
         });
         List<PagamentoInformado> partes = new ArrayList<>();
@@ -41,11 +42,11 @@ final class PagamentosDoFormulario {
     }
 
     private static FormaPagamento forma(String texto) {
-        if (texto == null || texto.isBlank()) throw new IllegalArgumentException("Escolha a forma de pagamento.");
+        if (texto == null || texto.isBlank()) throw new RegraDeNegocioException("Escolha a forma de pagamento.");
         try {
             return FormaPagamento.valueOf(texto.trim());
         } catch (IllegalArgumentException ex) {
-            throw new IllegalArgumentException("Forma de pagamento inválida: " + texto.trim());
+            throw new RegraDeNegocioException("Forma de pagamento inválida: " + texto.trim());
         }
     }
 }

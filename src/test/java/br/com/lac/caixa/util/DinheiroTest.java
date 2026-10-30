@@ -1,5 +1,6 @@
 package br.com.lac.caixa.util;
 
+import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.*;
 import br.com.lac.caixa.pagamento.PagamentoFactory;
 import org.junit.jupiter.api.Test;
@@ -13,8 +14,8 @@ class DinheiroTest {
         assertEquals(new BigDecimal("12.50"),Dinheiro.parse("12,50"));
         assertEquals(new BigDecimal("12.50"),Dinheiro.parse("12.50"));
         assertNull(Dinheiro.parse(" "));
-        assertThrows(IllegalArgumentException.class,()->Dinheiro.parse("1,2,3"));
-        assertThrows(IllegalArgumentException.class,()->Dinheiro.parse("texto"));
+        assertThrows(RegraDeNegocioException.class,()->Dinheiro.parse("1,2,3"));
+        assertThrows(RegraDeNegocioException.class,()->Dinheiro.parse("texto"));
     }
     @Test void reaisSeparaMilharECsvNao() {
         assertEquals("R$ 1.234,56",Dinheiro.reais(new BigDecimal("1234.56")));

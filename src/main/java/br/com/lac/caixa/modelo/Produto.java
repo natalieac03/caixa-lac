@@ -1,6 +1,7 @@
 package br.com.lac.caixa.modelo;
 
-import br.com.lac.caixa.servico.EstoqueInsuficienteException;
+import br.com.lac.caixa.dominio.RegraDeNegocioException;
+import br.com.lac.caixa.dominio.EstoqueInsuficienteException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -52,7 +53,7 @@ public class Produto {
     public Produto(String nome, BigDecimal preco, int quantidade) {
         this.nome = nome;
         setPreco(preco);
-        if (quantidade < 0) throw new IllegalArgumentException("Quantidade não pode ser negativa.");
+        if (quantidade < 0) throw new RegraDeNegocioException("Quantidade não pode ser negativa.");
         this.quantidade = quantidade;
     }
 
@@ -73,7 +74,7 @@ public class Produto {
     }
 
     public void setPreco(BigDecimal preco) {
-        if (preco == null || preco.signum() <= 0) throw new IllegalArgumentException("Preço deve ser maior que zero.");
+        if (preco == null || preco.signum() <= 0) throw new RegraDeNegocioException("Preço deve ser maior que zero.");
         this.preco = preco;
     }
 
@@ -83,7 +84,7 @@ public class Produto {
 
     /** Tira unidades do estoque; nunca deixa negativo. */
     public void baixar(int qtd) {
-        if (qtd < 1) throw new IllegalArgumentException("Quantidade deve ser maior que zero.");
+        if (qtd < 1) throw new RegraDeNegocioException("Quantidade deve ser maior que zero.");
         if (qtd > quantidade) {
             throw new EstoqueInsuficienteException(
                     "Estoque insuficiente de " + nome + " (disponível: " + quantidade + ").");
@@ -93,7 +94,7 @@ public class Produto {
 
     /** Devolve ou soma unidades ao estoque. */
     public void repor(int qtd) {
-        if (qtd < 1) throw new IllegalArgumentException("Quantidade deve ser maior que zero.");
+        if (qtd < 1) throw new RegraDeNegocioException("Quantidade deve ser maior que zero.");
         quantidade = Math.addExact(quantidade, qtd);
     }
 

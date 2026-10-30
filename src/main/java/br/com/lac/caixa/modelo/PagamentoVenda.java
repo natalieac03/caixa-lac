@@ -1,5 +1,6 @@
 package br.com.lac.caixa.modelo;
 
+import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.util.Dinheiro;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -44,21 +45,21 @@ public class PagamentoVenda {
     }
 
     public PagamentoVenda(FormaPagamento forma, BigDecimal valor, String descricao, BigDecimal valorRecebido) {
-        if (forma == null) throw new IllegalArgumentException("Escolha a forma de pagamento.");
+        if (forma == null) throw new RegraDeNegocioException("Escolha a forma de pagamento.");
         if (valor == null || valor.signum() <= 0) {
-            throw new IllegalArgumentException("O valor de cada parte do pagamento deve ser maior que zero.");
+            throw new RegraDeNegocioException("O valor de cada parte do pagamento deve ser maior que zero.");
         }
         String texto = descricao == null ? "" : descricao.trim();
         if (forma == FormaPagamento.OUTRO && texto.isEmpty()) {
-            throw new IllegalArgumentException("Pagamento em Outro precisa de descrição (ex.: vale, permuta).");
+            throw new RegraDeNegocioException("Pagamento em Outro precisa de descrição (ex.: vale, permuta).");
         }
-        if (texto.length() > 255) throw new IllegalArgumentException("Descrição do pagamento com até 255 caracteres.");
+        if (texto.length() > 255) throw new RegraDeNegocioException("Descrição do pagamento com até 255 caracteres.");
         if (valorRecebido != null) {
             if (forma != FormaPagamento.DINHEIRO) {
-                throw new IllegalArgumentException("Valor recebido só vale para pagamento em dinheiro.");
+                throw new RegraDeNegocioException("Valor recebido só vale para pagamento em dinheiro.");
             }
             if (valorRecebido.compareTo(valor) < 0) {
-                throw new IllegalArgumentException("Recebido em dinheiro (" + Dinheiro.reais(valorRecebido)
+                throw new RegraDeNegocioException("Recebido em dinheiro (" + Dinheiro.reais(valorRecebido)
                         + ") é menor que o valor em dinheiro (" + Dinheiro.reais(valor) + ").");
             }
         }

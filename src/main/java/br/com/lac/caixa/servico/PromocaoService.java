@@ -1,5 +1,6 @@
 package br.com.lac.caixa.servico;
 
+import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.Categoria;
 import br.com.lac.caixa.modelo.Promocao;
 import br.com.lac.caixa.modelo.PromocaoItem;
@@ -44,7 +45,7 @@ public class PromocaoService {
     @Transactional
     public void criar(Map<Long, Integer> qtdPorCategoria, TipoPromocao tipo, BigDecimal preco) {
         if (qtdPorCategoria == null || qtdPorCategoria.isEmpty()) {
-            throw new IllegalArgumentException("Selecione ao menos uma categoria.");
+            throw new RegraDeNegocioException("Selecione ao menos uma categoria.");
         }
         List<PromocaoItem> itens = new ArrayList<>();
         for (Map.Entry<Long, Integer> e : qtdPorCategoria.entrySet()) {
@@ -54,7 +55,7 @@ public class PromocaoService {
             }
         }
         if (itens.isEmpty()) {
-            throw new IllegalArgumentException("Selecione ao menos uma categoria com quantidade.");
+            throw new RegraDeNegocioException("Selecione ao menos uma categoria com quantidade.");
         }
         promocoes.save(new Promocao(itens, tipo, preco));
     }
@@ -67,7 +68,7 @@ public class PromocaoService {
     @Transactional
     public void alternar(Long id) {
         Promocao p = promocoes.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Promoção não encontrada."));
+                .orElseThrow(() -> new RegraDeNegocioException("Promoção não encontrada."));
         p.setAtivo(!p.isAtivo());
         promocoes.save(p);
     }
