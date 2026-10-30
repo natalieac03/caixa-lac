@@ -1009,3 +1009,7 @@ tr.linha-edicao.oculto { display: none; }
 
 /* Eventos: nome do evento sob a data da venda no histórico. */
 .evento-da-venda { display: block; font-size: .8rem; color: var(--tinta-suave); }
+
+/* Aviso informativo em texto corrido (Despesas, Taxas). */
+.aviso-info { display: block; background: var(--ceu-fundo); color: var(--ceu-texto); font-weight: 400; }
+.aviso-info a { color: inherit; font-weight: 700; }

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Despesas')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav('despesas')}"></nav>
+<main class="conteudo">
+    <div th:replace="~{fragments/layout :: avisos}"></div>
+    <div class="cabecalho-pagina">
+        <div>
+            <h1>Despesas</h1>
+            <p>Gastos do grupo: material, impressão, transporte, alimentação, taxa de espaço...</p>
+        </div>
+    </div>
+    <p class="aviso aviso-info" id="aviso-compras">
+        Compras de mercadoria para revender <strong>não</strong> entram aqui: registre-as em
+        <a th:href="@{/estoque} + '#entrada-estoque'">Estoque → Entrada de estoque</a>. Elas viram custo da mercadoria
+        quando o produto é vendido; lançá-las também como despesa contaria o mesmo gasto duas vezes.
+    </p>
+
+    <div class="cartao">
+        <form th:action="@{/despesas}" method="get" class="linha-campos" style="align-items:flex-end;">
+            <div class="campo" th:unless="${eventos.isEmpty()}">
+                <label for="filtroEvento">Evento</label>
+                <select id="filtroEvento" name="evento">
+                    <option value="">Nenhum (usar datas)</option>
+                    <option th:each="e : ${eventos}" th:value="${e.id}" th:text="${e.nome}"
+                            th:selected="${evento != null and evento == e.id}">Feira</option>
+                </select>
+            </div>
+            <div class="campo"><label for="filtroInicio">De</label><input type="date" id="filtroInicio" name="inicio" th:value="${inicio}"></div>
+            <div class="campo"><label for="filtroFim">Até</label><input type="date" id="filtroFim" name="fim" th:value="${fim}"></div>
+            <div class="campo campo-acao"><button type="submit" class="botao botao-principal">Filtrar</button></div>
+            <div class="campo campo-acao" th:if="${evento != null or inicio != null or fim != null}">
+                <a class="botao botao-fantasma" th:href="@{/despesas}">Limpar filtros</a>
+            </div>
+        </form>
+        <p class="ajuda">Com um evento escolhido, aparecem as despesas ligadas a ele (pelo campo Evento da despesa),
+            qualquer que seja a data.</p>
+    </div>
+
+    <div class="cartao tabela-area">
+        <div class="vazio" th:if="${despesas.isEmpty()}">Nenhuma despesa no filtro.</div>
+        <table class="dados" th:unless="${despesas.isEmpty()}">
+            <thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Evento</th><th class="num">Valor</th><th></th></tr></thead>
+            <tbody>
+            <tr th:each="d : ${despesas}">
+                <td th:text="${#temporals.format(d.data, 'dd/MM/yyyy')}">01/06/2024</td>
+                <td><span th:text="${d.descricao}">Lona</span>
+                    <span class="suave" th:if="${d.observacao != null}" th:text="' · ' + ${d.observacao}"></span></td>
+                <td th:text="${d.categoria.nome}">Material</td>
+                <td th:text="${d.evento?.nome}"></td>
+                <td class="num" th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(d.valor)}">R$ 0,00</td>
+                <td class="acoes-linha">
+                    <a class="botao botao-secundario botao-pequeno" th:href="@{/despesas(editar=${d.id})} + '#despesa-form'">Editar</a>
+                    <form method="post" th:action="@{'/despesas/' + ${d.id} + '/apagar'}"
+                          onsubmit="return confirm('Apagar esta despesa? Não dá para desfazer.');">
+                        <button type="submit" class="botao botao-fantasma botao-pequeno">Apagar</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+            <tfoot>
+            <tr><th colspan="4">Total</th>
+                <td class="num"><strong id="total-despesas" th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(total)}">R$ 0,00</strong></td><td></td></tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <div class="cartao cartao-lac" id="despesa-form">
+        <h2 th:text="${editando == null} ? 'Nova despesa' : 'Editar despesa'">Nova despesa</h2>
+        <div class="corpo">
+        <form method="post" th:action="${editando == null} ? @{/despesas} : @{'/despesas/' + ${editando.id} + '/editar'}">
+            <div class="linha-campos">
+                <div class="campo">
+                    <label for="despesaData">Data</label>
+                    <input type="date" id="despesaData" name="data" required th:value="${editando == null} ? ${hoje} : ${editando.data}">
+                </div>
+                <div class="campo" style="flex:2;">
+                    <label for="despesaDescricao">Descrição</label>
+                    <input type="text" id="despesaDescricao" name="descricao" required maxlength="255" th:value="${editando?.descricao}">
+                </div>
+                <div class="campo">
+                    <label for="despesaValor">Valor (R$)</label>
+                    <input type="text" id="despesaValor" name="valor" required placeholder="0,00" inputmode="decimal" class="mono"
+                           th:value="${editando == null} ? '' : ${T(br.com.lac.caixa.util.Dinheiro).numero(editando.valor)}">
+                </div>
+            </div>
+            <div class="linha-campos" style="margin-top:14px;">
+                <div class="campo">
+                    <label for="despesaCategoria">Categoria</label>
+                    <select id="despesaCategoria" name="categoria" required>
+                        <option th:each="c : ${categorias}" th:value="${c.id}" th:text="${c.nome}"
+                                th:selected="${editando != null and editando.categoria.id == c.id}">Material</option>
+                    </select>
+                </div>
+                <div class="campo">
+                    <label for="despesaEvento">Evento (opcional)</label>
+                    <select id="despesaEvento" name="evento">
+                        <option value="">Nenhum</option>
+                        <option th:each="e : ${eventos}" th:value="${e.id}" th:text="${e.nome}"
+                                th:selected="${editando != null and editando.evento != null and editando.evento.id == e.id}">Feira</option>
+                    </select>
+                </div>
+                <div class="campo" style="flex:2;">
+                    <label for="despesaObservacao">Observação</label>
+                    <input type="text" id="despesaObservacao" name="observacao" maxlength="255" th:value="${editando?.observacao}">
+                </div>
+            </div>
+            <div style="margin-top:16px;">
+                <button type="submit" class="botao botao-principal" th:text="${editando == null} ? 'Registrar despesa' : 'Salvar despesa'">Registrar despesa</button>
+                <a th:if="${editando != null}" class="botao botao-fantasma" th:href="@{/despesas}">Cancelar</a>
+            </div>
+        </form>
+        </div>
+    </div>
+
+    <div class="cartao" id="categorias-despesa">
+        <h2>Categorias de despesa</h2>
+        <table class="dados">
+            <tbody>
+            <tr th:each="c : ${categorias}">
+                <td>
+                    <form method="post" th:action="@{'/despesas/categorias/' + ${c.id} + '/renomear'}" class="acoes-linha">
+                        <input type="text" name="nome" required maxlength="60" th:value="${c.nome}" th:attr="aria-label='Nome de ' + ${c.nome}">
+                        <button type="submit" class="botao botao-secundario botao-pequeno">Renomear</button>
+                    </form>
+                </td>
+                <td>
+                    <form method="post" th:action="@{'/despesas/categorias/' + ${c.id} + '/apagar'}"
+                          onsubmit="return confirm('Apagar esta categoria? Só é possível se não tiver despesas.');">
+                        <button type="submit" class="botao botao-fantasma botao-pequeno">Apagar</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <form method="post" th:action="@{/despesas/categorias}" class="linha-campos" style="margin-top:12px; align-items:flex-end;">
+            <div class="campo"><label for="novaCategoriaDespesa">Nova categoria</label>
+                <input type="text" id="novaCategoriaDespesa" name="nome" required maxlength="60"></div>
+            <div class="campo campo-acao"><button type="submit" class="botao botao-principal botao-pequeno">Adicionar</button></div>
+        </form>
+    </div>
+</main>
+</body>
+</html>
