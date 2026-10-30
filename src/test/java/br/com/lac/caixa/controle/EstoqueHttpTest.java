@@ -16,7 +16,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /** Validação no servidor dos formulários de estoque e promoção. */
-@SpringBootTest(properties={"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:estoque;DB_CLOSE_DELAY=-1", "app.senha=teste"})
+@SpringBootTest(properties={"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:estoque;DB_CLOSE_DELAY=-1"})
 @AutoConfigureMockMvc
 class EstoqueHttpTest {
     @Autowired MockMvc mvc;

@@ -12,18 +12,18 @@ class LimiteLoginTest {
     }
     @Test void cincoErrosBloqueiamSoIpPorDezMinutos() {
         var clock=new Relogio(); var limite=new LimiteLogin(clock);
-        for(int i=0;i<5;i++) assertFalse(limite.autenticar("ip1","certa","errada"));
-        assertFalse(limite.autenticar("ip1","certa","certa"));
-        assertTrue(limite.autenticar("ip2","certa","certa"));
-        clock.avancar(599); assertFalse(limite.autenticar("ip1","certa","certa"));
-        clock.avancar(1); assertTrue(limite.autenticar("ip1","certa","certa"));
+        for(int i=0;i<5;i++) assertFalse(limite.autenticar("ip1",false));
+        assertFalse(limite.autenticar("ip1",true));
+        assertTrue(limite.autenticar("ip2",true));
+        clock.avancar(599); assertFalse(limite.autenticar("ip1",true));
+        clock.avancar(1); assertTrue(limite.autenticar("ip1",true));
     }
     @Test void errosAntigosExpiramEAcertoLimpaFalhas() {
         var clock=new Relogio(); var limite=new LimiteLogin(clock);
-        for(int i=0;i<4;i++) limite.autenticar("ip","certa","errada");
-        clock.avancar(601); assertFalse(limite.autenticar("ip","certa","errada"));
-        assertTrue(limite.autenticar("ip","certa","certa"));
-        for(int i=0;i<4;i++) limite.autenticar("ip","certa","errada");
-        assertTrue(limite.autenticar("ip","certa","certa"));
+        for(int i=0;i<4;i++) limite.autenticar("ip",false);
+        clock.avancar(601); assertFalse(limite.autenticar("ip",false));
+        assertTrue(limite.autenticar("ip",true));
+        for(int i=0;i<4;i++) limite.autenticar("ip",false);
+        assertTrue(limite.autenticar("ip",true));
     }
 }

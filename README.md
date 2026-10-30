@@ -39,9 +39,19 @@ Precisa de **Java 17+**. O Maven vem junto pelo Maven Wrapper.
 ./mvnw spring-boot:run        # Windows: mvnw.cmd spring-boot:run
 ```
 
-Abra **http://localhost:8080**. No modo local o banco é um arquivo H2 (pasta
-`./dados/`), então não precisa configurar nada — é só rodar, e os dados
-continuam lá entre reinicializações. O console do H2 fica em
+Antes, defina uma senha de acesso (mínimo 8 caracteres), de um destes jeitos:
+
+```bash
+# Opção 1: variável de ambiente (vale para esta janela do terminal)
+export APP_SENHA='uma-senha-sua'          # Windows (PowerShell): $env:APP_SENHA='uma-senha-sua'
+
+# Opção 2: arquivo local, lido só no perfil local e fora do git
+cp senha-local.properties.exemplo senha-local.properties   # depois edite o valor
+```
+
+Sem isso a aplicação não sobe e avisa: *Defina a variável APP_SENHA (mínimo 8
+caracteres)*. Abra **http://localhost:8080**. No modo local o banco é um arquivo
+H2 (pasta `./dados/`), e os dados continuam lá entre reinicializações. O console do H2 fica em
 `http://localhost:8080/h2-console` (JDBC URL: `jdbc:h2:file:./dados/caixa`,
 usuário `sa`, senha em branco).
 
@@ -89,10 +99,18 @@ ficam dentro de um círculo roxo claro.
 
 ## Senha de acesso
 
-A interface exige login com senha compartilhada. Em produção, `APP_SENHA` é
-obrigatória: a aplicação falha na inicialização se a variável faltar. No perfil
-local existe um padrão definido apenas em `application-local.properties`;
-`APP_SENHA` também permite substituí-lo nesse perfil.
+A interface exige login com uma senha compartilhada, que **não fica no código**:
+existe só na variável `APP_SENHA`. Em produção ela fica em **Variables** do
+serviço do app no Railway. Em qualquer perfil, se `APP_SENHA` faltar, estiver
+vazia ou tiver menos de 8 caracteres, a aplicação não sobe e o log diz *Defina a
+variável APP_SENHA (mínimo 8 caracteres)*. O valor nunca é escrito no log.
+
+**Para trocar a senha:** no Railway, abra o serviço do app → **Variables** →
+edite `APP_SENHA` → aplique. O Railway reimplanta o app, e como as sessões ficam
+na memória do servidor, **todas as sessões abertas caem** nesse deploy: quem
+estiver usando o caixa precisa entrar de novo com a senha nova. Troque fora do
+horário de vendas e avise a equipe antes. Os testes usam uma senha própria, em
+`src/test/resources/application-test.properties`.
 
 Após cinco erros por IP em uma janela móvel de dez minutos, o IP fica bloqueado
 por dez minutos. Um login correto limpa as falhas anteriores e renova o ID da

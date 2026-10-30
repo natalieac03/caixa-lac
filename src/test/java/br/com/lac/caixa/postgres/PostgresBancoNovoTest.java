@@ -16,7 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** Banco vazio: Flyway roda V1-V5 e o Hibernate valida o esquema no Postgres. */
 @Testcontainers(disabledWithoutDocker = true)
-@SpringBootTest(properties = {"spring.profiles.active=test", "app.senha=teste"})
+@SpringBootTest(properties = {"spring.profiles.active=test"})
 @AutoConfigureMockMvc
 class PostgresBancoNovoTest {
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");

@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-@SpringBootTest(properties={"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:vendas;DB_CLOSE_DELAY=-1", "spring.jpa.hibernate.ddl-auto=validate", "app.senha=teste"})
+@SpringBootTest(properties={"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:vendas;DB_CLOSE_DELAY=-1", "spring.jpa.hibernate.ddl-auto=validate"})
 @AutoConfigureMockMvc
 class VendaHttpTest {
     @Autowired MockMvc mvc;

@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest(properties={"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:estaticos;DB_CLOSE_DELAY=-1", "app.senha=teste"})
+@SpringBootTest(properties={"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:estaticos;DB_CLOSE_DELAY=-1"})
 @AutoConfigureMockMvc
 class EstaticosHttpTest {
     @Autowired MockMvc mvc;

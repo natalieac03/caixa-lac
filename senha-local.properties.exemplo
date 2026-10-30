@@ -1,0 +1,3 @@
+# Copie para senha-local.properties (que fica fora do git) e troque o valor.
+# Mínimo de 8 caracteres. Usado só no perfil local.
+APP_SENHA=troque-esta-senha

@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest(properties={"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:historico;DB_CLOSE_DELAY=-1", "app.senha=teste"})
+@SpringBootTest(properties={"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:historico;DB_CLOSE_DELAY=-1"})
 @Transactional
 class HistoricoIntegracaoTest {
     @Autowired VendaRepository vendas;

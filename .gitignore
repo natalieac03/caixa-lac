@@ -18,3 +18,6 @@ dados/
 
 # Cópias compactadas do projeto
 *.zip
+
+# Senha do desenvolvimento local (veja senha-local.properties.exemplo)
+senha-local.properties

@@ -12,7 +12,7 @@ import java.time.LocalDate;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest(properties={"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:cancelamento;DB_CLOSE_DELAY=-1", "app.senha=teste"})
+@SpringBootTest(properties={"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:cancelamento;DB_CLOSE_DELAY=-1"})
 @Transactional
 class CancelamentoFechamentoTest {
     @Autowired CaixaService caixa;

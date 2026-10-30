@@ -24,7 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * rodam no Postgres de verdade (o H2 aceita SQL que o Postgres recusa).
  */
 @Testcontainers(disabledWithoutDocker = true)
-@SpringBootTest(properties = {"spring.profiles.active=test", "app.senha=teste"})
+@SpringBootTest(properties = {"spring.profiles.active=test"})
 @AutoConfigureMockMvc
 class PostgresLegadoTest {
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");

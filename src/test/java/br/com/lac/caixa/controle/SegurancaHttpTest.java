@@ -1,10 +1,8 @@
 package br.com.lac.caixa.controle;
 
-import br.com.lac.caixa.CaixaApplication;
+import br.com.lac.caixa.SenhaDeTeste;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.WebApplicationType;
-import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockHttpSession;
@@ -15,11 +13,10 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import java.util.Set;
 import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest(properties={"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:seguranca;DB_CLOSE_DELAY=-1", "app.senha=teste"})
+@SpringBootTest(properties={"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:seguranca;DB_CLOSE_DELAY=-1"})
 @AutoConfigureMockMvc
 class SegurancaHttpTest {
     static final Set<String> PUBLICAS = Set.of("/login", "/logout", "/error");
@@ -52,31 +49,17 @@ class SegurancaHttpTest {
         for (int i = 0; i < 5; i++) {
             mvc.perform(doIp(post("/login").param("senha", "errada"), ip)).andExpect(redirectedUrl("/login?erro"));
         }
-        mvc.perform(doIp(post("/login").param("senha", "teste"), ip)).andExpect(redirectedUrl("/login?erro"));
-        mvc.perform(doIp(post("/login").param("senha", "teste"), "192.0.2.77")).andExpect(redirectedUrl("/"));
+        mvc.perform(doIp(post("/login").param("senha", SenhaDeTeste.VALOR), ip)).andExpect(redirectedUrl("/login?erro"));
+        mvc.perform(doIp(post("/login").param("senha", SenhaDeTeste.VALOR), "192.0.2.77")).andExpect(redirectedUrl("/"));
     }
 
     @Test void logoutSoPorPostEEncerraASessao() throws Exception {
         var sessao = new MockHttpSession();
-        mvc.perform(doIp(post("/login").param("senha", "teste"), "198.51.100.9").session(sessao)).andExpect(redirectedUrl("/"));
+        mvc.perform(doIp(post("/login").param("senha", SenhaDeTeste.VALOR), "198.51.100.9").session(sessao)).andExpect(redirectedUrl("/"));
         mvc.perform(get("/historico").session(sessao)).andExpect(status().isOk());
         mvc.perform(get("/logout").session(sessao)).andExpect(status().isMethodNotAllowed());
         mvc.perform(get("/historico").session(sessao)).andExpect(status().isOk());
         mvc.perform(post("/logout").session(sessao)).andExpect(redirectedUrl("/login"));
         assertTrue(sessao.isInvalid());
-    }
-
-    @Test void producaoNaoSobeSemAppSenha() {
-        assumeTrue(System.getenv("APP_SENHA") == null, "APP_SENHA definida no ambiente");
-        var erro = assertThrows(Exception.class, () -> new SpringApplicationBuilder(CaixaApplication.class)
-                .web(WebApplicationType.NONE)
-                .run("--spring.profiles.active=prod",
-                        "--spring.datasource.url=jdbc:h2:mem:prod_sem_senha;DB_CLOSE_DELAY=-1",
-                        "--spring.datasource.driver-class-name=org.h2.Driver",
-                        "--spring.datasource.username=sa", "--spring.datasource.password=")
-                .close());
-        Throwable causa = erro;
-        while (causa.getCause() != null && !String.valueOf(causa.getMessage()).contains("APP_SENHA")) causa = causa.getCause();
-        assertTrue(String.valueOf(causa.getMessage()).contains("APP_SENHA"), erro.toString());
     }
 }

@@ -1,9 +1,9 @@
 package br.com.lac.caixa.controle;
 
+import br.com.lac.caixa.config.SenhaDeAcesso;
 import br.com.lac.caixa.servico.LimiteLogin;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -12,14 +12,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 @Controller
 public class LoginController {
 
-    /** Senha definida em app.senha (APP_SENHA em produção, obrigatória). */
-    private final String senhaCorreta;
+    /** Senha de APP_SENHA, conferida na inicialização. */
+    private final SenhaDeAcesso senha;
 
     /** Bloqueia o IP por 10 minutos após 5 erros em 10 minutos. */
     private final LimiteLogin limite;
 
-    public LoginController(@Value("${app.senha}") String senhaCorreta, LimiteLogin limite) {
-        this.senhaCorreta = senhaCorreta;
+    public LoginController(SenhaDeAcesso senha, LimiteLogin limite) {
+        this.senha = senha;
         this.limite = limite;
     }
 
@@ -29,8 +29,8 @@ public class LoginController {
     }
 
     @PostMapping("/login")
-    public String entrar(@RequestParam String senha, HttpServletRequest request) {
-        if (limite.autenticar(request.getRemoteAddr(), senhaCorreta, senha)) {
+    public String entrar(@RequestParam("senha") String informada, HttpServletRequest request) {
+        if (limite.autenticar(request.getRemoteAddr(), senha.confere(informada))) {
             HttpSession session = request.getSession(true);
             // Novo id após autenticar: um id de sessão anterior ao login não serve mais.
             request.changeSessionId();
