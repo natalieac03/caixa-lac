@@ -2,6 +2,7 @@ package br.com.lac.caixa.repositorio;
 
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.modelo.ItemVenda;
+import br.com.lac.caixa.modelo.OrigemPagamento;
 import br.com.lac.caixa.modelo.PagamentoVenda;
 import br.com.lac.caixa.modelo.Venda;
 import jakarta.persistence.EntityManager;
@@ -12,7 +13,9 @@ import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Root;
 import java.math.BigDecimal;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.data.jpa.domain.Specification;
 
 /** Implementação de VendaConsultas, encontrada pelo Spring Data pelo sufixo Impl. */
@@ -89,5 +92,25 @@ class VendaConsultasImpl implements VendaConsultas {
                 t.get(1, BigDecimal.class),
                 t.get(2, BigDecimal.class),
                 t.get(3, BigDecimal.class));
+    }
+
+    @Override
+    public Map<OrigemPagamento, BigDecimal> pixPorOrigem(Specification<Venda> filtro) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Tuple> q = cb.createTupleQuery();
+        Root<Venda> v = q.from(Venda.class);
+        Join<Venda, PagamentoVenda> p = v.join("pagamentos");
+        q.multiselect(p.get("origem"), cb.coalesce(cb.sum(p.<BigDecimal>get("valor")), BigDecimal.ZERO))
+                .where(cb.and(filtro.toPredicate(v, q, cb), cb.equal(p.get("forma"), FormaPagamento.PIX)))
+                .groupBy(p.get("origem"));
+        var porOrigem = new EnumMap<OrigemPagamento, BigDecimal>(OrigemPagamento.class);
+        porOrigem.put(OrigemPagamento.MERCADO_PAGO, BigDecimal.ZERO);
+        porOrigem.put(OrigemPagamento.MANUAL, BigDecimal.ZERO);
+        for (Tuple t : em.createQuery(q).getResultList()) {
+            var origem = t.get(0, OrigemPagamento.class);
+            if (origem == null) origem = OrigemPagamento.MANUAL;
+            porOrigem.merge(origem, t.get(1, BigDecimal.class), BigDecimal::add);
+        }
+        return porOrigem;
     }
 }

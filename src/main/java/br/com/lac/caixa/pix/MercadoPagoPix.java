@@ -71,7 +71,8 @@ public class MercadoPagoPix {
         corpo.put("processing_mode", "automatic");
         corpo.put("total_amount", quantia);
         corpo.put("external_reference", referencia);
-        corpo.putObject("payer").put("email", config.getPayerEmail());
+        ObjectNode pagador = corpo.putObject("payer").put("email", config.getPayerEmail());
+        if (!config.getPayerFirstName().isBlank()) pagador.put("first_name", config.getPayerFirstName());
         ObjectNode pagamento =
                 corpo.putObject("transactions").putArray("payments").addObject();
         pagamento.put("amount", quantia);

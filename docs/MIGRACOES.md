@@ -71,6 +71,19 @@ O arquivo local original não foi migrado durante a implementação.
     (cortesias), que não têm linha em `pagamento_venda`. Fica só no dump e na
     exportação do passo 7.1 abaixo. As demais vendas já tinham a forma copiada
     pela V6 (inclusive a descrição do Outro).
+- V8 (Pix automático) cria `cobranca_pix` (uma cobrança do Mercado Pago por
+  parte Pix de uma venda em andamento: token + número estável da parte, valor,
+  tentativa, `order_id`, QR, status `PENDENTE/PAGA/EXPIRADA/CANCELADA`,
+  `valor_pago`, `criada_em`, `paga_em`; únicos em `(token, parte)` e `order_id`;
+  CHECK de que `PAGA` tem `valor_pago = valor`). Em `pagamento_venda`, acrescenta
+  `origem` (`MERCADO_PAGO` ou `MANUAL`, só em Pix) e `mp_order_id` (único,
+  obrigatório só com `MERCADO_PAGO`). As partes Pix existentes viram `MANUAL`
+  (foram todas conferidas no app). Não apaga nada.
+- V9 acrescenta `resolvida_em` e `resolucao` em `cobranca_pix`, para o aviso
+  "Pix recebido sem venda" do histórico. Não mexe em dado existente.
+- Rollback da V8/V9: as duas só acrescentam; a versão anterior do app ignora as
+  colunas e a tabela novas, então reimplantar a versão anterior basta (o dump
+  continua sendo o caminho se for preciso voltar o banco).
 
 Nomes de constraints gerados automaticamente pelo Hibernate/H2 diferem dos nomes
 explícitos da V1; isso não muda a integridade nem impede `validate`. O H2 usa

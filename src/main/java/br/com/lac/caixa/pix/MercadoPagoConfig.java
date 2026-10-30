@@ -15,6 +15,9 @@ public class MercadoPagoConfig {
     private String accessToken = "";
     private String webhookSecret = "";
     private String payerEmail = "";
+    /** Opcional, só para testes: "APRO" faz o Mercado Pago aprovar o Pix de teste sozinho. */
+    private String payerFirstName = "";
+
     private String url = "https://api.mercadopago.com";
     private Duration timeout = Duration.ofSeconds(5);
     /** Validade do Pix (ISO 8601). A documentação exige no mínimo 30 minutos. */
@@ -52,6 +55,14 @@ public class MercadoPagoConfig {
 
     public void setPayerEmail(String payerEmail) {
         this.payerEmail = payerEmail == null ? "" : payerEmail.trim();
+    }
+
+    public String getPayerFirstName() {
+        return payerFirstName;
+    }
+
+    public void setPayerFirstName(String payerFirstName) {
+        this.payerFirstName = payerFirstName == null ? "" : payerFirstName.trim();
     }
 
     public String getUrl() {

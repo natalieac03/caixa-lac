@@ -136,17 +136,85 @@ servlet à parte e não passa pelo interceptor de login.
 ## Pix automático (Mercado Pago)
 
 Opcional. Com as variáveis abaixo, a tela de venda gera o QR do Pix pelo Mercado
-Pago e confirma sozinha quando o pagamento cai. Sem `MP_ACCESS_TOKEN`, o recurso
-fica desligado e tudo continua como antes (Pix manual, conferido no app).
+Pago (Orders API) e confirma sozinha quando o pagamento cai. Sem
+`MP_ACCESS_TOKEN`, o recurso fica desligado e tudo continua como antes (Pix
+manual, conferido no app). Se o Mercado Pago cair no meio do evento, a tela
+mostra o aviso e o botão **Pix manual** continua funcionando.
 
 | Variável | Para quê |
 |---|---|
 | `MP_ACCESS_TOKEN` | Access Token da aplicação no Mercado Pago (liga o recurso) |
 | `MP_WEBHOOK_SECRET` | Assinatura secreta dos webhooks (valida os avisos de pagamento) |
 | `MP_PAYER_EMAIL` | E-mail fixo da LAC usado como pagador (a API exige um) |
+| `MP_PAYER_FIRST_NAME` | Só em teste: `APRO` faz o Mercado Pago aprovar o Pix de teste sozinho. Vazio em produção |
 
 Ficam só em variável de ambiente (Variables no Railway, ou o
 `senha-local.properties` no computador), nunca no código nem no log.
+
+### Como funciona no caixa
+
+- Forma **Pix** (única ou uma parte do pagamento dividido): aparecem **Gerar
+  Pix** e **Pix manual**. "Gerar Pix" mostra o QR, o valor, **Copiar código** e
+  "Aguardando pagamento..."; a tela pergunta ao servidor a cada 3 s, e o
+  servidor pergunta ao Mercado Pago. Quando o pagamento cai, a parte fica
+  "Pix recebido" e o **Confirmar** libera (com todas as partes fechadas).
+- O QR vale 30 minutos (mínimo da documentação). Se o total mudar depois de
+  gerar, o Pix antigo é cancelado e é preciso gerar outro; um Pix já pago não
+  muda de valor (ajuste as outras partes).
+- A venda só é aceita com o Pix **pago no Mercado Pago com o mesmo valor**: o
+  servidor confere de novo no momento de confirmar. Cada parte Pix fica gravada
+  como `MERCADO_PAGO` (com o id da order) ou `MANUAL`.
+- O webhook (`/webhooks/mercadopago`) é um reforço: com a assinatura conferida,
+  ele faz o servidor consultar a order e marcar a cobrança como paga, mesmo com a
+  tela fechada.
+- **Pix recebido sem venda:** se alguém pagar e a venda nunca for confirmada
+  (tela fechada), o histórico mostra um aviso com hora, valor e id da order,
+  para alguém resolver à mão (lançar a venda ou estornar no Mercado Pago) e
+  marcar como resolvido. Pix pago com valor diferente do cobrado também aparece.
+- A cada 5 minutos, cobranças pendentes há mais de 20 minutos são conferidas e,
+  se ainda não pagas, canceladas no Mercado Pago.
+- No **fechamento**, o total Pix aparece separado em "Pix pelo Mercado Pago" e
+  "Pix manual", para conferir com o extrato de cada lugar.
+
+### Configurar no Mercado Pago
+
+1. **Conta e chave Pix:** a conta Mercado Pago da LAC precisa ter uma **chave Pix
+   cadastrada** (no app do Mercado Pago, área Pix → Minhas chaves). Sem chave
+   Pix, a API não gera QR.
+2. **Criar a aplicação:** em [Suas integrações](https://www.mercadopago.com.br/developers/panel/app)
+   → **Criar aplicação**; escolha pagamentos online com **Checkout Transparente**
+   (Orders API).
+3. **Access Token:** na aplicação, menu **Credenciais**. Use o de **teste** para
+   ensaiar e o de **produção** no evento; os dois começam com `APP_USR`. Ele vai
+   em `MP_ACCESS_TOKEN`. Nunca no código, nunca no front.
+4. **Webhook:** na aplicação, **Configuração de Webhooks** → escolha Teste ou
+   Produção no seletor → URL HTTPS
+   `https://<seu-app>.up.railway.app/webhooks/mercadopago` → marque o evento
+   **Order (Mercado Pago)** → **Salvar**. A tela passa a mostrar a
+   **Assinatura secreta** ("revelar"): ela vai em `MP_WEBHOOK_SECRET`. Use
+   "Simular notificação" para conferir que o app responde (sem uma order nossa,
+   ele responde 200 e não faz nada; com assinatura errada, 401).
+
+### Configurar no Railway
+
+No serviço do app, em **Variables**: `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET` e
+`MP_PAYER_EMAIL` (e, só para ensaio, `MP_PAYER_FIRST_NAME=APRO`). O deploy
+seguinte liga o recurso; o log de início diz "Pix automático (Mercado Pago)
+ligado" (sem mostrar valores). A URL do webhook é o domínio público do serviço
+(Settings → Networking) + `/webhooks/mercadopago`.
+
+### Testar com as credenciais de teste
+
+1. Variables com o Access Token **de teste**, a assinatura do webhook do modo
+   **Teste** e `MP_PAYER_FIRST_NAME=APRO`.
+2. Faça uma venda com **Gerar Pix**: com `APRO`, o Mercado Pago aprova o Pix de
+   teste sozinho e a tela mostra "Pix recebido" em poucos segundos.
+3. Confira em Suas integrações → aplicação → **Pagamentos de teste**, e no
+   histórico/fechamento do caixa (parte marcada como Mercado Pago).
+4. Antes do evento, troque para as credenciais e o webhook de **produção** e
+   apague `MP_PAYER_FIRST_NAME`.
+
+A suíte de testes nunca chama o Mercado Pago: usa um servidor HTTP falso.
 
 ## Editar cadastro
 

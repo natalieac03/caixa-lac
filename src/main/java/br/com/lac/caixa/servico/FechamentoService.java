@@ -1,6 +1,7 @@
 package br.com.lac.caixa.servico;
 
 import br.com.lac.caixa.modelo.FormaPagamento;
+import br.com.lac.caixa.modelo.OrigemPagamento;
 import br.com.lac.caixa.repositorio.FiltroHistorico;
 import br.com.lac.caixa.repositorio.VendaRepository;
 import br.com.lac.caixa.repositorio.VendaSpecs;
@@ -34,6 +35,7 @@ public class FechamentoService {
             totalFormas = totalFormas.add(linha.total());
         }
         var totais = vendas.totais(filtro);
+        var pix = vendas.pixPorOrigem(filtro);
         return new Fechamento(
                 linhas,
                 totais.vendas(),
@@ -42,6 +44,8 @@ public class FechamentoService {
                 totais.descontos(),
                 totais.ajustes(),
                 vendas.count(filtro.and(VendaSpecs.pagamentoDividido())),
-                vendas.count(filtro.and(VendaSpecs.cortesia())));
+                vendas.count(filtro.and(VendaSpecs.cortesia())),
+                pix.get(OrigemPagamento.MERCADO_PAGO),
+                pix.get(OrigemPagamento.MANUAL));
     }
 }

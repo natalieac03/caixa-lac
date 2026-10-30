@@ -95,6 +95,8 @@ class MercadoPagoPixTest {
         assertEquals("12.50", corpo.path("total_amount").asText());
         assertEquals("venda-abc-p0-1250", corpo.path("external_reference").asText());
         assertEquals("caixa@lac.test", corpo.path("payer").path("email").asText());
+        assertTrue(
+                corpo.path("payer").path("first_name").isMissingNode(), "sem MP_PAYER_FIRST_NAME, não vai first_name");
         var pagamento = corpo.path("transactions").path("payments").path(0);
         assertEquals("12.50", pagamento.path("amount").asText());
         assertEquals("PT30M", pagamento.path("expiration_time").asText());
@@ -231,5 +233,18 @@ class MercadoPagoPixTest {
         assertFalse(new MercadoPagoPix(semEmail).ligado());
         assertThrows(MercadoPagoException.class, () -> semToken.criarPix(BigDecimal.ONE, "r"));
         assertEquals(0, servidor.getRequestCount());
+    }
+
+    @Test
+    @DisplayName("Com MP_PAYER_FIRST_NAME (ex.: APRO nos testes), vai payer.first_name")
+    void primeiroNomeDoPagadorDeTeste() throws Exception {
+        var c = config(servidor.url("/").toString(), TOKEN);
+        c.setPayerFirstName("APRO");
+        servidor.enqueue(json(201, order("action_required", "waiting_transfer", "0.00")));
+
+        new MercadoPagoPix(c).criarPix(BigDecimal.TEN, "ref-apro");
+
+        var corpo = new ObjectMapper().readTree(servidor.takeRequest().getBody().readUtf8());
+        assertEquals("APRO", corpo.path("payer").path("first_name").asText());
     }
 }

@@ -85,6 +85,14 @@ public final class ExportadorCSV {
                     .append('\n');
         }
         csv.append(intervalo)
+                .append("\"Pix pelo Mercado Pago\";;")
+                .append(Dinheiro.numero(fechamento.pixMercadoPago()))
+                .append('\n');
+        csv.append(intervalo)
+                .append("\"Pix manual\";;")
+                .append(Dinheiro.numero(fechamento.pixManual()))
+                .append('\n');
+        csv.append(intervalo)
                 .append("\"Soma das formas\";;")
                 .append(Dinheiro.numero(fechamento.totalFormas()))
                 .append('\n');

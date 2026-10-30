@@ -47,6 +47,10 @@
             </tr>
             </tbody>
             <tfoot>
+            <tr class="pix-origem"><td>&nbsp;&nbsp;Pix pelo Mercado Pago</td><td></td>
+                <td class="num" th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(fechamento.pixMercadoPago)}">R$ 0,00</td></tr>
+            <tr class="pix-origem"><td>&nbsp;&nbsp;Pix manual (conferir no app)</td><td></td>
+                <td class="num" th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(fechamento.pixManual)}">R$ 0,00</td></tr>
             <tr><th>Soma das formas</th><td></td>
                 <td class="num"><strong th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(fechamento.totalFormas)}">R$ 0,00</strong></td></tr>
             </tfoot>

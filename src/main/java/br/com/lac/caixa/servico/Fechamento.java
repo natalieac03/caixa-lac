@@ -22,13 +22,25 @@ public record Fechamento(
         BigDecimal descontos,
         BigDecimal ajustes,
         long divididas,
-        long cortesias) {
+        long cortesias,
+        BigDecimal pixMercadoPago,
+        BigDecimal pixManual) {
     public Fechamento {
         formas = List.copyOf(formas);
     }
 
     /** vendas = quantas vendas tiveram alguma parte nesta forma. */
     public record Linha(FormaPagamento forma, long vendas, BigDecimal total) {}
+
+    /** O Pix separado por origem soma o total da linha Pix (conferir com cada extrato). */
+    public boolean isPixConfere() {
+        BigDecimal pix = formas.stream()
+                .filter(l -> l.forma() == FormaPagamento.PIX)
+                .map(Linha::total)
+                .findFirst()
+                .orElse(BigDecimal.ZERO);
+        return pixMercadoPago.add(pixManual).compareTo(pix) == 0;
+    }
 
     public boolean isConfere() {
         return totalFormas.compareTo(total) == 0;
