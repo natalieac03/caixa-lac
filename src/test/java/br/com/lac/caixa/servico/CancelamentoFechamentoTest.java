@@ -20,6 +20,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -59,102 +60,12 @@ class CancelamentoFechamentoTest {
         return vendas.saveAndFlush(v);
     }
 
-    void valor(String esperado, BigDecimal atual) {
-        assertEquals(0, new BigDecimal(esperado).compareTo(atual));
+    static void assertValor(String esperado, BigDecimal atual) {
+        assertEquals(0, new BigDecimal(esperado).compareTo(atual), "valor " + atual);
     }
 
-    @Test
-    void cancelarDevolveTodosOsItensUmaVezEPreservaAuditoria() {
-        var p = produtos.save(new Produto("Primeiro", new BigDecimal("6"), 10));
-        var outro = produtos.save(new Produto("Segundo", new BigDecimal("2"), 7));
-        var v = caixa.registrarVenda(
-                        Map.of(p.getId(), 3, outro.getId(), 2),
-                        List.of(PagamentoInformado.total(FormaPagamento.PIX)),
-                        null,
-                        null,
-                        UUID.randomUUID().toString())
-                .venda();
-        v.setDataHora(dia.atTime(12, 0));
-        vendas.saveAndFlush(v);
-        assertEquals(7, p.getQuantidade());
-        assertEquals(5, outro.getQuantidade());
-        caixa.cancelarVenda(v.getId(), "Cliente desistiu");
-        var instante = v.getDataCancelamento();
-        caixa.cancelarVenda(v.getId(), "Segunda tentativa");
-        vendas.flush();
-        assertEquals(10, p.getQuantidade());
-        assertEquals(7, outro.getQuantidade());
-        assertTrue(v.isCancelada());
-        assertNotNull(instante);
-        assertEquals(instante, v.getDataCancelamento());
-        assertEquals("Cliente desistiu", v.getMotivoCancelamento());
-        valor("22", v.getValorCobrado());
-        var filtro = new FiltroHistorico(null, dia, dia, "");
-        var r = historico.consultar(filtro, 0);
-        assertEquals(1, r.pagina().getTotalElements());
-        assertEquals(0, r.resumo().getVendas());
-        valor("0", r.resumo().getTotal());
-        assertTrue(historico.exportar(filtro).isEmpty());
-        assertFalse(ExportadorCSV.doHistorico(List.of(v)).contains("Cliente"));
-        assertEquals(1, ExportadorCSV.doHistorico(List.of(v)).lines().count());
-        valor("0", fechamento.consultar(dia, dia).total());
-    }
-
-    @Test
-    void motivoVazioNaoCancelaNemDevolveEstoque() {
-        var p = produtos.save(new Produto("Produto", BigDecimal.TEN, 10));
-        var v = registrar(p, 2, FormaPagamento.PIX, null);
-        assertThrows(RegraDeNegocioException.class, () -> caixa.cancelarVenda(v.getId(), " "));
-        assertFalse(v.isCancelada());
-        assertEquals(8, p.getQuantidade());
-    }
-
-    @Test
-    void fechamentoSomaFormasDescontosEAjustesSemCanceladas() {
-        var p = produtos.save(new Produto("Produto", new BigDecimal("10"), 20));
-        registrar(p, 2, FormaPagamento.PIX, "18");
-        registrar(p, 1, FormaPagamento.PIX, "12");
-        var credito = registrar(p, 1, FormaPagamento.CREDITO, null);
-        credito.registrarValores(new BigDecimal("8"), new BigDecimal("2"), new BigDecimal("8"), null);
-        credito.registrarPagamentos(
-                List.of(new PagamentoVenda(FormaPagamento.CREDITO, new BigDecimal("8"), null, null)));
-        vendas.saveAndFlush(credito);
-        var cancelada = registrar(p, 1, FormaPagamento.DINHEIRO, null);
-        caixa.cancelarVenda(cancelada.getId(), "Cancelada");
-        var fora = registrar(p, 1, FormaPagamento.PIX, null);
-        fora.setDataHora(dia.plusDays(1).atStartOfDay());
-        vendas.saveAndFlush(fora);
-        var legado = Venda.nova();
-        legado.setDataHora(dia.atStartOfDay());
-        legado.setValorTotal(new BigDecimal("4"));
-        legado.registrarPagamentos(List.of(new PagamentoVenda(FormaPagamento.DEBITO, new BigDecimal("4"), null, null)));
-        vendas.saveAndFlush(legado);
-        var r = fechamento.consultar(dia, dia);
-        assertEquals(4, r.quantidade());
-        valor("42", r.total());
-        valor("2", r.descontos());
-        valor("0", r.ajustes());
-        var pix = r.formas().stream()
-                .filter(f -> f.forma() == FormaPagamento.PIX)
-                .findFirst()
-                .orElseThrow();
-        assertEquals(2, pix.vendas());
-        valor("30", pix.total());
-        var cr = r.formas().stream()
-                .filter(f -> f.forma() == FormaPagamento.CREDITO)
-                .findFirst()
-                .orElseThrow();
-        assertEquals(1, cr.vendas());
-        valor("8", cr.total());
-        assertTrue(r.isConfere());
-        assertEquals(
-                0,
-                r.formas().stream()
-                        .filter(f -> f.forma() == FormaPagamento.DINHEIRO)
-                        .findFirst()
-                        .orElseThrow()
-                        .vendas());
-        assertTrue(ExportadorCSV.doFechamento(r, dia, dia).contains("TOTAL;4;42,00"));
+    static Fechamento.Linha linha(Fechamento f, FormaPagamento forma) {
+        return f.formas().stream().filter(l -> l.forma() == forma).findFirst().orElseThrow();
     }
 
     Venda dividida(Produto p, int qtd, PagamentoInformado... partes) {
@@ -170,7 +81,107 @@ class CancelamentoFechamentoTest {
     }
 
     @Test
+    @DisplayName("Cancelar devolve todos os itens uma vez só, preserva data/motivo e tira a venda de totais e CSV")
+    void cancelarDevolveTodosOsItensUmaVezEPreservaAuditoria() {
+        // Arrange: venda de 3 x R$ 6 + 2 x R$ 2 = R$ 22
+        var p = produtos.save(new Produto("Primeiro", new BigDecimal("6"), 10));
+        var outro = produtos.save(new Produto("Segundo", new BigDecimal("2"), 7));
+        var v = caixa.registrarVenda(
+                        Map.of(p.getId(), 3, outro.getId(), 2),
+                        List.of(PagamentoInformado.total(FormaPagamento.PIX)),
+                        null,
+                        null,
+                        UUID.randomUUID().toString())
+                .venda();
+        v.setDataHora(dia.atTime(12, 0));
+        vendas.saveAndFlush(v);
+        assertEquals(7, p.getQuantidade());
+        assertEquals(5, outro.getQuantidade());
+
+        // Act: cancela e tenta cancelar de novo
+        caixa.cancelarVenda(v.getId(), "Cliente desistiu");
+        var instante = v.getDataCancelamento();
+        caixa.cancelarVenda(v.getId(), "Segunda tentativa");
+        vendas.flush();
+
+        // Assert: estoque devolvido uma vez, auditoria preservada
+        assertEquals(10, p.getQuantidade());
+        assertEquals(7, outro.getQuantidade());
+        assertTrue(v.isCancelada());
+        assertNotNull(instante);
+        assertEquals(instante, v.getDataCancelamento());
+        assertEquals("Cliente desistiu", v.getMotivoCancelamento());
+        assertValor("22", v.getValorCobrado());
+
+        // Assert: aparece no histórico, mas fora dos indicadores, do CSV e do fechamento
+        var filtro = new FiltroHistorico(null, dia, dia, "");
+        var r = historico.consultar(filtro, 0);
+        assertEquals(1, r.pagina().getTotalElements());
+        assertEquals(0, r.resumo().getVendas());
+        assertValor("0", r.resumo().getTotal());
+        assertTrue(historico.exportar(filtro).isEmpty());
+        assertFalse(ExportadorCSV.doHistorico(List.of(v)).contains("Cliente"));
+        assertEquals(1, ExportadorCSV.doHistorico(List.of(v)).lines().count());
+        assertValor("0", fechamento.consultar(dia, dia).total());
+    }
+
+    @Test
+    @DisplayName("Motivo vazio não cancela nem devolve estoque")
+    void motivoVazioNaoCancelaNemDevolveEstoque() {
+        // Arrange
+        var p = produtos.save(new Produto("Produto", BigDecimal.TEN, 10));
+        var v = registrar(p, 2, FormaPagamento.PIX, null);
+
+        // Act / Assert
+        assertThrows(RegraDeNegocioException.class, () -> caixa.cancelarVenda(v.getId(), " "));
+        assertFalse(v.isCancelada());
+        assertEquals(8, p.getQuantidade());
+    }
+
+    @Test
+    @DisplayName("Fechamento soma formas, descontos e ajustes sem canceladas nem vendas fora do período")
+    void fechamentoSomaFormasDescontosEAjustesSemCanceladas() {
+        // Arrange
+        var p = produtos.save(new Produto("Produto", new BigDecimal("10"), 20));
+        registrar(p, 2, FormaPagamento.PIX, "18"); // ajuste -2
+        registrar(p, 1, FormaPagamento.PIX, "12"); // ajuste +2
+        var credito = registrar(p, 1, FormaPagamento.CREDITO, null);
+        credito.registrarValores(new BigDecimal("8"), new BigDecimal("2"), new BigDecimal("8"), null);
+        credito.registrarPagamentos(
+                List.of(new PagamentoVenda(FormaPagamento.CREDITO, new BigDecimal("8"), null, null)));
+        vendas.saveAndFlush(credito);
+        var cancelada = registrar(p, 1, FormaPagamento.DINHEIRO, null);
+        caixa.cancelarVenda(cancelada.getId(), "Cancelada");
+        var fora = registrar(p, 1, FormaPagamento.PIX, null);
+        fora.setDataHora(dia.plusDays(1).atStartOfDay());
+        vendas.saveAndFlush(fora);
+        var legado = Venda.nova();
+        legado.setDataHora(dia.atStartOfDay());
+        legado.setValorTotal(new BigDecimal("4"));
+        legado.registrarPagamentos(List.of(new PagamentoVenda(FormaPagamento.DEBITO, new BigDecimal("4"), null, null)));
+        vendas.saveAndFlush(legado);
+
+        // Act
+        var r = fechamento.consultar(dia, dia);
+
+        // Assert
+        assertEquals(4, r.quantidade());
+        assertValor("42", r.total());
+        assertValor("2", r.descontos());
+        assertValor("0", r.ajustes());
+        assertEquals(2, linha(r, FormaPagamento.PIX).vendas());
+        assertValor("30", linha(r, FormaPagamento.PIX).total());
+        assertEquals(1, linha(r, FormaPagamento.CREDITO).vendas());
+        assertValor("8", linha(r, FormaPagamento.CREDITO).total());
+        assertTrue(r.isConfere());
+        assertEquals(0, linha(r, FormaPagamento.DINHEIRO).vendas());
+        assertTrue(ExportadorCSV.doFechamento(r, dia, dia).contains("TOTAL;4;42,00"));
+    }
+
+    @Test
+    @DisplayName("Fechamento soma cada parte do pagamento dividido na forma certa e bate com o total cobrado")
     void fechamentoSomaCadaParteNaFormaCertaEBateComOTotal() {
+        // Arrange: duas vendas divididas, uma simples, uma cortesia e uma dividida cancelada
         var p = produtos.save(new Produto("Produto", new BigDecimal("6"), 50));
         dividida(
                 p,
@@ -198,23 +209,26 @@ class CancelamentoFechamentoTest {
                 new PagamentoInformado(FormaPagamento.CREDITO, new BigDecimal("6"), null, null),
                 new PagamentoInformado(FormaPagamento.DEBITO, new BigDecimal("6"), null, null));
         int antes = p.getQuantidade();
-        caixa.cancelarVenda(cancelada.getId(), "Desistiu");
-        assertEquals(antes + 2, p.getQuantidade());
 
+        // Act
+        caixa.cancelarVenda(cancelada.getId(), "Desistiu");
         var r = fechamento.consultar(dia, dia);
-        java.util.function.Function<FormaPagamento, Fechamento.Linha> linha =
-                f -> r.formas().stream().filter(l -> l.forma() == f).findFirst().orElseThrow();
-        valor("15", linha.apply(FormaPagamento.PIX).total());
-        assertEquals(2, linha.apply(FormaPagamento.PIX).vendas());
-        valor("14", linha.apply(FormaPagamento.DINHEIRO).total());
-        assertEquals(2, linha.apply(FormaPagamento.DINHEIRO).vendas());
-        valor("7", linha.apply(FormaPagamento.OUTRO).total());
-        // Cancelada sai dos totais com todas as suas partes.
-        valor("0", linha.apply(FormaPagamento.CREDITO).total());
-        valor("0", linha.apply(FormaPagamento.DEBITO).total());
+
+        // Assert: cancelamento devolve o estoque
+        assertEquals(antes + 2, p.getQuantidade());
+        // Assert: cada parte na sua forma
+        assertValor("15", linha(r, FormaPagamento.PIX).total());
+        assertEquals(2, linha(r, FormaPagamento.PIX).vendas());
+        assertValor("14", linha(r, FormaPagamento.DINHEIRO).total());
+        assertEquals(2, linha(r, FormaPagamento.DINHEIRO).vendas());
+        assertValor("7", linha(r, FormaPagamento.OUTRO).total());
+        // Assert: cancelada sai dos totais com todas as suas partes
+        assertValor("0", linha(r, FormaPagamento.CREDITO).total());
+        assertValor("0", linha(r, FormaPagamento.DEBITO).total());
+        // Assert: totais e conferência
         assertEquals(4, r.quantidade());
-        valor("36", r.total());
-        valor("36", r.totalFormas());
+        assertValor("36", r.total());
+        assertValor("36", r.totalFormas());
         assertEquals(2, r.divididas());
         assertEquals(1, r.cortesias());
         assertTrue(r.isConfere(), "soma das formas " + r.totalFormas() + " x total " + r.total());

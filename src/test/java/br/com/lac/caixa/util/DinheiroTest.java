@@ -13,11 +13,19 @@ import br.com.lac.caixa.modelo.Venda;
 import br.com.lac.caixa.pagamento.PagamentoFactory;
 import java.math.BigDecimal;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class DinheiroTest {
+
+    static PagamentoVenda parte(FormaPagamento forma, String valor, String descricao) {
+        return new PagamentoVenda(forma, new BigDecimal(valor), descricao, null);
+    }
+
     @Test
+    @DisplayName("Lê \"1.234,56\", \"12,50\" e \"12.50\"; vazio é null; formato errado é recusado")
     void aceitaFormatosERecusaValorMalformado() {
+        // Act / Assert
         assertEquals(new BigDecimal("1234.56"), Dinheiro.parse("1.234,56"));
         assertEquals(new BigDecimal("12.50"), Dinheiro.parse("12,50"));
         assertEquals(new BigDecimal("12.50"), Dinheiro.parse("12.50"));
@@ -27,30 +35,48 @@ class DinheiroTest {
     }
 
     @Test
+    @DisplayName("Na tela o valor tem separador de milhar (R$ 1.234,56); no CSV não (1234,56)")
     void reaisSeparaMilharECsvNao() {
-        assertEquals("R$ 1.234,56", Dinheiro.reais(new BigDecimal("1234.56")));
+        // Arrange
+        var mil = new BigDecimal("1234.56");
+
+        // Act
+        String mensagem = PagamentoFactory.mensagem(List.of(parte(FormaPagamento.PIX, "1234.56", null)));
+
+        // Assert
+        assertEquals("R$ 1.234,56", Dinheiro.reais(mil));
         assertEquals("R$ 0,50", Dinheiro.reais(new BigDecimal("0.5")));
-        assertEquals("1234,56", Dinheiro.numero(new BigDecimal("1234.56")));
-        assertTrue(PagamentoFactory.mensagem(
-                        List.of(new PagamentoVenda(FormaPagamento.PIX, new BigDecimal("1234.56"), null, null)))
-                .contains("R$ 1.234,56"));
+        assertEquals("1234,56", Dinheiro.numero(mil));
+        assertTrue(mensagem.contains("R$ 1.234,56"));
     }
 
     @Test
+    @DisplayName("A mensagem de confirmação de toda forma de pagamento mostra o valor em reais")
     void todasAsMensagensUsamReais() {
-        for (var forma : FormaPagamento.values())
-            assertTrue(PagamentoFactory.mensagem(
-                            List.of(new PagamentoVenda(forma, new BigDecimal("12.50"), "teste", null)))
-                    .contains("R$ 12,50"));
+        for (var forma : FormaPagamento.values()) {
+            // Act
+            String mensagem = PagamentoFactory.mensagem(List.of(parte(forma, "12.50", "teste")));
+
+            // Assert
+            assertTrue(mensagem.contains("R$ 12,50"), forma + ": " + mensagem);
+        }
     }
 
     @Test
+    @DisplayName("CSV usa vírgula decimal e escapa aspas nos nomes")
     void csvUsaVirgulaEEscapaNomes() {
+        // Arrange
         var p = new Produto("Produto \"especial\"", new BigDecimal("12.50"), 2);
-        assertTrue(ExportadorCSV.doEstoque(List.of(p)).contains("\"Produto \"\"especial\"\"\";\"\";12,50;2"));
         var v = Venda.nova();
         v.setValorTotal(new BigDecimal("12.50"));
-        v.registrarPagamentos(List.of(new PagamentoVenda(FormaPagamento.PIX, new BigDecimal("12.50"), null, null)));
-        assertTrue(ExportadorCSV.doHistorico(List.of(v)).contains(";12,50;12,50;0,00;0,00;0,00;0,00;\"\"\n"));
+        v.registrarPagamentos(List.of(parte(FormaPagamento.PIX, "12.50", null)));
+
+        // Act
+        String estoque = ExportadorCSV.doEstoque(List.of(p));
+        String historico = ExportadorCSV.doHistorico(List.of(v));
+
+        // Assert
+        assertTrue(estoque.contains("\"Produto \"\"especial\"\"\";\"\";12,50;2"));
+        assertTrue(historico.contains(";12,50;12,50;0,00;0,00;0,00;0,00;\"\"\n"));
     }
 }

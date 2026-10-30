@@ -13,6 +13,8 @@ import br.com.lac.caixa.repositorio.ProdutoRepository;
 import br.com.lac.caixa.repositorio.VendaRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -36,20 +38,34 @@ class HistoricoIntegracaoTest {
         v.setDataHora(dia.atTime(12, 0));
         v.adicionarItem(new ItemVenda(p, 2));
         v.registrarValores(new BigDecimal("2"), BigDecimal.ZERO, new BigDecimal("2"), null);
-        v.registrarPagamentos(java.util.List.of(new PagamentoVenda(forma, new BigDecimal("2"), null, null)));
+        v.registrarPagamentos(List.of(new PagamentoVenda(forma, new BigDecimal("2"), null, null)));
         return vendas.saveAndFlush(v);
     }
 
+    long vendasNoFiltro(LocalDate dia, String termo) {
+        return consulta.consultar(new FiltroHistorico(null, dia, dia, termo), 0)
+                .resumo()
+                .getVendas();
+    }
+
     @Test
+    @DisplayName("Página de 50 cortada no banco; indicadores e CSV somam o filtro inteiro")
     void paginaNoBancoESomaFiltroInteiro() {
+        // Arrange: 51 vendas Pix no dia, 1 de crédito no dia e 1 Pix no dia seguinte
         var dia = LocalDate.of(2030, 1, 1);
         var p = produtos.save(new Produto("Especial %_", BigDecimal.ONE, 1000));
-        for (int i = 0; i < 51; i++) venda(p, FormaPagamento.PIX, dia);
+        for (int i = 0; i < 51; i++) {
+            venda(p, FormaPagamento.PIX, dia);
+        }
         venda(p, FormaPagamento.CREDITO, dia);
         venda(p, FormaPagamento.PIX, dia.plusDays(1));
         var filtro = new FiltroHistorico(FormaPagamento.PIX, dia, dia, "ESPECIAL %_");
+
+        // Act
         var primeira = consulta.consultar(filtro, 0);
         var segunda = consulta.consultar(filtro, 1);
+
+        // Assert
         assertEquals(50, primeira.pagina().getNumberOfElements());
         assertEquals(1, segunda.pagina().getNumberOfElements());
         assertEquals(51, primeira.pagina().getTotalElements());
@@ -64,17 +80,22 @@ class HistoricoIntegracaoTest {
     }
 
     @Test
+    @DisplayName("Filtro de produto traz a venda inteira (todos os itens) sem duplicar o total")
     void produtoQualificaVendaSemCortarOutrosItensOuDuplicarTotal() {
+        // Arrange: venda com o produto buscado (x2) e outro (x3), total 5
         var dia = LocalDate.of(2031, 1, 1);
         var p = produtos.save(new Produto("Buscado", BigDecimal.ONE, 10));
         var outro = produtos.save(new Produto("Outro", BigDecimal.ONE, 10));
         var v = venda(p, FormaPagamento.PIX, dia);
         v.adicionarItem(new ItemVenda(outro, 3));
         v.registrarValores(new BigDecimal("5"), BigDecimal.ZERO, new BigDecimal("5"), null);
-        v.registrarPagamentos(
-                java.util.List.of(new PagamentoVenda(FormaPagamento.PIX, new BigDecimal("5"), null, null)));
+        v.registrarPagamentos(List.of(new PagamentoVenda(FormaPagamento.PIX, new BigDecimal("5"), null, null)));
         vendas.saveAndFlush(v);
+
+        // Act
         var r = consulta.consultar(new FiltroHistorico(null, dia, dia, "buscado"), 0);
+
+        // Assert
         assertEquals(1, r.resumo().getVendas());
         assertEquals(5, r.resumo().getItens());
         assertEquals(0, new BigDecimal("5").compareTo(r.resumo().getTotal()));
@@ -82,22 +103,17 @@ class HistoricoIntegracaoTest {
     }
 
     @Test
+    @DisplayName("Filtro de produto não diferencia acento nem maiúscula (H2)")
     void produtoSemDiferenciarAcentoNoH2() {
+        // Arrange
         var dia = LocalDate.of(2033, 2, 2);
         var p = produtos.save(new Produto("Pão de Açúcar ÉPICO", BigDecimal.ONE, 10));
         venda(p, FormaPagamento.PIX, dia);
+
+        // Act / Assert
         for (String termo : new String[] {"pao de acucar", "PÃO", "epico", "acuca"}) {
-            assertEquals(
-                    1,
-                    consulta.consultar(new FiltroHistorico(null, dia, dia, termo), 0)
-                            .resumo()
-                            .getVendas(),
-                    termo);
+            assertEquals(1, vendasNoFiltro(dia, termo), termo);
         }
-        assertEquals(
-                0,
-                consulta.consultar(new FiltroHistorico(null, dia, dia, "paes"), 0)
-                        .resumo()
-                        .getVendas());
+        assertEquals(0, vendasNoFiltro(dia, "paes"));
     }
 }

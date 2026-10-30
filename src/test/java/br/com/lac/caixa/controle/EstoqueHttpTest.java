@@ -12,6 +12,7 @@ import br.com.lac.caixa.repositorio.CategoriaRepository;
 import br.com.lac.caixa.repositorio.ProdutoRepository;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -43,26 +44,37 @@ class EstoqueHttpTest {
         p = produtos.save(p);
     }
 
-    void recusa(String url, String mensagem, String... params) throws Exception {
+    /** POST logado com os campos; espera redirect com a mensagem de erro no flash. */
+    void assertRecusa(String url, String mensagem, String... campos) throws Exception {
         var req = post(url).sessionAttr("autenticado", true);
-        for (int i = 0; i < params.length; i += 2) req.param(params[i], params[i + 1]);
+        for (int i = 0; i < campos.length; i += 2) req.param(campos[i], campos[i + 1]);
         mvc.perform(req).andExpect(status().is3xxRedirection()).andExpect(flash().attribute("erro", mensagem));
     }
 
-    @Test
-    void adicionarERemoverExigemPeloMenosUmaUnidade() throws Exception {
-        recusa("/estoque/" + p.getId() + "/adicionar", "Quantidade deve ser maior que zero.", "quantidade", "0");
-        recusa("/estoque/" + p.getId() + "/adicionar", "Quantidade deve ser maior que zero.", "quantidade", "-3");
-        recusa("/estoque/" + p.getId() + "/remover-unidades", "Quantidade deve ser maior que zero.", "quantidade", "0");
-        assertEquals(5, produtos.findById(p.getId()).orElseThrow().getQuantidade());
+    int estoque() {
+        return produtos.findById(p.getId()).orElseThrow().getQuantidade();
     }
 
     @Test
+    @DisplayName("Adicionar e remover unidades exigem pelo menos 1 unidade, sem mudar o estoque")
+    void adicionarERemoverExigemPeloMenosUmaUnidade() throws Exception {
+        // Arrange
+        String base = "/estoque/" + p.getId();
+
+        // Act / Assert
+        assertRecusa(base + "/adicionar", "Quantidade deve ser maior que zero.", "quantidade", "0");
+        assertRecusa(base + "/adicionar", "Quantidade deve ser maior que zero.", "quantidade", "-3");
+        assertRecusa(base + "/remover-unidades", "Quantidade deve ser maior que zero.", "quantidade", "0");
+        assertEquals(5, estoque());
+    }
+
+    @Test
+    @DisplayName("A validação dos parâmetros roda antes de buscar o produto ou a categoria")
     void validacaoRodaAntesDeBuscarOProduto() throws Exception {
         // Sem @Min a mensagem seria "Produto não encontrado"; sem @PositiveOrZero, "Escolha uma categoria".
-        recusa("/estoque/999999/adicionar", "Quantidade deve ser maior que zero.", "quantidade", "0");
-        recusa("/estoque/999999/remover-unidades", "Quantidade deve ser maior que zero.", "quantidade", "0");
-        recusa(
+        assertRecusa("/estoque/999999/adicionar", "Quantidade deve ser maior que zero.", "quantidade", "0");
+        assertRecusa("/estoque/999999/remover-unidades", "Quantidade deve ser maior que zero.", "quantidade", "0");
+        assertRecusa(
                 "/estoque/novo",
                 "Quantidade não pode ser negativa.",
                 "nome",
@@ -74,9 +86,14 @@ class EstoqueHttpTest {
     }
 
     @Test
+    @DisplayName("Cadastro recusa quantidade negativa e preço zero, sem criar produto")
     void cadastroRecusaQuantidadeNegativaEPrecoZero() throws Exception {
+        // Arrange
         long antes = produtos.count();
-        recusa(
+        String categoria = cat.getId().toString();
+
+        // Act / Assert
+        assertRecusa(
                 "/estoque/novo",
                 "Quantidade não pode ser negativa.",
                 "nome",
@@ -86,8 +103,8 @@ class EstoqueHttpTest {
                 "quantidade",
                 "-1",
                 "categoriaId",
-                cat.getId().toString());
-        recusa(
+                categoria);
+        assertRecusa(
                 "/estoque/novo",
                 "Preço deve ser maior que zero.",
                 "nome",
@@ -97,13 +114,14 @@ class EstoqueHttpTest {
                 "quantidade",
                 "1",
                 "categoriaId",
-                cat.getId().toString());
+                categoria);
         assertEquals(antes, produtos.count());
     }
 
     @Test
+    @DisplayName("Promoção com preço zero é recusada")
     void promocaoRecusaPrecoZero() throws Exception {
-        recusa(
+        assertRecusa(
                 "/descontos/novo",
                 "Preço deve ser maior que zero.",
                 "tipo",
@@ -115,6 +133,7 @@ class EstoqueHttpTest {
     }
 
     @Test
+    @DisplayName("Cadastro válido (preço \"1.234,50\", quantidade zero) volta ao estoque com sucesso")
     void cadastroValidoRedirecionaParaEstoque() throws Exception {
         mvc.perform(post("/estoque/novo")
                         .sessionAttr("autenticado", true)
