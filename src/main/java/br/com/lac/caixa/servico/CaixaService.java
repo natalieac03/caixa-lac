@@ -8,6 +8,9 @@ import br.com.lac.caixa.modelo.Venda;
 import br.com.lac.caixa.pagamento.Pagamento;
 import br.com.lac.caixa.pagamento.PagamentoFactory;
 import br.com.lac.caixa.repositorio.VendaRepository;
+import br.com.lac.caixa.servico.preco.CalculadoraDePreco;
+import br.com.lac.caixa.servico.preco.Carrinho;
+import br.com.lac.caixa.servico.preco.Orcamento;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +21,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class CaixaService {
@@ -25,6 +29,7 @@ public class CaixaService {
     private final VendaRepository vendas;
     private final EstoqueService estoque;
     private final PromocaoService promocoes;
+    private final CalculadoraDePreco calculadora = new CalculadoraDePreco();
 
     public CaixaService(VendaRepository vendas, EstoqueService estoque, PromocaoService promocoes) {
         this.vendas = vendas;
@@ -62,7 +67,7 @@ public class CaixaService {
                                          FormaPagamento forma,
                                          String outro,
                                          BigDecimal totalManual, String motivoAjuste, String token) {
-        if (token == null || !java.util.UUID.fromString(token).toString().equals(token)) throw new IllegalArgumentException("Token de venda inválido.");
+        if (token == null || !UUID.fromString(token).toString().equals(token)) throw new IllegalArgumentException("Token de venda inválido.");
         var existente = vendas.findByToken(token);
         if (existente.isPresent()) return new ResultadoVenda(existente.get(), "Venda já registrada.");
 
@@ -87,9 +92,9 @@ public class CaixaService {
             throw new IllegalArgumentException("Selecione ao menos um produto.");
         }
 
-        var carrinho = new br.com.lac.caixa.servico.preco.Carrinho(selecionados.values().stream()
-                .map(p -> new br.com.lac.caixa.servico.preco.Carrinho.Linha(p, quantidades.get(p.getId()))).toList());
-        var orcamento = new br.com.lac.caixa.servico.preco.CalculadoraDePreco().calcular(carrinho, ativas);
+        var carrinho = new Carrinho(selecionados.values().stream()
+                .map(p -> new Carrinho.Linha(p, quantidades.get(p.getId()))).toList());
+        var orcamento = calculadora.calcular(carrinho, ativas);
         BigDecimal calculado = orcamento.total();
         BigDecimal total = totalManual != null ? totalManual : calculado;
         if (total.signum() < 0) throw new IllegalArgumentException("O valor ajustado não pode ser negativo.");
@@ -100,7 +105,7 @@ public class CaixaService {
             estoque.darBaixa(p, item.quantidade());
             venda.adicionarItem(new ItemVenda(p, item.quantidade(), item.precoUnitario()));
         }
-        venda.registrarValores(calculado, orcamento.descontos().stream().map(br.com.lac.caixa.servico.preco.Orcamento.Desconto::valor)
+        venda.registrarValores(calculado, orcamento.descontos().stream().map(Orcamento.Desconto::valor)
                 .reduce(BigDecimal.ZERO, BigDecimal::add), total, motivoAjuste);
 
         Venda salva = vendas.save(venda);
@@ -108,13 +113,13 @@ public class CaixaService {
         return new ResultadoVenda(salva, estrategia.pagar(total));
     }
     @Transactional(readOnly = true)
-    public br.com.lac.caixa.servico.preco.Orcamento previa(Map<Long,Integer> quantidades) {
-        var linhas = new ArrayList<br.com.lac.caixa.servico.preco.Carrinho.Linha>();
+    public Orcamento previa(Map<Long,Integer> quantidades) {
+        var linhas = new ArrayList<Carrinho.Linha>();
         quantidades.forEach((id,qtd) -> {
             if (qtd < 0) throw new IllegalArgumentException("Quantidade inválida.");
-            if (qtd > 0) linhas.add(new br.com.lac.caixa.servico.preco.Carrinho.Linha(estoque.buscar(id), qtd));
+            if (qtd > 0) linhas.add(new Carrinho.Linha(estoque.buscar(id), qtd));
         });
-        return new br.com.lac.caixa.servico.preco.CalculadoraDePreco().calcular(new br.com.lac.caixa.servico.preco.Carrinho(linhas), promocoes.listarAtivas());
+        return calculadora.calcular(new Carrinho(linhas), promocoes.listarAtivas());
     }
     @Transactional(readOnly = true)
     public boolean tokenRegistrado(String token) { return token != null && vendas.existsByToken(token); }

@@ -16,6 +16,12 @@ class DinheiroTest {
         assertThrows(IllegalArgumentException.class,()->Dinheiro.parse("1,2,3"));
         assertThrows(IllegalArgumentException.class,()->Dinheiro.parse("texto"));
     }
+    @Test void reaisSeparaMilharECsvNao() {
+        assertEquals("R$ 1.234,56",Dinheiro.reais(new BigDecimal("1234.56")));
+        assertEquals("R$ 0,50",Dinheiro.reais(new BigDecimal("0.5")));
+        assertEquals("1234,56",Dinheiro.numero(new BigDecimal("1234.56")));
+        assertTrue(PagamentoFactory.criar(FormaPagamento.PIX,null).pagar(new BigDecimal("1234.56")).contains("R$ 1.234,56"));
+    }
     @Test void todasAsMensagensUsamReais() {
         for(var forma:FormaPagamento.values())
             assertTrue(PagamentoFactory.criar(forma,"teste").pagar(new BigDecimal("12.50")).contains("R$ 12,50"));

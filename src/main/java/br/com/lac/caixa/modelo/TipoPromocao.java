@@ -1,5 +1,9 @@
 package br.com.lac.caixa.modelo;
 
+import br.com.lac.caixa.servico.preco.APartirDe;
+import br.com.lac.caixa.servico.preco.Pacote;
+import br.com.lac.caixa.servico.preco.RegraPromocao;
+
 /**
  * Como a promoção é aplicada:
  * - A_PARTIR_DE: atingiu o mínimo, TODAS as unidades saem pelo preço promocional.
@@ -9,18 +13,21 @@ package br.com.lac.caixa.modelo;
  *   -> 3 un. = 10 + 6 = 16.
  */
 public enum TipoPromocao {
-    A_PARTIR_DE("A partir de X unidades", new br.com.lac.caixa.servico.preco.APartirDe()),
-    PACOTE("Pacote fechado a cada X unidades", new br.com.lac.caixa.servico.preco.Pacote());
+    A_PARTIR_DE("A partir de X unidades", new APartirDe()),
+    PACOTE("Pacote fechado a cada X unidades", new Pacote());
 
     private final String rotulo;
 
-    private final br.com.lac.caixa.servico.preco.RegraPromocao regra;
+    private final RegraPromocao regra;
 
-    public br.com.lac.caixa.servico.preco.RegraPromocao regra() { return regra; }
-
-    TipoPromocao(String rotulo, br.com.lac.caixa.servico.preco.RegraPromocao regra) {
-        this.regra = regra;
+    TipoPromocao(String rotulo, RegraPromocao regra) {
         this.rotulo = rotulo;
+        this.regra = regra;
+    }
+
+    /** Como este tipo entra no cálculo do preço. */
+    public RegraPromocao regra() {
+        return regra;
     }
 
     public String getRotulo() {
