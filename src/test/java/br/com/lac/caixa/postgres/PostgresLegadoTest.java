@@ -14,7 +14,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.flywaydb.core.Flyway;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -32,7 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Flyway faz baseline e aplica V2-V5, Hibernate valida. Depois as telas
  * rodam no Postgres de verdade (o H2 aceita SQL que o Postgres recusa).
  */
-@Testcontainers(disabledWithoutDocker = true)
+@ExtendWith(ExigeDocker.class)
 @SpringBootTest(properties = {"spring.profiles.active=test"})
 @AutoConfigureMockMvc
 class PostgresLegadoTest {

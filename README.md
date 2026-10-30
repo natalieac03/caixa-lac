@@ -160,7 +160,7 @@ servlet à parte e não passa pelo interceptor de login.
 - O orçamento inclui itens com preço unitário aplicado, economias descritas e
   total. As economias de `A_PARTIR_DE` já estão refletidas nos preços dos itens.
 - O campo **Valor ajustado** é opcional. Vazio, cobra o total calculado; se for
-  diferente, exige motivo. O valor pode ser zero e nunca negativo. Aceita
+  diferente, exige motivo. O valor pode ser zero (cortesia) e nunca negativo. Aceita
   valores como `1.234,56`. A venda guarda total calculado após promoções,
   desconto das promoções, valor cobrado e motivo do ajuste. O ajuste manual
   fica separado do desconto promocional. Vendas antigas exibem o total legado.
@@ -168,12 +168,35 @@ servlet à parte e não passa pelo interceptor de login.
   sem criar outra venda nem baixar o estoque novamente. O estoque usa versão
   otimista e rejeita baixas que ultrapassem o disponível.
 
+## Pagamento dividido e troco
+
+- **Caso comum, um toque:** escolha a forma (Pix, Débito, Crédito, Dinheiro ou
+  Outro) e confirme; ela paga o total. Em **Outro**, diga qual (ex.: vale). Em
+  **Dinheiro**, o campo "Recebido" é opcional e mostra o troco na hora.
+- **Dividir pagamento** abre linhas forma + valor (adicione ou remova linhas). A
+  tela mostra ao vivo "Falta R$ X" ou "Sobra R$ X", e **Confirmar** só habilita
+  quando a diferença é zero. Linha de dinheiro tem "Recebido" e mostra o troco.
+- O servidor confere tudo de novo: a soma das partes tem que ser **exatamente**
+  o valor cobrado, ao centavo; cada parte maior que zero; Outro com descrição;
+  recebido só em dinheiro e nunca menor que a parte (troco = recebido − valor).
+  No máximo 10 partes.
+- **Cortesia** (valor ajustado zero, com motivo obrigatório) não tem pagamento.
+- A confirmação sai uma parte por linha, pelo Strategy de pagamento:
+  *"Recebido R$ 10,00 via Pix + R$ 8,00 em dinheiro (troco R$ 2,00)."*
+- No **histórico**, a coluna Pagamento mostra "Pix R$ 10,00 + Dinheiro R$ 8,00
+  (troco R$ 2,00)". O filtro por forma traz a venda se **qualquer** parte usou
+  aquela forma. O **CSV** tem uma coluna por forma (Pix, Débito, Crédito,
+  Dinheiro, Outro) com o valor pago nela, e a coluna "Descrição do Outro".
+- Vendas anteriores ao pagamento dividido viraram uma parte só, com a forma e o
+  valor que tinham (migração V6); as de valor zero viraram cortesias.
+
 ## Verificação e dados
 
 Execute a suíte normal com `./mvnw -B verify` (Java 17). Os testes HTTP usam um H2
 em memória, separado do banco local. Com Docker disponível, `PostgresLegadoTest`
 e `PostgresBancoNovoTest` sobem um PostgreSQL 16 (Testcontainers) e repetem a
-migração da produção e a de um banco vazio; sem Docker eles são pulados. As colunas novas de venda aceitam `null`
+migração da produção e a de um banco vazio. No computador, sem Docker, eles são
+pulados; no CI (`CI=true`) falta de Docker é erro. As colunas novas de venda aceitam `null`
 para preservar os registros antigos. O Flyway aplica as migrações antes de
 `ddl-auto=validate`; veja [o roteiro de produção](docs/MIGRACOES.md).
 
@@ -202,9 +225,14 @@ o operador precisa cuidar do reembolso pelo meio utilizado. Canceladas ficam
 fora dos indicadores, do fechamento e do CSV padrão.
 
 Em `/fechamento`, escolha o intervalo de dias (ambos inclusivos); sem datas, a
-tela abre o dia atual. O relatório mostra quantidade e total cobrado por forma
-de pagamento, descontos promocionais e ajustes manuais. **OUTRO** é agrupado
-como uma única forma, independentemente da descrição. Ajuste é `cobrado -
+tela abre o dia atual. O total por forma vem da **soma das partes de pagamento**
+(uma venda dividida Pix + Dinheiro soma cada parte na sua forma; a coluna Vendas
+conta a venda nas duas). O relatório mostra também o total de vendas e o total
+cobrado, descontos promocionais, ajustes manuais, **vendas com pagamento
+dividido** e cortesias. A soma das formas tem que bater com o total cobrado; se
+não bater, a tela mostra um alerta vermelho (não feche o caixa por ela e confira
+as vendas). **OUTRO** é agrupado como uma única forma, independentemente da
+descrição. Ajuste é `cobrado -
 calculado`, com sinal; a soma pode compensar aumentos e reduções. Vendas antigas
 usam `valor_total` e contribuem com zero em descontos/ajustes não registrados.
 Os CSVs incluem o intervalo consultado e seguem a mesma regra de exclusão de
@@ -219,7 +247,11 @@ incluindo backup e interrupção das instâncias antigas antes da migração V3.
 O GitHub Actions executa `./mvnw -B verify` com Java 17 em pushes e pull requests
 para `main`, sem banco externo nem segredos de produção. A suíte integra Flyway,
 JPA e HTTP usando H2 em memória, e PostgreSQL via Testcontainers (o runner do
-GitHub tem Docker); o H2 local em arquivo é preservado.
+GitHub tem Docker); o H2 local em arquivo é preservado. No CI os testes com
+PostgreSQL **não podem ser pulados**: com `CI=true`, falta de Docker é erro
+(`ExigeDocker`), e um passo final lê os relatórios do surefire e falha se esses
+testes não rodaram; o número de testes com PostgreSQL real aparece no resumo do
+job.
 
 O Maven Wrapper oficial 3.3.4 fixa Maven 3.9.9: `./mvnw -B verify` no
 Linux/macOS ou `mvnw.cmd -B verify` no Windows. A primeira execução baixa a
