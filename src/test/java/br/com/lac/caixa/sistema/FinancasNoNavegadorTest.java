@@ -142,4 +142,60 @@ class FinancasNoNavegadorTest {
             celular.close();
         }
     }
+
+    @Test
+    @DisplayName("Menu Finanças agrupa painel, eventos, despesas e taxas; abre, navega e fecha com Esc")
+    void menuFinancas() {
+        pagina.navigate(url("/"));
+        var menu = pagina.locator("details.menu-grupo");
+        var itens = menu.locator(".menu-grupo-itens");
+        assertThat(itens).isHidden();
+        // Só um item no topo para as quatro telas
+        assertThat(
+                        pagina.locator(
+                                ".nav-links > a[href='/eventos'], .nav-links > a[href='/despesas'], .nav-links > a[href='/taxas']"))
+                .hasCount(0);
+
+        menu.locator("summary").click();
+        assertThat(itens).isVisible();
+        assertThat(itens.locator("a"))
+                .hasText(new String[] {"Painel de finanças", "Eventos", "Comparativo de eventos", "Despesas", "Taxas"});
+        pagina.screenshot(new Page.ScreenshotOptions().setPath(Path.of("target", "menu-financas.png")));
+        pagina.keyboard().press("Escape");
+        assertThat(itens).isHidden();
+
+        menu.locator("summary").click();
+        itens.getByText("Despesas").click();
+        pagina.waitForURL(url("/despesas"));
+        // Numa tela do grupo, o item Finanças fica marcado e a tela atual também
+        assertThat(pagina.locator("details.menu-grupo summary")).hasClass(java.util.regex.Pattern.compile("ativo"));
+        pagina.locator("details.menu-grupo summary").click();
+        assertThat(pagina.locator(".menu-grupo-itens a[aria-current='page']")).hasText("Despesas");
+        // Clicar fora fecha
+        pagina.locator("h1").click();
+        assertThat(pagina.locator(".menu-grupo-itens")).isHidden();
+    }
+
+    @Test
+    @DisplayName("Menu Finanças no celular: abre dentro da barra, sem rolagem horizontal")
+    void menuNoCelular() {
+        var celular = Navegador.browser()
+                .newContext(new com.microsoft.playwright.Browser.NewContextOptions().setViewportSize(390, 844));
+        try {
+            var p = celular.newPage();
+            p.navigate(url("/login"));
+            p.locator("#senha").fill(SenhaDeTeste.VALOR);
+            p.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Entrar"))
+                    .click();
+            p.waitForURL(url("/"));
+            p.locator("details.menu-grupo summary").click();
+            assertThat(p.locator(".menu-grupo-itens")).isVisible();
+            Object largura =
+                    p.evaluate("() => document.documentElement.scrollWidth - document.documentElement.clientWidth");
+            org.junit.jupiter.api.Assertions.assertEquals(0, ((Number) largura).intValue(), "rolagem horizontal");
+            p.screenshot(new Page.ScreenshotOptions().setPath(Path.of("target", "menu-financas-celular.png")));
+        } finally {
+            celular.close();
+        }
+    }
 }

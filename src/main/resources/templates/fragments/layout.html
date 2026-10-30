@@ -18,6 +18,19 @@
                 if (t === 'claro' || t === 'escuro') document.documentElement.setAttribute('data-tema', t);
             } catch (e) {}
         })();
+        /* Menu Finanças: fecha ao clicar fora ou com Esc. */
+        document.addEventListener('click', function (e) {
+            document.querySelectorAll('details.menu-grupo[open]').forEach(function (d) {
+                if (!d.contains(e.target)) d.removeAttribute('open');
+            });
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Escape') return;
+            document.querySelectorAll('details.menu-grupo[open]').forEach(function (d) {
+                d.removeAttribute('open');
+                d.querySelector('summary').focus();
+            });
+        });
         function alternarTema() {
             var raiz = document.documentElement;
             var atual = raiz.getAttribute('data-tema')
@@ -61,26 +74,25 @@
                 <svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>
                 Fechamento
             </a>
-            <a th:href="@{/financas}" th:classappend="${ativo == 'financas'} ? 'ativo'"
-               th:attr="aria-current=${ativo == 'financas'} ? 'page' : null">
-                <svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>
-                Finanças
-            </a>
-            <a th:href="@{/eventos}" th:classappend="${ativo == 'eventos'} ? 'ativo'"
-               th:attr="aria-current=${ativo == 'eventos'} ? 'page' : null">
-                <svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-                Eventos
-            </a>
-            <a th:href="@{/despesas}" th:classappend="${ativo == 'despesas'} ? 'ativo'"
-               th:attr="aria-current=${ativo == 'despesas'} ? 'page' : null">
-                <svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2v20l3-2 3 2 3-2 3 2 3-2 1 .7V2l-1 .7-3-2-3 2-3-2-3 2-3-2Z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
-                Despesas
-            </a>
-            <a th:href="@{/taxas}" th:classappend="${ativo == 'taxas'} ? 'ativo'"
-               th:attr="aria-current=${ativo == 'taxas'} ? 'page' : null">
-                <svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
-                Taxas
-            </a>
+            <!--/* Finanças agrupa o painel, eventos, despesas e taxas (details: abre sem JavaScript). */-->
+            <details class="menu-grupo" th:with="noGrupo=${ativo == 'financas' or ativo == 'eventos' or ativo == 'despesas' or ativo == 'taxas'}">
+                <summary th:classappend="${noGrupo} ? 'ativo'">
+                    <svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>
+                    Finanças
+                    <svg class="icone seta-menu" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                </summary>
+                <div class="menu-grupo-itens">
+                    <a th:href="@{/financas}" th:classappend="${ativo == 'financas'} ? 'ativo'"
+                       th:attr="aria-current=${ativo == 'financas'} ? 'page' : null">Painel de finanças</a>
+                    <a th:href="@{/eventos}" th:classappend="${ativo == 'eventos'} ? 'ativo'"
+                       th:attr="aria-current=${ativo == 'eventos'} ? 'page' : null">Eventos</a>
+                    <a th:href="@{/eventos/comparativo}">Comparativo de eventos</a>
+                    <a th:href="@{/despesas}" th:classappend="${ativo == 'despesas'} ? 'ativo'"
+                       th:attr="aria-current=${ativo == 'despesas'} ? 'page' : null">Despesas</a>
+                    <a th:href="@{/taxas}" th:classappend="${ativo == 'taxas'} ? 'ativo'"
+                       th:attr="aria-current=${ativo == 'taxas'} ? 'page' : null">Taxas</a>
+                </div>
+            </details>
             <form class="form-sair" method="post" th:action="@{/logout}">
                 <button type="submit" class="sair">
                     <svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>

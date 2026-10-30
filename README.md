@@ -359,7 +359,10 @@ o log. No Railway, filtre os logs do serviço por `evento=`.
 
 ## Finanças
 
-A aba **Finanças** mostra receita, lucro, margem, rankings, mapa de calor e
+No menu, **Finanças** agrupa o painel de finanças, Eventos (com o comparativo),
+Despesas e Taxas; no celular o grupo abre como uma folha no pé da tela.
+
+O painel de **Finanças** mostra receita, lucro, margem, rankings, mapa de calor e
 estoque do período escolhido (atalhos, evento, categoria e forma ficam na URL:
 dá para mandar o link). Os números vêm todos do servidor (`FinancasService`);
 os gráficos leem `/financas/dados` (mesmo filtro, exige login).

@@ -1104,3 +1104,33 @@ table.ordenavel th[aria-sort="descending"] button::after { content: " ▼"; }
 .meta-texto { margin-bottom: 4px; }
 .barra-meta { height: 14px; border-radius: 999px; background: var(--linha); overflow: hidden; border: 1px solid var(--linha-forte); }
 .barra-meta-cheia { height: 100%; background: var(--verde); }
+
+/* Menu Finanças (agrupa painel, eventos, despesas e taxas) */
+.menu-grupo { position: relative; }
+.menu-grupo summary {
+    list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+    color: var(--roxo-forte); font-weight: 600; font-size: 15px; padding: 7px 14px; border-radius: var(--raio-pill);
+}
+.menu-grupo summary::-webkit-details-marker { display: none; }
+.menu-grupo summary:hover { background: var(--roxo-fundo); }
+.menu-grupo summary.ativo { background: var(--roxo); color: var(--on-roxo); }
+.menu-grupo summary .icone { width: 17px; height: 17px; color: var(--petroleo); }
+.menu-grupo summary.ativo .icone { color: var(--on-roxo); }
+.menu-grupo[open] .seta-menu { transform: rotate(180deg); }
+.menu-grupo-itens {
+    position: absolute; right: 0; top: calc(100% + 6px); z-index: 40; min-width: 220px;
+    display: flex; flex-direction: column; padding: 6px; gap: 2px;
+    background: var(--papel); border: 1px solid var(--linha); border-radius: var(--raio-md); box-shadow: var(--sombra-menu);
+}
+.nav-links .menu-grupo-itens a { border-radius: var(--raio-sm); padding: 8px 12px; }
+@media (max-width: 640px) {
+    /* No celular a barra rola de lado: o grupo abre como uma folha presa ao pé da tela. */
+    .menu-grupo { flex: none; }
+    .menu-grupo summary { padding: 6px 11px; font-size: 14px; }
+    .menu-grupo summary .icone:not(.seta-menu) { display: none; }
+    .menu-grupo-itens {
+        position: fixed; left: 12px; right: 12px; top: auto; bottom: 12px; min-width: 0;
+        padding: 10px; box-shadow: var(--sombra-menu);
+    }
+    .nav-links .menu-grupo-itens a { padding: 12px 14px; font-size: 16px; }
+}
