@@ -240,7 +240,8 @@ p { margin: 0 0 0.6em; }
     flex-wrap: wrap;
     align-items: center;
 }
-.nav-links a {
+.nav-links a,
+.nav-links button.sair {
     display: inline-flex;
     align-items: center;
     gap: 7px;
@@ -252,10 +253,15 @@ p { margin: 0 0 0.6em; }
     border-radius: var(--raio-pill);
     transition: background 0.15s, color 0.15s;
 }
-.nav-links a .icone { width: 17px; height: 17px; color: var(--petroleo); }
-.nav-links a:hover { background: var(--roxo-fundo); }
+.nav-links a .icone,
+.nav-links button.sair .icone { width: 17px; height: 17px; color: var(--petroleo); }
+.nav-links a:hover,
+.nav-links button.sair:hover { background: var(--roxo-fundo); }
 .nav-links a.ativo { background: var(--roxo); color: var(--on-roxo); }
 .nav-links a.ativo .icone { color: var(--on-roxo); }
+/* Sair é um botão de formulário (logout por POST), com cara de link. */
+.nav-links .form-sair { display: inline-flex; margin: 0; }
+.nav-links button.sair { border: 0; background: none; font-family: inherit; cursor: pointer; }
 .nav-links .sair { color: var(--tinta-suave); margin-left: 6px; }
 .nav-links .sair .icone { color: var(--tinta-suave); }
 
@@ -936,8 +942,10 @@ table.dados th.num, table.dados td.num { text-align: right; }
         scrollbar-width: none;
     }
     .nav-links::-webkit-scrollbar { display: none; }
-    .nav-links a { padding: 6px 11px; font-size: 14px; flex: none; }
-    .nav-links a .icone { display: none; }
+    .nav-links a,
+    .nav-links button.sair { padding: 6px 11px; font-size: 14px; flex: none; }
+    .nav-links a .icone,
+    .nav-links button.sair .icone { display: none; }
 
     .conteudo { padding: 18px 12px 48px; }
     .cartao { padding: 16px 14px; }

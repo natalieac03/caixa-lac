@@ -1,0 +1,82 @@
+package br.com.lac.caixa.controle;
+
+import br.com.lac.caixa.CaixaApplication;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
+import java.util.Set;
+import java.util.UUID;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@SpringBootTest(properties={"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:seguranca;DB_CLOSE_DELAY=-1", "app.senha=teste"})
+@AutoConfigureMockMvc
+class SegurancaHttpTest {
+    static final Set<String> PUBLICAS = Set.of("/login", "/logout", "/error");
+    @Autowired MockMvc mvc;
+    @Autowired RequestMappingHandlerMapping mapeamentos;
+
+    MockHttpServletRequestBuilder doIp(MockHttpServletRequestBuilder req, String ip) {
+        return req.with(r -> { r.setRemoteAddr(ip); return r; });
+    }
+
+    /** Percorre todas as rotas registradas: uma rota nova sem login quebra este teste. */
+    @Test void todaRotaExigeLogin() throws Exception {
+        int conferidas = 0;
+        for (var info : mapeamentos.getHandlerMethods().keySet()) {
+            for (String padrao : info.getPatternValues()) {
+                if (PUBLICAS.contains(padrao)) continue;
+                String url = padrao.replaceAll("\\{[^}]+}", "1");
+                var metodos = info.getMethodsCondition().getMethods();
+                var metodo = metodos.isEmpty() ? RequestMethod.GET : metodos.iterator().next();
+                var req = metodo == RequestMethod.POST ? post(url) : get(url);
+                mvc.perform(req).andExpect(redirectedUrl("/login"));
+                conferidas++;
+            }
+        }
+        assertTrue(conferidas >= 15, "rotas conferidas: " + conferidas);
+    }
+
+    @Test void sextaTentativaErradaEBloqueadaMesmoComSenhaCerta() throws Exception {
+        String ip = "10.0.0." + (UUID.randomUUID().hashCode() & 0xff);
+        for (int i = 0; i < 5; i++) {
+            mvc.perform(doIp(post("/login").param("senha", "errada"), ip)).andExpect(redirectedUrl("/login?erro"));
+        }
+        mvc.perform(doIp(post("/login").param("senha", "teste"), ip)).andExpect(redirectedUrl("/login?erro"));
+        mvc.perform(doIp(post("/login").param("senha", "teste"), "192.0.2.77")).andExpect(redirectedUrl("/"));
+    }
+
+    @Test void logoutSoPorPostEEncerraASessao() throws Exception {
+        var sessao = new MockHttpSession();
+        mvc.perform(doIp(post("/login").param("senha", "teste"), "198.51.100.9").session(sessao)).andExpect(redirectedUrl("/"));
+        mvc.perform(get("/historico").session(sessao)).andExpect(status().isOk());
+        mvc.perform(get("/logout").session(sessao)).andExpect(status().isMethodNotAllowed());
+        mvc.perform(get("/historico").session(sessao)).andExpect(status().isOk());
+        mvc.perform(post("/logout").session(sessao)).andExpect(redirectedUrl("/login"));
+        assertTrue(sessao.isInvalid());
+    }
+
+    @Test void producaoNaoSobeSemAppSenha() {
+        assumeTrue(System.getenv("APP_SENHA") == null, "APP_SENHA definida no ambiente");
+        var erro = assertThrows(Exception.class, () -> new SpringApplicationBuilder(CaixaApplication.class)
+                .web(WebApplicationType.NONE)
+                .run("--spring.profiles.active=prod",
+                        "--spring.datasource.url=jdbc:h2:mem:prod_sem_senha;DB_CLOSE_DELAY=-1",
+                        "--spring.datasource.driver-class-name=org.h2.Driver",
+                        "--spring.datasource.username=sa", "--spring.datasource.password=")
+                .close());
+        Throwable causa = erro;
+        while (causa.getCause() != null && !String.valueOf(causa.getMessage()).contains("APP_SENHA")) causa = causa.getCause();
+        assertTrue(String.valueOf(causa.getMessage()).contains("APP_SENHA"), erro.toString());
+    }
+}
