@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import br.com.lac.caixa.migracao.Migracoes;
 import br.com.lac.caixa.modelo.FormaPagamento;
+import br.com.lac.caixa.repositorio.MovimentoEstoqueRepository;
 import br.com.lac.caixa.servico.ConsultaHistorico;
 import br.com.lac.caixa.servico.FechamentoService;
 import java.math.BigDecimal;
@@ -116,6 +117,9 @@ class PostgresLegadoTest {
 
     @Autowired
     FechamentoService fechamento;
+
+    @Autowired
+    MovimentoEstoqueRepository movimentos;
 
     /**
      * Vendas antigas, todas em 10/05/2024: #1 Pix R$ 23 (Bóton Capivara x3,
@@ -301,5 +305,28 @@ class PostgresLegadoTest {
                 .andExpect(redirectedUrl("/historico"));
         assertEquals(antes, jdbc.queryForObject("select quantidade from produto where id = 3", Integer.class));
         assertTrue(jdbc.queryForObject("select cancelada from venda where id = ?", Boolean.class, id));
+        // V11: saldo inicial + venda + devolução batem com a quantidade.
+        mvc.perform(post("/estoque/compra")
+                        .sessionAttr("autenticado", true)
+                        .param("produtoId", "3")
+                        .param("quantidade", "4")
+                        .param("custoTotal", "10,00"))
+                .andExpect(redirectedUrl("/estoque"));
+        assertEquals(List.of(), movimentos.produtosComSaldoDivergente());
+        assertEquals(
+                List.of("ENTRADA_AJUSTE", "SAIDA_VENDA", "DEVOLUCAO_CANCELAMENTO", "ENTRADA_COMPRA"),
+                jdbc.queryForList("select tipo from movimento_estoque where produto_id = 3 order by id", String.class));
+    }
+
+    @Test
+    @DisplayName("V11: cada produto antigo com estoque ganha um movimento \"saldo inicial\" igual à quantidade")
+    void saldoInicialDaV11() {
+        assertEquals(
+                0,
+                jdbc.queryForObject(
+                        "select count(*) from produto p where p.quantidade > 0 and p.quantidade <>"
+                                + " (select coalesce(sum(m.quantidade), 0) from movimento_estoque m"
+                                + " where m.produto_id = p.id and m.observacao = 'saldo inicial')",
+                        Integer.class));
     }
 }

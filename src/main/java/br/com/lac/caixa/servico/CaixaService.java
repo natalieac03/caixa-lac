@@ -128,6 +128,8 @@ public class CaixaService {
         }
 
         Venda salva = vendas.save(venda);
+        // Movimentos de saída na mesma transação, já apontando para a venda salva.
+        estoque.registrarSaidasDaVenda(salva);
         auditoria.registrar(
                 "venda",
                 "id",
@@ -213,8 +215,7 @@ public class CaixaService {
                 .orElseThrow(() -> new RegraDeNegocioException("Venda não encontrada: " + id));
         if (venda.isCancelada()) return;
         venda.cancelar(motivo, LocalDateTime.now());
-        for (ItemVenda item : venda.getItens())
-            estoque.adicionarUnidades(item.getProduto().getId(), item.getQuantidade());
+        estoque.devolverItensDaVenda(venda);
         vendas.save(venda);
         auditoria.registrar(
                 "cancelamento",

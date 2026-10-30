@@ -3,11 +3,17 @@ package br.com.lac.caixa.servico;
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.Categoria;
 import br.com.lac.caixa.modelo.CompraEstoque;
+import br.com.lac.caixa.modelo.ItemVenda;
+import br.com.lac.caixa.modelo.MovimentoEstoque;
 import br.com.lac.caixa.modelo.Produto;
+import br.com.lac.caixa.modelo.TipoMovimento;
+import br.com.lac.caixa.modelo.Venda;
 import br.com.lac.caixa.repositorio.CompraEstoqueRepository;
 import br.com.lac.caixa.repositorio.ItemVendaRepository;
+import br.com.lac.caixa.repositorio.MovimentoEstoqueRepository;
 import br.com.lac.caixa.repositorio.ProdutoRepository;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -29,18 +35,33 @@ public class EstoqueService {
 
     private final CompraEstoqueRepository compras;
     private final Clock relogio;
+    private final MovimentoEstoqueRepository movimentos;
 
     public EstoqueService(
             ProdutoRepository produtos,
             ItemVendaRepository itensVenda,
             Auditoria auditoria,
             CompraEstoqueRepository compras,
-            Clock relogio) {
+            Clock relogio,
+            MovimentoEstoqueRepository movimentos) {
         this.produtos = produtos;
         this.itensVenda = itensVenda;
         this.auditoria = auditoria;
         this.compras = compras;
         this.relogio = relogio;
+        this.movimentos = movimentos;
+    }
+
+    /** Grava o movimento (na mesma transação de quem alterou o estoque). */
+    private void movimento(
+            Produto p,
+            TipoMovimento tipo,
+            int unidades,
+            BigDecimal custo,
+            Venda venda,
+            CompraEstoque compra,
+            String obs) {
+        movimentos.save(new MovimentoEstoque(p, tipo, unidades, custo, venda, compra, LocalDateTime.now(relogio), obs));
     }
 
     private static String descrever(Produto p) {
@@ -60,6 +81,9 @@ public class EstoqueService {
         CompraEstoque compra = compras.save(
                 CompraEstoque.registrar(p, quantidade, custoTotal, data, observacao, LocalDateTime.now(relogio)));
         produtos.save(p);
+        BigDecimal custoDaCompra =
+                custoTotal.divide(BigDecimal.valueOf(quantidade), Produto.ESCALA_CUSTO, RoundingMode.HALF_EVEN);
+        movimento(p, TipoMovimento.ENTRADA_COMPRA, quantidade, custoDaCompra, null, compra, compra.getObservacao());
         auditoria.registrar(
                 "compra_estoque",
                 "id",
@@ -102,6 +126,16 @@ public class EstoqueService {
         p.setCategoria(categoria);
         p.setCustoUnitario(custo);
         Produto salvo = produtos.save(p);
+        if (quantidade > 0) {
+            movimento(
+                    salvo,
+                    TipoMovimento.ENTRADA_AJUSTE,
+                    quantidade,
+                    salvo.getCustoUnitario(),
+                    null,
+                    null,
+                    "estoque inicial do cadastro");
+        }
         auditoria.registrar(
                 "produto_criado", "id", salvo.getId(), "depois", descrever(salvo), "quantidade", quantidade);
         return salvo;
@@ -131,6 +165,7 @@ public class EstoqueService {
         int antes = p.getQuantidade();
         p.repor(quantidade);
         produtos.save(p);
+        movimento(p, TipoMovimento.ENTRADA_AJUSTE, quantidade, p.getCustoUnitario(), null, null, "ajuste manual");
         auditoria.registrar("estoque_reposto", "id", id, "antes", antes, "depois", p.getQuantidade());
     }
 
@@ -144,21 +179,22 @@ public class EstoqueService {
         int antes = p.getQuantidade();
         p.baixar(quantidade);
         produtos.save(p);
+        movimento(p, TipoMovimento.SAIDA_AJUSTE, quantidade, p.getCustoUnitario(), null, null, "ajuste manual");
         auditoria.registrar("estoque_retirado", "id", produtoId, "antes", antes, "depois", p.getQuantidade());
     }
 
     /**
-     * Remove um produto. Se ele ja aparece em alguma venda, nao da para
-     * apagar de vez (o historico ficaria quebrado): nesse caso o produto e
-     * ARQUIVADO, somindo das telas mas preservando as vendas antigas.
+     * Remove um produto. Se ele ja aparece em alguma venda ou tem movimentos de
+     * estoque, nao da para apagar de vez (o historico ficaria quebrado): nesse
+     * caso o produto e ARQUIVADO, somindo das telas mas preservando o historico.
      *
      * @return true se foi arquivado, false se foi apagado de vez.
      */
     @Transactional
     public boolean remover(Long id) {
         Produto p = buscar(id);
-        boolean jaVendido = itensVenda.countByProdutoId(id) > 0;
-        if (jaVendido) {
+        boolean temHistorico = itensVenda.countByProdutoId(id) > 0 || movimentos.existsByProdutoId(id);
+        if (temHistorico) {
             p.setAtivo(false);
             produtos.save(p);
             auditoria.registrar("produto_arquivado", "id", id, "antes", descrever(p));
@@ -169,10 +205,43 @@ public class EstoqueService {
         return false;
     }
 
-    /** Da baixa no estoque ao confirmar uma venda. */
+    /** Da baixa no estoque ao confirmar uma venda (o movimento é gravado depois, com a venda salva). */
     @Transactional
     public void darBaixa(Produto produto, int quantidade) {
         produto.baixar(quantidade);
         produtos.save(produto);
+    }
+
+    /** Um SAIDA_VENDA por item da venda já salva, com o custo congelado no item. */
+    @Transactional
+    public void registrarSaidasDaVenda(Venda venda) {
+        for (ItemVenda item : venda.getItens()) {
+            movimento(
+                    item.getProduto(),
+                    TipoMovimento.SAIDA_VENDA,
+                    item.getQuantidade(),
+                    item.getCustoUnitario(),
+                    venda,
+                    null,
+                    "venda #" + venda.getId());
+        }
+    }
+
+    /** Cancelamento: devolve cada item ao estoque, com um DEVOLUCAO_CANCELAMENTO por item. */
+    @Transactional
+    public void devolverItensDaVenda(Venda venda) {
+        for (ItemVenda item : venda.getItens()) {
+            Produto p = buscar(item.getProduto().getId());
+            p.repor(item.getQuantidade());
+            produtos.save(p);
+            movimento(
+                    p,
+                    TipoMovimento.DEVOLUCAO_CANCELAMENTO,
+                    item.getQuantidade(),
+                    item.getCustoUnitario(),
+                    venda,
+                    null,
+                    "cancelamento da venda #" + venda.getId());
+        }
     }
 }

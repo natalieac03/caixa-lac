@@ -7,12 +7,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import br.com.lac.caixa.migracao.Migracoes;
 import br.com.lac.caixa.modelo.Categoria;
 import br.com.lac.caixa.modelo.FormaPagamento;
-import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.repositorio.CategoriaRepository;
+import br.com.lac.caixa.repositorio.MovimentoEstoqueRepository;
 import br.com.lac.caixa.repositorio.ProdutoRepository;
 import br.com.lac.caixa.repositorio.VendaRepository;
 import br.com.lac.caixa.servico.CaixaService;
 import br.com.lac.caixa.servico.ConsultaHistorico;
+import br.com.lac.caixa.servico.EstoqueService;
 import br.com.lac.caixa.servico.FechamentoService;
 import br.com.lac.caixa.servico.PagamentoInformado;
 import java.math.BigDecimal;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -73,6 +75,12 @@ class PostgresBancoNovoTest {
     @Autowired
     CategoriaRepository categorias;
 
+    @Autowired
+    EstoqueService estoque;
+
+    @Autowired
+    MovimentoEstoqueRepository movimentos;
+
     static boolean vendasCriadas;
     static long produtosAntes = -1;
 
@@ -81,11 +89,6 @@ class PostgresBancoNovoTest {
      * 01/06/2024 Pix R$ 12 (Bóton Capivara x2) e 02/06/2024 Dinheiro R$ 14
      * (Adesivo Capivara Grande x1 + Bóton Logo LAC x1).
      */
-    static Produto comCategoria(Produto p, Categoria c) {
-        p.setCategoria(c);
-        return p;
-    }
-
     @BeforeEach
     void criarVendas() {
         if (vendasCriadas) return;
@@ -94,12 +97,11 @@ class PostgresBancoNovoTest {
         produtosAntes = produtos.count();
         var boton = categorias.save(new Categoria("Bóton"));
         var adesivo = categorias.save(new Categoria("Adesivo Grande"));
-        long capivara = produtos.save(comCategoria(new Produto("Bóton Capivara", new BigDecimal("6.00"), 30), boton))
+        long capivara = estoque.criarNovo("Bóton Capivara", new BigDecimal("6.00"), 30, boton)
                 .getId();
-        long logo = produtos.save(comCategoria(new Produto("Bóton Logo LAC", new BigDecimal("6.00"), 30), boton))
+        long logo = estoque.criarNovo("Bóton Logo LAC", new BigDecimal("6.00"), 30, boton)
                 .getId();
-        long grande = produtos.save(
-                        comCategoria(new Produto("Adesivo Capivara Grande", new BigDecimal("8.00"), 25), adesivo))
+        long grande = estoque.criarNovo("Adesivo Capivara Grande", new BigDecimal("8.00"), 25, adesivo)
                 .getId();
         var a = caixa.registrarVenda(
                         Map.of(capivara, 2),
@@ -148,5 +150,41 @@ class PostgresBancoNovoTest {
                         "select count(*) from flyway_schema_history where type = 'SQL' and success", Integer.class));
         assertEquals(0, produtosAntes, "nada semeado fora do perfil local");
         mvc.perform(get("/historico").sessionAttr("autenticado", true)).andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Invariante no Postgres: soma dos movimentos = quantidade, com venda, cancelamento, compra e ajustes")
+    void invarianteDosMovimentos() {
+        // Arrange
+        var p = estoque.criarNovo("Bóton Invariante PG", new BigDecimal("6.00"), 10, null);
+        var v = caixa.registrarVenda(
+                        Map.of(p.getId(), 3),
+                        List.of(PagamentoInformado.total(FormaPagamento.DINHEIRO)),
+                        null,
+                        null,
+                        UUID.randomUUID().toString())
+                .venda();
+
+        // Act
+        caixa.cancelarVenda(v.getId(), "Ensaio");
+        estoque.registrarCompra(p.getId(), 5, new BigDecimal("10.00"), LocalDate.now(), "fornecedor");
+        estoque.adicionarUnidades(p.getId(), 2);
+        estoque.removerUnidades(p.getId(), 4);
+
+        // Assert
+        assertEquals(List.of(), movimentos.produtosComSaldoDivergente());
+        assertEquals(13, produtos.findById(p.getId()).orElseThrow().getQuantidade());
+        assertEquals(
+                List.of(
+                        "ENTRADA_AJUSTE",
+                        "SAIDA_VENDA",
+                        "DEVOLUCAO_CANCELAMENTO",
+                        "ENTRADA_COMPRA",
+                        "ENTRADA_AJUSTE",
+                        "SAIDA_AJUSTE"),
+                jdbc.queryForList(
+                        "select tipo from movimento_estoque where produto_id = ? order by id",
+                        String.class,
+                        p.getId()));
     }
 }
