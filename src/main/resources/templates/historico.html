@@ -13,7 +13,7 @@
             <p>Clique no dia ou na hora de uma venda para corrigir.</p>
         </div>
         <a class="botao botao-secundario botao-pequeno"
-           th:href="@{/historico/exportar.csv(forma=${forma}, produto=${produto}, dia=${dia})}">
+           th:href="@{/historico/exportar.csv(forma=${forma}, produto=${produto}, inicio=${inicio}, fim=${fim})}">
             <svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
             Exportar CSV
         </a>
@@ -35,39 +35,43 @@
                     <input type="text" id="produto" name="produto" th:value="${produto}" placeholder="Ex.: capivara">
                 </div>
                 <div class="campo">
-                    <label for="dia">Dia</label>
-                    <input type="date" id="dia" name="dia" th:value="${dia}">
+                    <label for="inicio">De</label>
+                    <input type="date" id="inicio" name="inicio" th:value="${inicio}">
+                </div>
+                <div class="campo">
+                    <label for="fim">Até</label>
+                    <input type="date" id="fim" name="fim" th:value="${fim}">
                 </div>
                 <div class="campo campo-acao">
                     <button type="submit" class="botao botao-principal">Filtrar</button>
                 </div>
-                <div class="campo campo-acao" th:if="${forma != null or !#strings.isEmpty(produto) or !#strings.isEmpty(dia)}">
+                <div class="campo campo-acao" th:if="${forma != null or !#strings.isEmpty(produto) or inicio != null or fim != null}">
                     <a class="botao botao-fantasma" th:href="@{/historico}">Limpar filtros</a>
                 </div>
             </div>
         </form>
     </div>
 
-    <div class="indicadores" th:unless="${vendas.isEmpty()}">
+    <div class="indicadores" th:if="${pagina.totalElements > 0}">
         <div class="indicador">
-            <div class="indicador-rotulo">Vendas
+            <div class="indicador-rotulo">Vendas válidas
                 <svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3h18v4H3zM5 7v13h14V7M9 12h6"/></svg>
             </div>
-            <div class="indicador-valor" th:text="${vendas.size()}">14</div>
+            <div class="indicador-valor" th:text="${resumo.vendas}">14</div>
             <div class="indicador-rodape">neste filtro</div>
         </div>
         <div class="indicador">
             <div class="indicador-rotulo">Itens vendidos
                 <svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>
             </div>
-            <div class="indicador-valor" th:text="${#numbers.formatInteger(#aggregates.sum(vendas.![quantidadeTotal]), 1, 'POINT')}">62</div>
+            <div class="indicador-valor" th:text="${#numbers.formatInteger(resumo.itens, 1, 'POINT')}">62</div>
             <div class="indicador-rodape">unidades</div>
         </div>
         <div class="indicador">
             <div class="indicador-rotulo">Total
                 <svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2Z"/><path d="M16 3H6a2 2 0 0 0-2 2v2"/><circle cx="17" cy="14" r="1.5"/></svg>
             </div>
-            <div class="indicador-valor">R$ <span th:text="${#numbers.formatDecimal(#aggregates.sum(vendas.![valorTotal]),1,'POINT',2,'COMMA')}">483,50</span></div>
+            <div class="indicador-valor">R$ <span th:text="${#numbers.formatDecimal(resumo.total,1,'POINT',2,'COMMA')}">483,50</span></div>
             <div class="indicador-rodape">arrecadado</div>
         </div>
     </div>
@@ -88,10 +92,11 @@
                     <th>Produtos</th>
                     <th class="num">Qtd</th>
                     <th class="num">Total</th>
+                    <th>Cancelamento</th>
                 </tr>
                 </thead>
                 <tbody>
-                <tr th:each="v : ${vendas}">
+                <tr th:each="v : ${vendas}" th:classappend="${v.cancelada} ? 'venda-cancelada'">
                     <td class="num suave" th:text="${v.id}">1</td>
                     <!--/* Dia e Hora: clicar abre a edição. O input de data fica
                          nesta célula, mas pertence ao form da célula ao lado (atributo form). */-->
@@ -120,7 +125,9 @@
                                        th:value="${#temporals.format(v.dataHora, 'HH:mm')}">
                                 <input type="hidden" name="forma" th:value="${forma}">
                                 <input type="hidden" name="produto" th:value="${produto}">
-                                <input type="hidden" name="dia" th:value="${dia}">
+                                <input type="hidden" name="inicio" th:value="${inicio}">
+                                <input type="hidden" name="fim" th:value="${fim}">
+                                <input type="hidden" name="pagina" th:value="${pagina.number}">
                                 <button type="submit" class="botao botao-principal botao-pequeno">Salvar</button>
                                 <button type="button" class="botao botao-secundario botao-pequeno"
                                         onclick="fecharEdicaoData(this.closest('tr'))">Cancelar</button>
@@ -135,11 +142,31 @@
                     <td th:text="${v.resumoProdutos}">X-Burger x2</td>
                     <td class="num" th:text="${v.quantidadeTotal}">2</td>
                     <td class="num"><strong>R$ <span th:text="${#numbers.formatDecimal(v.valorTotal,1,2,'COMMA')}">0,00</span></strong></td>
+                    <td>
+                        <div th:if="${v.cancelada}">
+                            <strong>Cancelada</strong>
+                            <span th:text="${#temporals.format(v.dataCancelamento, 'dd/MM/yyyy HH:mm')}"></span>
+                            <span th:text="${v.motivoCancelamento}"></span>
+                        </div>
+                        <form th:unless="${v.cancelada}" method="post" th:action="@{'/historico/' + ${v.id} + '/cancelar'}"
+                              onsubmit="return confirm('Cancelar esta venda e devolver o estoque?');">
+                            <label th:for="'motivo_' + ${v.id}">Motivo</label>
+                            <input type="text" name="motivo" th:id="'motivo_' + ${v.id}" required maxlength="255">
+                            <button type="submit" class="botao botao-secundario botao-pequeno">Cancelar venda</button>
+                        </form>
+                    </td>
                 </tr>
                 </tbody>
             </table>
         </div>
     </div>
+    <nav class="barra-inferior" aria-label="Páginas do histórico" th:if="${pagina.totalPages > 1}">
+        <a class="botao botao-secundario" th:if="${pagina.hasPrevious()}"
+           th:href="@{/historico(forma=${forma},produto=${produto},inicio=${inicio},fim=${fim},pagina=${pagina.number - 1})}">Anterior</a>
+        <span th:text="'Página ' + ${pagina.number + 1} + ' de ' + ${pagina.totalPages}"></span>
+        <a class="botao botao-secundario" th:if="${pagina.hasNext()}"
+           th:href="@{/historico(forma=${forma},produto=${produto},inicio=${inicio},fim=${fim},pagina=${pagina.number + 1})}">Próxima</a>
+    </nav>
 </main>
 
 <script th:inline="none">

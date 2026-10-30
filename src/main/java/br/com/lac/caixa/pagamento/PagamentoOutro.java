@@ -11,6 +11,6 @@ public class PagamentoOutro implements Pagamento {
 
     @Override
     public String pagar(BigDecimal valor) {
-        return "Recebido R$ " + valor + " via " + descricao + ".";
+        return "Recebido " + br.com.lac.caixa.util.Dinheiro.reais(valor) + " via " + descricao + ".";
     }
 }

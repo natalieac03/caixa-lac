@@ -43,8 +43,7 @@ public class PromocaoController {
                        @RequestParam TipoPromocao tipo,
                        @RequestParam String preco,
                        RedirectAttributes flash) {
-        try {
-            BigDecimal valor = new BigDecimal(preco.trim().replace(",", "."));
+            BigDecimal valor = br.com.lac.caixa.util.Dinheiro.parse(preco);
             Map<Long, Integer> qtdPorCat = new LinkedHashMap<>();
             for (Map.Entry<String, String> e : params.entrySet()) {
                 if (e.getKey().startsWith("qtdCat_")) {
@@ -55,11 +54,6 @@ public class PromocaoController {
             }
             promocoes.criar(qtdPorCat, tipo, valor);
             flash.addFlashAttribute("sucesso", "Promoção criada.");
-        } catch (NumberFormatException e) {
-            flash.addFlashAttribute("erro", "Valor inválido.");
-        } catch (IllegalArgumentException e) {
-            flash.addFlashAttribute("erro", e.getMessage());
-        }
         return "redirect:/descontos";
     }
 

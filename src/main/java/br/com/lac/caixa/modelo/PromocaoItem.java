@@ -26,6 +26,7 @@ public class PromocaoItem {
     }
 
     public PromocaoItem(Categoria categoria, int quantidade) {
+        if (quantidade < 1) throw new IllegalArgumentException("Quantidade deve ser maior que zero.");
         this.categoria = categoria;
         this.quantidade = quantidade;
     }

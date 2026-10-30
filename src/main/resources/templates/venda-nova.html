@@ -14,6 +14,7 @@
     </div>
 
     <form th:action="@{/venda}" method="post" id="formVenda">
+    <input type="hidden" name="token" th:value="${tokenVenda}">
     <div class="venda-grade">
 
         <!-- Coluna da esquerda: produtos -->
@@ -108,10 +109,11 @@
                            placeholder="Ex.: parte em dinheiro, parte no Pix">
                 </div>
                 <div class="campo" style="margin-top:16px;">
-                    <label for="valorTotal">Valor a cobrar</label>
-                    <input type="text" id="valorTotal" name="valorTotal" class="mono" value="0.00" inputmode="decimal">
-                    <p class="ajuda" style="margin:0;">Já vem com o total. Ajuste só se combinar outro valor.</p>
+                    <label for="valorTotal">Valor ajustado (opcional)</label>
+                    <input type="text" id="valorTotal" name="valorTotal" class="mono" inputmode="decimal">
+                    <p class="ajuda" style="margin:0;">Deixe vazio para cobrar o total calculado.</p>
                 </div>
+                <div class="campo"><label for="motivoAjuste">Motivo do ajuste</label><input id="motivoAjuste" name="motivoAjuste" type="text"></div>
             </div>
 
             <div class="barra-inferior barra-fixa">
@@ -124,11 +126,6 @@
     </div>
     </form>
 </main>
-
-<script th:inline="javascript">
-/* Promoções ativas vindas do servidor. */
-const PROMOS = JSON.parse([[${promosJson}]]);
-</script>
 
 <script th:inline="none">
     function reais(v) {
@@ -176,151 +173,41 @@ const PROMOS = JSON.parse([[${promosJson}]]);
         if (outro) document.getElementById('formaPagamentoOutro').focus();
     }
 
-    /* ---- cálculo principal (mesma regra do servidor) ---- */
+    let enviando = false;
+    document.getElementById('formVenda').addEventListener('submit', function(e) {
+        if (enviando) { e.preventDefault(); return; }
+        enviando = true;
+        document.getElementById('botaoConfirmar').disabled = true;
+    });
+    let timer, versao = 0;
+    function linha(texto, valor) {
+        const div = document.createElement('div'); div.className = 'item-carrinho';
+        const nome = document.createElement('span'); nome.textContent = texto;
+        const preco = document.createElement('span'); preco.textContent = valor;
+        div.append(nome, preco); document.getElementById('carrinho').append(div);
+    }
     function recalcular() {
-        const inputs = Array.from(document.querySelectorAll('.qtd'));
-
-        /* 1) Quantidades por produto e por categoria */
-        const qtdProd = {};   // prodId -> qtd
-        const qtdCat = {};    // catId  -> qtd
-        const precosCat = {}; // catId  -> [preco, preco, ...] (um por unidade)
-        let unidades = 0;
-
-        inputs.forEach(function (inp) {
-            const qtd = parseInt(inp.value) || 0;
-            const tr = inp.closest('tr');
-            const max = parseInt(inp.getAttribute('max'));
-            /* estado visual da linha e dos botões − / + */
-            if (tr) tr.classList.toggle('selecionada', qtd > 0);
-            const botoes = inp.parentNode.querySelectorAll('button');
-            if (botoes.length === 2) {
-                botoes[0].disabled = qtd <= 0;
-                botoes[1].disabled = !isNaN(max) && qtd >= max;
+        clearTimeout(timer);
+        const atual = ++versao;
+        document.getElementById('botaoConfirmar').disabled = true;
+        timer = setTimeout(async function () {
+            try {
+                const resposta = await fetch('/venda/previa', {method:'POST', body:new URLSearchParams(new FormData(document.getElementById('formVenda')))});
+                if (!resposta.ok || !resposta.headers.get('content-type')?.includes('application/json')) throw new Error('Não foi possível calcular a prévia.');
+                const o = await resposta.json();
+                if (atual !== versao) return;
+                document.getElementById('carrinho').replaceChildren();
+                let unidades = 0;
+                o.itens.forEach(i => { unidades += i.quantidade; linha(i.nome + ' · ' + i.categoria + ' · ' + i.quantidade + ' × ' + reais(Number(i.precoUnitario)), reais(i.quantidade * Number(i.precoUnitario))); });
+                o.descontos.forEach(d => linha(d.descricao, '− ' + reais(Number(d.valor))));
+                document.getElementById('totalCarrinho').textContent = Number(o.total).toFixed(2).replace('.', ',');
+                document.getElementById('contagemItens').textContent = unidades + ' itens';
+                document.getElementById('botaoConfirmar').disabled = enviando || unidades === 0;
+            } catch (e) {
+                if (atual !== versao) return;
+                document.getElementById('carrinho').replaceChildren(); linha('Não foi possível calcular a prévia. Confira a conexão e tente novamente.', '');
             }
-            if (qtd <= 0) return;
-            unidades += qtd;
-            const pid = inp.getAttribute('data-prod-id');
-            const cid = inp.getAttribute('data-cat-id');
-            const preco = parseFloat(inp.getAttribute('data-preco')) || 0;
-            qtdProd[pid] = qtd;
-            if (cid) {
-                qtdCat[cid] = (qtdCat[cid] || 0) + qtd;
-                precosCat[cid] = precosCat[cid] || [];
-                for (let k = 0; k < qtd; k++) precosCat[cid].push(preco);
-            }
-        });
-        /* Ordena precos desc (mais caros primeiro para maximizar desconto no pacote) */
-        Object.values(precosCat).forEach(function (arr) { arr.sort(function (a, b) { return b - a; }); });
-
-        /* 2) Identifica promos A_PARTIR_DE ativas e marca catIds com preço promo */
-        const remaining = Object.assign({}, qtdCat);
-        const precoApDe = {}; // catId -> precoPromo
-
-        PROMOS.forEach(function (promo) {
-            if (promo.tipo !== 'A_PARTIR_DE') return;
-            /* Combos disponíveis: min(remaining[cat] / required[cat]) */
-            let combos = Infinity;
-            promo.itens.forEach(function (it) {
-                combos = Math.min(combos, Math.floor((remaining[it.catId] || 0) / it.qtd));
-            });
-            if (!isFinite(combos) || combos === 0) return;
-            promo.itens.forEach(function (it) {
-                precoApDe[String(it.catId)] = promo.preco;
-                remaining[it.catId] = 0;
-            });
-        });
-
-        /* 3) Monta linhas do carrinho aplicando A_PARTIR_DE */
-        let total = 0;
-        let linhas = '';
-
-        inputs.forEach(function (inp) {
-            const qtd = parseInt(inp.value) || 0;
-            if (qtd <= 0) return;
-            const cid = inp.getAttribute('data-cat-id');
-            const normalPreco = parseFloat(inp.getAttribute('data-preco')) || 0;
-            const promoPreco = cid && precoApDe[cid] !== undefined ? precoApDe[cid] : null;
-            const preco = (promoPreco !== null) ? promoPreco : normalPreco;
-            const sub = qtd * preco;
-            total += sub;
-
-            linhas += '<div class="item-carrinho"><span><span class="nome">'
-                + inp.getAttribute('data-nome') + '</span>'
-                + (promoPreco !== null ? ' <span class="tag-promo">promo</span>' : '')
-                + '<span class="meta">' + qtd + ' × ' + reais(preco)
-                + (promoPreco !== null ? ' (era ' + reais(normalPreco) + ')' : '') + '</span>'
-                + '</span><span class="num">' + reais(sub) + '</span></div>';
-        });
-
-        /* 4) Desconto PACOTE: aplica primeiro o melhor negócio
-              (menor preço por unidade), igual ao servidor. */
-        const remPacote = Object.assign({}, qtdCat);
-
-        const pacotesOrdenados = PROMOS
-            .filter(function (p) { return p.tipo === 'PACOTE'; })
-            .sort(function (a, b) {
-                const ua = a.preco / a.itens.reduce(function (s, i) { return s + i.qtd; }, 0);
-                const ub = b.preco / b.itens.reduce(function (s, i) { return s + i.qtd; }, 0);
-                return ua - ub;
-            });
-
-        pacotesOrdenados.forEach(function (promo) {
-            let combos = Infinity;
-            promo.itens.forEach(function (it) {
-                combos = Math.min(combos, Math.floor((remPacote[it.catId] || 0) / it.qtd));
-            });
-            if (!isFinite(combos) || combos === 0) return;
-
-            let custNormal = 0;
-            promo.itens.forEach(function (it) {
-                const precos = precosCat[it.catId] || [];
-                const jaUsados = qtdCat[it.catId] - (remPacote[it.catId] || 0);
-                const ini = jaUsados;
-                const fim = ini + combos * it.qtd;
-                for (let k = ini; k < Math.min(fim, precos.length); k++) custNormal += precos[k];
-                remPacote[it.catId] = (remPacote[it.catId] || 0) - combos * it.qtd;
-            });
-
-            const custPromo = combos * promo.preco;
-            const economia = custNormal - custPromo;
-            if (economia > 0.001) {
-                total -= economia;
-                linhas += '<div class="item-carrinho linha-desconto"><span>Pacote '
-                    + promo.nome
-                    + (combos > 1 ? ' ×' + combos : '')
-                    + '</span><span class="num">− ' + reais(economia) + '</span></div>';
-            }
-        });
-
-        /* 5) Atualiza tela */
-        document.getElementById('carrinho').innerHTML = linhas
-            || '<p class="vazio">Nenhum item selecionado.</p>';
-        document.getElementById('totalCarrinho').textContent = total.toFixed(2).replace('.', ',');
-        document.getElementById('valorTotal').value = total.toFixed(2);
-        document.getElementById('contagemItens').textContent =
-            unidades + (unidades === 1 ? ' item' : ' itens');
-        const confirmar = document.getElementById('botaoConfirmar');
-        confirmar.disabled = unidades === 0;
-        confirmar.textContent = unidades === 0 ? 'Confirmar venda' : 'Confirmar ' + reais(total);
-
-        /* 6) Atualiza dicas de promoção em cada linha da tabela */
-        inputs.forEach(function (inp) {
-            const cid = inp.getAttribute('data-cat-id');
-            const pid = inp.getAttribute('data-prod-id');
-            const dica = document.getElementById('dica_' + pid);
-            if (!dica || !cid) return;
-            const hints = [];
-            PROMOS.forEach(function (promo) {
-                const it = promo.itens.find(function (x) { return String(x.catId) === String(cid); });
-                if (!it) return;
-                if (promo.tipo === 'A_PARTIR_DE') {
-                    hints.push(promo.nome + ': cada un. ' + reais(promo.preco));
-                } else {
-                    hints.push('Pacote ' + promo.nome + ' = ' + reais(promo.preco));
-                }
-            });
-            dica.textContent = hints.join(' · ');
-        });
+        }, 200);
     }
 
     /* Atalho: "/" foca a busca */

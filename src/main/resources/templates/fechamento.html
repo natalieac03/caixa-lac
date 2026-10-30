@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Fechamento de caixa')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav('fechamento')}"></nav>
+<main class="conteudo">
+    <div th:replace="~{fragments/layout :: avisos}"></div>
+    <div class="cabecalho-pagina">
+        <div><h1>Fechamento de caixa</h1><p>Vendas válidas no intervalo, incluindo o primeiro e o último dia.</p></div>
+        <a class="botao botao-secundario" th:href="@{/fechamento/exportar.csv(inicio=${inicio},fim=${fim})}">Exportar CSV</a>
+    </div>
+    <div class="cartao">
+        <form th:action="@{/fechamento}" method="get" class="linha-campos">
+            <div class="campo"><label for="inicio">De</label><input type="date" id="inicio" name="inicio" th:value="${inicio}"></div>
+            <div class="campo"><label for="fim">Até</label><input type="date" id="fim" name="fim" th:value="${fim}"></div>
+            <div class="campo campo-acao"><button type="submit" class="botao botao-principal">Consultar</button></div>
+        </form>
+    </div>
+    <div class="indicadores">
+        <div class="indicador"><div class="indicador-rotulo">Vendas</div><div class="indicador-valor" th:text="${fechamento.quantidade}">0</div></div>
+        <div class="indicador"><div class="indicador-rotulo">Total cobrado</div><div class="indicador-valor" th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(fechamento.total)}">R$ 0,00</div></div>
+        <div class="indicador"><div class="indicador-rotulo">Descontos promocionais</div><div class="indicador-valor" th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(fechamento.descontos)}">R$ 0,00</div></div>
+        <div class="indicador"><div class="indicador-rotulo">Ajustes manuais</div><div class="indicador-valor" th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(fechamento.ajustes)}">R$ 0,00</div></div>
+    </div>
+    <p class="ajuda">Ajustes positivos aumentam a cobrança; negativos representam redução. Canceladas ficam fora do fechamento. Vendas antigas sem cálculo registrado contribuem com zero em descontos e ajustes.</p>
+    <div class="cartao tabela-area">
+        <table class="dados">
+            <thead><tr><th>Pagamento</th><th class="num">Vendas</th><th class="num">Total</th><th class="num">Descontos</th><th class="num">Ajustes</th></tr></thead>
+            <tbody>
+            <tr th:each="linha : ${fechamento.formas}">
+                <td th:text="${linha.forma.rotulo}">Pix</td><td class="num" th:text="${linha.quantidade}">0</td>
+                <td class="num" th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(linha.total)}">R$ 0,00</td>
+                <td class="num" th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(linha.descontos)}">R$ 0,00</td>
+                <td class="num" th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(linha.ajustes)}">R$ 0,00</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

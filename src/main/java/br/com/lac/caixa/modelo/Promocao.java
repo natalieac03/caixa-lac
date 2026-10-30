@@ -31,8 +31,10 @@ public class Promocao {
     private Long id;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @jakarta.persistence.JoinColumn(name = "promocao_id", nullable = false)
     private List<PromocaoItem> itens = new ArrayList<>();
 
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
     private TipoPromocao tipo = TipoPromocao.A_PARTIR_DE;
 
@@ -45,6 +47,7 @@ public class Promocao {
     }
 
     public Promocao(List<PromocaoItem> itens, TipoPromocao tipo, BigDecimal preco) {
+        if (preco == null || preco.signum() <= 0) throw new IllegalArgumentException("Preço deve ser maior que zero.");
         this.itens = itens;
         this.tipo = tipo;
         this.preco = preco;
@@ -78,7 +81,7 @@ public class Promocao {
         return itens.stream().mapToInt(PromocaoItem::getQuantidade).sum();
     }
 
-    /** Preço por unidade do combo: usado para aplicar o melhor negócio primeiro. */
+    /** Preço médio por unidade para consulta; não determina a combinação de pacotes. */
     public double getPrecoPorUnidade() {
         int total = getTotalUnidades();
         return total == 0 ? Double.MAX_VALUE : preco.doubleValue() / total;

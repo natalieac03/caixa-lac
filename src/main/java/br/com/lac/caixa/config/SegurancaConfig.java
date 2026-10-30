@@ -27,8 +27,7 @@ public class SegurancaConfig implements WebMvcConfigurer {
                         "/css/**",
                         "/img/**",
                         "/webjars/**",
-                        "/favicon.ico",
-                        "/h2-console/**"
+                        "/favicon.ico"
                 );
     }
 }

@@ -1,0 +1,20 @@
+target/
+*.class
+*.log
+
+# IntelliJ / Eclipse / VS Code
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+bin/
+
+# Banco H2 local
+dados/
+
+*.mv.db
+
+# Cópias compactadas do projeto
+*.zip

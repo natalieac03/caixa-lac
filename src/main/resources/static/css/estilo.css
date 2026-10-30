@@ -979,3 +979,6 @@ table.dados th.num, table.dados td.num { text-align: right; }
     .atalho { padding: 14px; }
     .atalho span { display: none; }
 }
+
+/* Vendas canceladas continuam visíveis para auditoria. */
+.dados tr.venda-cancelada td { text-decoration: line-through; opacity: .65; }

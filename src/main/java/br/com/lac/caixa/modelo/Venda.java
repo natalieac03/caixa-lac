@@ -16,8 +16,8 @@ import java.util.stream.Collectors;
 
 /**
  * Uma venda registrada no caixa. O id funciona como numero da compra.
- * O valorTotal e calculado a partir dos itens, mas pode ser ajustado
- * manualmente antes de confirmar.
+ * Guarda o total calculado, desconto promocional e valor cobrado com eventual
+ * motivo de ajuste. valorTotal permanece como compatibilidade com vendas antigas.
  */
 @Entity
 public class Venda {
@@ -26,18 +26,61 @@ public class Venda {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @jakarta.persistence.Column(nullable = false)
     private LocalDateTime dataHora;
 
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
+    @jakarta.persistence.Column(nullable = false)
     private FormaPagamento formaPagamento;
 
     /** Preenchido apenas quando a forma de pagamento e OUTRO. */
     private String formaPagamentoOutro;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @jakarta.persistence.JoinColumn(name = "venda_id", nullable = false)
     private List<ItemVenda> itens = new ArrayList<>();
 
     private BigDecimal valorTotal;
+    private BigDecimal valorCalculado;
+    private BigDecimal desconto;
+    private BigDecimal valorCobrado;
+    private String motivoAjuste;
+
+    @jakarta.persistence.Column(nullable = false)
+    private boolean cancelada;
+    private LocalDateTime dataCancelamento;
+    private String motivoCancelamento;
+    @jakarta.persistence.Version
+    private long versao;
+
+    public boolean isCancelada() { return cancelada; }
+    public LocalDateTime getDataCancelamento() { return dataCancelamento; }
+    public String getMotivoCancelamento() { return motivoCancelamento; }
+
+    /** Cancela uma vez; os valores e o token originais continuam no histórico. */
+    public void cancelar(String motivo, LocalDateTime quando) {
+        if (cancelada) return;
+        if (motivo == null || motivo.isBlank() || motivo.trim().length() > 255)
+            throw new IllegalArgumentException("Informe um motivo de cancelamento com até 255 caracteres.");
+        if (quando == null) throw new IllegalArgumentException("Informe a data do cancelamento.");
+        cancelada = true; dataCancelamento = quando; motivoCancelamento = motivo.trim();
+    }
+
+    @jakarta.persistence.Column(unique = true)
+    private String token;
+    public String getToken() { return token; }
+    public void setToken(String token) { this.token = token; }
+
+    public BigDecimal getValorCalculado() { return valorCalculado; }
+    public BigDecimal getDesconto() { return desconto; }
+    public BigDecimal getValorCobrado() { return valorCobrado != null ? valorCobrado : valorTotal; }
+    public String getMotivoAjuste() { return motivoAjuste; }
+    public void registrarValores(BigDecimal calculado, BigDecimal desconto, BigDecimal cobrado, String motivo) {
+        this.valorCalculado = calculado; this.desconto = desconto; this.valorCobrado = cobrado;
+        this.valorTotal = cobrado; this.motivoAjuste = motivo;
+    }
+
 
     public Venda() {
     }
@@ -103,7 +146,7 @@ public class Venda {
     }
 
     public BigDecimal getValorTotal() {
-        return valorTotal;
+        return getValorCobrado();
     }
 
     public void setValorTotal(BigDecimal valorTotal) {

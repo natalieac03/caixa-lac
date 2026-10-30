@@ -14,7 +14,10 @@ public class LoginController {
     /** Senha definida em application.properties (app.senha), trocavel por variavel de ambiente. */
     private final String senhaCorreta;
 
-    public LoginController(@Value("${app.senha}") String senhaCorreta) {
+    private final br.com.lac.caixa.servico.LimiteLogin limite;
+
+    public LoginController(@Value("${app.senha}") String senhaCorreta, br.com.lac.caixa.servico.LimiteLogin limite) {
+        this.limite = limite;
         this.senhaCorreta = senhaCorreta;
     }
 
@@ -25,8 +28,9 @@ public class LoginController {
 
     @PostMapping("/login")
     public String entrar(@RequestParam String senha, HttpServletRequest request) {
-        if (senhaCorreta.equals(senha)) {
+        if (limite.autenticar(request.getRemoteAddr(), senhaCorreta, senha)) {
             HttpSession session = request.getSession(true);
+            request.changeSessionId();
             session.setAttribute("autenticado", Boolean.TRUE);
             return "redirect:/";
         }

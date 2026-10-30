@@ -46,7 +46,7 @@ public class EstoqueService {
     @Transactional
     public void adicionarUnidades(Long id, int quantidade) {
         Produto p = buscar(id);
-        p.setQuantidade(p.getQuantidade() + quantidade);
+        p.repor(quantidade);
         produtos.save(p);
     }
 
@@ -56,15 +56,8 @@ public class EstoqueService {
      */
     @Transactional
     public void removerUnidades(Long produtoId, int quantidade) {
-        if (quantidade < 1) {
-            throw new IllegalArgumentException("Informe uma quantidade maior que zero para remover.");
-        }
         Produto p = buscar(produtoId);
-        if (quantidade > p.getQuantidade()) {
-            throw new IllegalArgumentException("Não é possível remover " + quantidade
-                    + " unidades: o estoque tem apenas " + p.getQuantidade() + ".");
-        }
-        p.setQuantidade(p.getQuantidade() - quantidade);
+        p.baixar(quantidade);
         produtos.save(p);
     }
 
@@ -91,12 +84,7 @@ public class EstoqueService {
     /** Da baixa no estoque ao confirmar uma venda. */
     @Transactional
     public void darBaixa(Produto produto, int quantidade) {
-        if (!produto.temEstoquePara(quantidade)) {
-            throw new EstoqueInsuficienteException(
-                    "Estoque insuficiente de " + produto.getNome()
-                            + " (disponível: " + produto.getQuantidade() + ").");
-        }
-        produto.setQuantidade(produto.getQuantidade() - quantidade);
+        produto.baixar(quantidade);
         produtos.save(produto);
     }
 }

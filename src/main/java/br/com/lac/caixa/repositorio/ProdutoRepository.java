@@ -7,5 +7,6 @@ import java.util.List;
 
 public interface ProdutoRepository extends JpaRepository<Produto, Long> {
     /** Apenas os produtos ativos (não arquivados). */
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "categoria")
     List<Produto> findByAtivoTrueOrderByNomeAsc();
 }

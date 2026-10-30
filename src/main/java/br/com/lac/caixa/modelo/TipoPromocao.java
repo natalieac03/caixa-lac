@@ -9,12 +9,17 @@ package br.com.lac.caixa.modelo;
  *   -> 3 un. = 10 + 6 = 16.
  */
 public enum TipoPromocao {
-    A_PARTIR_DE("A partir de X unidades"),
-    PACOTE("Pacote fechado a cada X unidades");
+    A_PARTIR_DE("A partir de X unidades", new br.com.lac.caixa.servico.preco.APartirDe()),
+    PACOTE("Pacote fechado a cada X unidades", new br.com.lac.caixa.servico.preco.Pacote());
 
     private final String rotulo;
 
-    TipoPromocao(String rotulo) {
+    private final br.com.lac.caixa.servico.preco.RegraPromocao regra;
+
+    public br.com.lac.caixa.servico.preco.RegraPromocao regra() { return regra; }
+
+    TipoPromocao(String rotulo, br.com.lac.caixa.servico.preco.RegraPromocao regra) {
+        this.regra = regra;
         this.rotulo = rotulo;
     }
 

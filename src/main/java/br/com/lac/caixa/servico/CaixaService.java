@@ -4,8 +4,6 @@ import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.modelo.ItemVenda;
 import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.modelo.Promocao;
-import br.com.lac.caixa.modelo.PromocaoItem;
-import br.com.lac.caixa.modelo.TipoPromocao;
 import br.com.lac.caixa.modelo.Venda;
 import br.com.lac.caixa.pagamento.Pagamento;
 import br.com.lac.caixa.pagamento.PagamentoFactory;
@@ -17,8 +15,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -65,116 +61,71 @@ public class CaixaService {
     public ResultadoVenda registrarVenda(Map<Long, Integer> quantidades,
                                          FormaPagamento forma,
                                          String outro,
-                                         BigDecimal totalManual) {
+                                         BigDecimal totalManual, String motivoAjuste, String token) {
+        if (token == null || !java.util.UUID.fromString(token).toString().equals(token)) throw new IllegalArgumentException("Token de venda inválido.");
+        var existente = vendas.findByToken(token);
+        if (existente.isPresent()) return new ResultadoVenda(existente.get(), "Venda já registrada.");
+
 
         Venda venda = new Venda(forma, outro);
+        venda.setToken(token);
         List<Promocao> ativas = promocoes.listarAtivas();
 
-        // -- Passo 1: resolve produtos e soma quantidades por categoria --
+        // Resolve os produtos antes de calcular e alterar o estoque.
         Map<Long, Produto> selecionados = new LinkedHashMap<>();
-        Map<Long, Integer> qtdPorCat = new HashMap<>();
 
         for (Map.Entry<Long, Integer> e : quantidades.entrySet()) {
             int qtd = e.getValue() == null ? 0 : e.getValue();
-            if (qtd <= 0) continue;
+            if (qtd < 0) throw new IllegalArgumentException("Quantidade inválida.");
+            if (qtd == 0) continue;
             Produto p = estoque.buscar(e.getKey());
+            if (!p.isAtivo()) throw new IllegalArgumentException("Produto arquivado.");
             selecionados.put(e.getKey(), p);
-            if (p.getCategoria() != null) {
-                qtdPorCat.merge(p.getCategoria().getId(), qtd, Integer::sum);
-            }
         }
 
         if (selecionados.isEmpty()) {
             throw new IllegalArgumentException("Selecione ao menos um produto.");
         }
 
-        // -- Passo 2: identifica promoções A_PARTIR_DE que se ativam --
-        // Guarda catId -> preço promocional para aplicar em cada item.
-        Map<Long, BigDecimal> precoAPartirDe = new HashMap<>();
-        Map<Long, Integer> remaining = new HashMap<>(qtdPorCat);
-
-        for (Promocao promo : ativas) {
-            if (promo.getTipo() != TipoPromocao.A_PARTIR_DE) continue;
-            int combos = promo.combosDisponiveis(remaining);
-            if (combos == 0) continue;
-            // Aplica o preco promocional a TODAS as unidades das categorias envolvidas.
-            for (PromocaoItem pi : promo.getItens()) {
-                Long catId = pi.getCategoria().getId();
-                precoAPartirDe.put(catId, promo.getPreco());
-                remaining.put(catId, 0); // "consome" para não entrar em outro promo
-            }
+        var carrinho = new br.com.lac.caixa.servico.preco.Carrinho(selecionados.values().stream()
+                .map(p -> new br.com.lac.caixa.servico.preco.Carrinho.Linha(p, quantidades.get(p.getId()))).toList());
+        var orcamento = new br.com.lac.caixa.servico.preco.CalculadoraDePreco().calcular(carrinho, ativas);
+        BigDecimal calculado = orcamento.total();
+        BigDecimal total = totalManual != null ? totalManual : calculado;
+        if (total.signum() < 0) throw new IllegalArgumentException("O valor ajustado não pode ser negativo.");
+        if (total.compareTo(calculado) != 0 && (motivoAjuste == null || motivoAjuste.isBlank()))
+            throw new IllegalArgumentException("Informe o motivo do ajuste de valor.");
+        for (var item : orcamento.itens()) {
+            Produto p = selecionados.get(item.produtoId());
+            estoque.darBaixa(p, item.quantidade());
+            venda.adicionarItem(new ItemVenda(p, item.quantidade(), item.precoUnitario()));
         }
-
-        // -- Passo 3: dá baixa no estoque e monta os itens --
-        for (Map.Entry<Long, Produto> e : selecionados.entrySet()) {
-            Produto p = e.getValue();
-            int qtd = quantidades.get(e.getKey());
-            estoque.darBaixa(p, qtd);
-
-            BigDecimal precoUnit = (p.getCategoria() != null
-                    && precoAPartirDe.containsKey(p.getCategoria().getId()))
-                    ? precoAPartirDe.get(p.getCategoria().getId())
-                    : p.getPreco();
-
-            venda.adicionarItem(new ItemVenda(p, qtd, precoUnit));
-        }
-
-        // -- Passo 4: calcula desconto dos combos PACOTE --
-        // Preços dos itens por categoria (ordenados decrescente para
-        // maximizar o desconto: os mais caros entram primeiro no combo).
-        Map<Long, List<BigDecimal>> precosPorCat = new HashMap<>();
-        for (ItemVenda iv : venda.getItens()) {
-            if (iv.getProduto().getCategoria() == null) continue;
-            Long catId = iv.getProduto().getCategoria().getId();
-            List<BigDecimal> lista = precosPorCat.computeIfAbsent(catId, k -> new ArrayList<>());
-            for (int k = 0; k < iv.getQuantidade(); k++) {
-                lista.add(iv.getPrecoUnitario());
-            }
-        }
-        precosPorCat.values().forEach(l -> l.sort(Comparator.reverseOrder()));
-
-        Map<Long, Integer> remainingPacote = new HashMap<>(qtdPorCat);
-        BigDecimal descontoPacote = BigDecimal.ZERO;
-
-        // Pacotes ordenados do melhor negócio para o pior (menor preço por
-        // unidade primeiro). Assim "5 por R$6" (R$1,20/un) é aplicado antes
-        // de "3 por R$4" (R$1,33/un), e o cliente sempre paga o menor total.
-        List<Promocao> pacotesOrdenados = ativas.stream()
-                .filter(p -> p.getTipo() == TipoPromocao.PACOTE)
-                .sorted(Comparator.comparingDouble(Promocao::getPrecoPorUnidade))
-                .toList();
-
-        for (Promocao promo : pacotesOrdenados) {
-            int combos = promo.combosDisponiveis(remainingPacote);
-            if (combos == 0) continue;
-
-            BigDecimal custNormal = BigDecimal.ZERO;
-            for (PromocaoItem pi : promo.getItens()) {
-                Long catId = pi.getCategoria().getId();
-                List<BigDecimal> precos = precosPorCat.getOrDefault(catId, List.of());
-                // índice de início = unidades já consumidas por combos anteriores desta cat
-                int inicio = qtdPorCat.getOrDefault(catId, 0) - remainingPacote.getOrDefault(catId, 0);
-                int fim = inicio + combos * pi.getQuantidade();
-                for (int k = inicio; k < Math.min(fim, precos.size()); k++) {
-                    custNormal = custNormal.add(precos.get(k));
-                }
-                // Consome as unidades usadas no combo
-                remainingPacote.merge(catId, -combos * pi.getQuantidade(), Integer::sum);
-            }
-
-            BigDecimal custPromo = promo.getPreco().multiply(BigDecimal.valueOf(combos));
-            BigDecimal economia = custNormal.subtract(custPromo);
-            if (economia.compareTo(BigDecimal.ZERO) > 0) {
-                descontoPacote = descontoPacote.add(economia);
-            }
-        }
-
-        BigDecimal calculado = venda.calcularTotal().subtract(descontoPacote);
-        BigDecimal total = (totalManual != null) ? totalManual : calculado;
-        venda.setValorTotal(total);
+        venda.registrarValores(calculado, orcamento.descontos().stream().map(br.com.lac.caixa.servico.preco.Orcamento.Desconto::valor)
+                .reduce(BigDecimal.ZERO, BigDecimal::add), total, motivoAjuste);
 
         Venda salva = vendas.save(venda);
         Pagamento estrategia = PagamentoFactory.criar(forma, outro);
         return new ResultadoVenda(salva, estrategia.pagar(total));
+    }
+    @Transactional(readOnly = true)
+    public br.com.lac.caixa.servico.preco.Orcamento previa(Map<Long,Integer> quantidades) {
+        var linhas = new ArrayList<br.com.lac.caixa.servico.preco.Carrinho.Linha>();
+        quantidades.forEach((id,qtd) -> {
+            if (qtd < 0) throw new IllegalArgumentException("Quantidade inválida.");
+            if (qtd > 0) linhas.add(new br.com.lac.caixa.servico.preco.Carrinho.Linha(estoque.buscar(id), qtd));
+        });
+        return new br.com.lac.caixa.servico.preco.CalculadoraDePreco().calcular(new br.com.lac.caixa.servico.preco.Carrinho(linhas), promocoes.listarAtivas());
+    }
+    @Transactional(readOnly = true)
+    public boolean tokenRegistrado(String token) { return token != null && vendas.existsByToken(token); }
+    /** O bloqueio da venda serializa cancelamentos; a versão protege o estoque. */
+    @Transactional
+    public void cancelarVenda(Long id, String motivo) {
+        Venda venda = vendas.buscarParaCancelar(id)
+                .orElseThrow(() -> new RegraDeNegocioException("Venda não encontrada: " + id));
+        if (venda.isCancelada()) return;
+        venda.cancelar(motivo, LocalDateTime.now());
+        for (ItemVenda item : venda.getItens()) estoque.adicionarUnidades(item.getProduto().getId(), item.getQuantidade());
+        vendas.save(venda);
     }
 }

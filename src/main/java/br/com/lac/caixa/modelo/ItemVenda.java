@@ -19,6 +19,7 @@ public class ItemVenda {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @jakarta.persistence.JoinColumn(name = "produto_id", nullable = false)
     @ManyToOne
     private Produto produto;
 

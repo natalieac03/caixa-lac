@@ -51,8 +51,7 @@ public class EstoqueController {
                        @RequestParam(required = false) Long categoriaId,
                        @RequestParam(required = false) String novaCategoria,
                        RedirectAttributes flash) {
-        try {
-            BigDecimal valor = new BigDecimal(preco.trim().replace(",", "."));
+            BigDecimal valor = br.com.lac.caixa.util.Dinheiro.parse(preco);
 
             Categoria categoria;
             if (novaCategoria != null && !novaCategoria.isBlank()) {
@@ -67,11 +66,6 @@ public class EstoqueController {
             estoque.criarNovo(nome, valor, quantidade, categoria);
             flash.addFlashAttribute("sucesso",
                     "Produto \"" + nome + "\" cadastrado na categoria " + categoria.getNome() + ".");
-        } catch (NumberFormatException e) {
-            flash.addFlashAttribute("erro", "Preço inválido.");
-        } catch (IllegalArgumentException e) {
-            flash.addFlashAttribute("erro", e.getMessage());
-        }
         return "redirect:/estoque";
     }
 
@@ -90,25 +84,17 @@ public class EstoqueController {
     public String removerUnidades(@PathVariable Long id,
                                   @RequestParam int quantidade,
                                   RedirectAttributes flash) {
-        try {
             estoque.removerUnidades(id, quantidade);
             flash.addFlashAttribute("sucesso", "Estoque atualizado.");
-        } catch (IllegalArgumentException e) {
-            flash.addFlashAttribute("erro", e.getMessage());
-        }
         return "redirect:/estoque";
     }
 
     @PostMapping("/estoque/{id}/remover")
     public String remover(@PathVariable Long id, RedirectAttributes flash) {
-        try {
             boolean arquivado = estoque.remover(id);
             flash.addFlashAttribute("sucesso", arquivado
                     ? "Produto arquivado: ele já aparece em vendas antigas, então saiu do estoque mas continua no histórico."
                     : "Produto removido.");
-        } catch (IllegalArgumentException e) {
-            flash.addFlashAttribute("erro", e.getMessage());
-        }
         return "redirect:/estoque";
     }
 
@@ -116,20 +102,7 @@ public class EstoqueController {
     @GetMapping("/estoque/exportar.csv")
     public ResponseEntity<Resource> exportar() {
         String csv = ExportadorCSV.doEstoque(estoque.listar());
-        return arquivoCsv(csv, "estoque.csv");
+        return ExportadorCSV.arquivoCsv(csv, "estoque.csv");
     }
 
-    static ResponseEntity<Resource> arquivoCsv(String csv, String nomeArquivo) {
-        // BOM UTF-8 para o Excel exibir os acentos corretamente.
-        byte[] bom = new byte[]{(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
-        byte[] corpo = csv.getBytes(StandardCharsets.UTF_8);
-        byte[] conteudo = new byte[bom.length + corpo.length];
-        System.arraycopy(bom, 0, conteudo, 0, bom.length);
-        System.arraycopy(corpo, 0, conteudo, bom.length, corpo.length);
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nomeArquivo + "\"")
-                .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
-                .body(new ByteArrayResource(conteudo));
-    }
 }
