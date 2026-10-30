@@ -54,7 +54,248 @@
         <strong>Nenhuma venda neste período.</strong>
         Escolha outro período ou evento nos filtros acima.
     </div>
+
+    <th:block th:unless="${painel.vazio}" th:with="R=${T(br.com.lac.caixa.util.Dinheiro)}">
+    <!--/* 4. Cartões */-->
+    <section aria-labelledby="titulo-indicadores">
+        <h2 id="titulo-indicadores" class="sr-only">Indicadores</h2>
+        <div th:replace="~{fragments/financas :: cartoes(${painel})}"></div>
+        <div th:replace="~{fragments/financas :: aviso-parcial(${painel})}"></div>
+    </section>
+
+    <!--/* 5. Demonstrativo */-->
+    <section class="cartao tabela-area" aria-labelledby="titulo-demonstrativo">
+        <h2 id="titulo-demonstrativo">Demonstrativo</h2>
+        <table th:replace="~{fragments/financas :: demonstrativo(${painel})}"></table>
+    </section>
+
+    <!--/* 6. Série */-->
+    <section class="cartao" aria-labelledby="titulo-serie">
+        <h2 id="titulo-serie" th:text="${painel.serie.porHora} ? 'Receita líquida e lucro bruto por hora' : 'Receita líquida e lucro bruto por dia'">Receita e lucro por dia</h2>
+        <figure class="grafico grafico-linha">
+            <canvas id="grafico-serie" role="img" aria-describedby="tabela-serie-titulo"></canvas>
+            <figcaption>Linha roxa: receita líquida. Linha laranja tracejada: lucro bruto (receita líquida - CMV).</figcaption>
+        </figure>
+    </section>
+
+    <!--/* 7. Produtos */-->
+    <section class="cartao" aria-labelledby="titulo-produtos" id="secao-produtos">
+        <h2 id="titulo-produtos">Ranking de produtos</h2>
+        <nav class="atalhos-periodo" aria-label="Métrica do ranking">
+            <a th:each="m : ${ {'quantidade','receita','lucro'} }"
+               th:href="@{/financas} + '?' + ${f.consulta()} + '&metrica=' + ${m} + '#secao-produtos'"
+               th:classappend="${metrica == m} ? 'ativo'" th:attr="aria-current=${metrica == m} ? 'true' : null"
+               th:text="${m == 'quantidade'} ? 'Quantidade' : (${m == 'receita'} ? 'Receita' : 'Lucro')">Receita</a>
+        </nav>
+        <figure class="grafico grafico-barras">
+            <canvas id="grafico-produtos" role="img" aria-describedby="tabela-produtos-top"></canvas>
+            <figcaption th:text="'Os 10 primeiros por ' + (${metrica == 'quantidade'} ? 'quantidade vendida' : (${metrica == 'lucro'} ? 'lucro bruto' : 'receita líquida')) + '.'">Os 10 primeiros.</figcaption>
+        </figure>
+        <div class="linha-campos busca-tabela">
+            <div class="campo"><label for="buscaProdutos">Buscar produto</label>
+                <input type="search" id="buscaProdutos" data-busca="tabela-produtos" placeholder="Ex.: capivara"></div>
+        </div>
+        <div class="tabela-area">
+        <table class="dados ordenavel" id="tabela-produtos">
+            <caption class="sr-only">Todos os produtos vendidos no período. Clique no título de uma coluna para ordenar.</caption>
+            <thead><tr>
+                <th scope="col"><button type="button" data-ordenar="0">Pos.</button></th>
+                <th scope="col"><button type="button" data-ordenar="1">Produto</button></th>
+                <th scope="col"><button type="button" data-ordenar="2">Categoria</button></th>
+                <th scope="col" class="num"><button type="button" data-ordenar="3">Qtd</button></th>
+                <th scope="col" class="num"><button type="button" data-ordenar="4">Receita líquida</button></th>
+                <th scope="col" class="num"><button type="button" data-ordenar="5">Lucro bruto</button></th>
+                <th scope="col" class="num"><button type="button" data-ordenar="6">Margem</button></th>
+                <th scope="col" class="num"><button type="button" data-ordenar="7">Participação</button></th>
+                <th scope="col"><button type="button" data-ordenar="8">ABC</button></th>
+            </tr></thead>
+            <tbody>
+            <tr th:each="x : ${painel.produtos}" th:with="p=${x.produto}" th:attr="data-nome=${#strings.toLowerCase(p.nome)}">
+                <td class="num" th:attr="data-valor=${p.posicao}" th:text="${p.posicao}">1</td>
+                <td th:attr="data-valor=${p.nome}"><span th:text="${p.nome}">Bóton</span>
+                    <span class="selo selo-arquivado" th:if="${p.arquivado}">Arquivado</span>
+                    <span class="selo selo-sem-custo" th:if="${p.unidadesSemCusto > 0}" th:title="${p.unidadesSemCusto} + ' un. vendidas sem custo'">sem custo</span></td>
+                <td th:attr="data-valor=${p.categoria}" th:text="${p.categoria ?: 'Sem categoria'}">Bóton</td>
+                <td class="num" th:attr="data-valor=${p.quantidade}" th:text="${p.quantidade}">3</td>
+                <td class="num" th:attr="data-valor=${p.receitaLiquida}" th:text="${R.reais(p.receitaLiquida)}">R$ 0,00</td>
+                <td class="num" th:attr="data-valor=${p.lucroBruto}" th:text="${R.reais(p.lucroBruto)}">R$ 0,00</td>
+                <td class="num" th:attr="data-valor=${p.margemPercentual ?: -999999}" th:text="${p.margemPercentual == null} ? '—' : ${#numbers.formatDecimal(p.margemPercentual, 1, 2, 'COMMA')} + '%'">0%</td>
+                <td class="num" th:attr="data-valor=${p.participacaoPercentual ?: 0}" th:text="${p.participacaoPercentual == null} ? '—' : ${#numbers.formatDecimal(p.participacaoPercentual, 1, 2, 'COMMA')} + '%'">0%</td>
+                <td th:attr="data-valor=${x.classe}"><span class="selo selo-abc" th:classappend="'abc-' + ${x.classe}" th:text="${x.classe}">A</span></td>
+            </tr>
+            </tbody>
+        </table>
+        </div>
+        <p class="ajuda">Curva ABC por receita líquida: A são os produtos que somam os primeiros 80% da receita; B, até 95%; C, o resto.</p>
+    </section>
+
+    <!--/* 8. Categorias com drill-down */-->
+    <section class="cartao" aria-labelledby="titulo-categorias" id="secao-categorias">
+        <h2 id="titulo-categorias">Categorias</h2>
+        <div id="categorias-visao">
+            <figure class="grafico grafico-barras">
+                <canvas id="grafico-categorias" role="img" aria-describedby="tabela-categorias"></canvas>
+                <figcaption>Receita líquida por categoria. Clique numa barra (ou em "Ver produtos") para abrir os produtos dela.</figcaption>
+            </figure>
+            <div class="tabela-area">
+            <table class="dados" id="tabela-categorias">
+                <caption class="sr-only">Receita, lucro e participação por categoria</caption>
+                <thead><tr><th scope="col">Pos.</th><th scope="col">Categoria</th><th scope="col" class="num">Qtd</th><th scope="col" class="num">Vendas</th>
+                    <th scope="col" class="num">Receita líquida</th><th scope="col" class="num">Lucro bruto</th><th scope="col" class="num">Margem</th>
+                    <th scope="col" class="num">Participação</th><th scope="col"></th></tr></thead>
+                <tbody>
+                <tr th:each="c : ${painel.categorias}">
+                    <td class="num" th:text="${c.posicao}">1</td>
+                    <td th:text="${c.categoria}">Bóton</td>
+                    <td class="num" th:text="${c.quantidade}">5</td>
+                    <td class="num" th:text="${c.vendas}">2</td>
+                    <td class="num" th:text="${R.reais(c.receitaLiquida)}">R$ 0,00</td>
+                    <td class="num" th:text="${R.reais(c.lucroBruto)}">R$ 0,00</td>
+                    <td class="num" th:text="${c.margemPercentual == null} ? '—' : ${#numbers.formatDecimal(c.margemPercentual, 1, 2, 'COMMA')} + '%'">0%</td>
+                    <td class="num" th:text="${c.participacaoPercentual == null} ? '—' : ${#numbers.formatDecimal(c.participacaoPercentual, 1, 2, 'COMMA')} + '%'">0%</td>
+                    <td><button type="button" class="botao botao-secundario botao-pequeno"
+                                th:attr="data-categoria=${c.categoriaId ?: 'sem'}">Ver produtos</button></td>
+                </tr>
+                </tbody>
+            </table>
+            </div>
+        </div>
+        <div th:each="c : ${painel.categorias}" class="drill oculto" th:id="'drill-' + ${c.categoriaId ?: 'sem'}" tabindex="-1">
+            <button type="button" class="botao botao-fantasma botao-pequeno" data-voltar>← Voltar para as categorias</button>
+            <h3 th:text="'Produtos de ' + ${c.categoria}">Produtos de Bóton</h3>
+            <div class="tabela-area">
+            <table class="dados">
+                <thead><tr><th scope="col">Pos.</th><th scope="col">Produto</th><th scope="col" class="num">Qtd</th><th scope="col" class="num">Receita líquida</th>
+                    <th scope="col" class="num">Lucro bruto</th><th scope="col" class="num">Margem</th><th scope="col" class="num">Participação na categoria</th></tr></thead>
+                <tbody>
+                <tr th:each="p : ${c.produtos}">
+                    <td class="num" th:text="${p.posicao}">1</td>
+                    <td><span th:text="${p.nome}">Bóton 1</span> <span class="selo selo-arquivado" th:if="${p.arquivado}">Arquivado</span></td>
+                    <td class="num" th:text="${p.quantidade}">3</td>
+                    <td class="num" th:text="${R.reais(p.receitaLiquida)}">R$ 0,00</td>
+                    <td class="num" th:text="${R.reais(p.lucroBruto)}">R$ 0,00</td>
+                    <td class="num" th:text="${p.margemPercentual == null} ? '—' : ${#numbers.formatDecimal(p.margemPercentual, 1, 2, 'COMMA')} + '%'">0%</td>
+                    <td class="num" th:text="${p.participacaoPercentual == null} ? '—' : ${#numbers.formatDecimal(p.participacaoPercentual, 1, 2, 'COMMA')} + '%'">0%</td>
+                </tr>
+                </tbody>
+            </table>
+            </div>
+        </div>
+    </section>
+
+    <!--/* 9. Formas de pagamento */-->
+    <section class="cartao" aria-labelledby="titulo-formas">
+        <h2 id="titulo-formas">Formas de pagamento</h2>
+        <figure class="grafico grafico-barras">
+            <canvas id="grafico-formas" role="img" aria-describedby="tabela-formas"></canvas>
+            <figcaption>Barras roxas: valor recebido (eixo da esquerda). Barras laranja listradas: número de vendas (eixo da direita).</figcaption>
+        </figure>
+        <div class="tabela-area">
+        <table class="dados" id="tabela-formas">
+            <caption class="sr-only">Valor, vendas e taxa estimada por forma de pagamento</caption>
+            <thead><tr><th scope="col">Forma</th><th scope="col" class="num">Valor</th><th scope="col" class="num">Vendas</th>
+                <th scope="col" class="num">Taxa estimada</th><th scope="col" class="num">Participação</th></tr></thead>
+            <tbody>
+            <tr th:each="l : ${painel.formas}">
+                <td th:text="${l.forma.rotulo}">Pix</td>
+                <td class="num" th:text="${R.reais(l.valor)}">R$ 0,00</td>
+                <td class="num" th:text="${l.vendas}">0</td>
+                <td class="num" th:text="${R.reais(l.taxas)}">R$ 0,00</td>
+                <td class="num" th:text="${l.participacaoPercentual == null} ? '—' : ${#numbers.formatDecimal(l.participacaoPercentual, 1, 2, 'COMMA')} + '%'">0%</td>
+            </tr>
+            </tbody>
+        </table>
+        </div>
+        <p class="ajuda">Pelas partes do pagamento: uma venda dividida entra em cada forma que usou, com o valor de cada parte.</p>
+    </section>
+
+    <!--/* 10. Mapa de calor */-->
+    <section class="cartao" aria-labelledby="titulo-mapa">
+        <h2 id="titulo-mapa">Vendas por dia da semana e hora</h2>
+        <div class="tabela-area">
+        <table class="dados mapa-calor" id="mapa-calor">
+            <caption class="sr-only">Número de vendas em cada dia da semana e hora do dia; a receita aparece ao passar o mouse.</caption>
+            <thead><tr><th scope="col">Dia</th><th scope="col" class="num" th:each="h : ${#numbers.sequence(0, 23)}" th:text="${h} + 'h'">0h</th></tr></thead>
+            <tbody>
+            <tr th:each="l : ${painel.mapa}">
+                <th scope="row" th:text="${l.rotulo}">seg.</th>
+                <td th:each="c : ${l.horas}" class="num" th:classappend="'nivel-' + ${c.nivel}"
+                    th:title="${c.vendas} + ' venda(s), ' + ${R.reais(c.receita)}" th:text="${c.vendas}">0</td>
+            </tr>
+            </tbody>
+        </table>
+        </div>
+        <p class="ajuda">O número em cada célula é a quantidade de vendas; a cor mais forte só reforça as horas de maior movimento.</p>
+    </section>
+
+    <!--/* 11. Promoções */-->
+    <section class="cartao tabela-area" aria-labelledby="titulo-promocoes">
+        <h2 id="titulo-promocoes">Promoções</h2>
+        <p class="vazio" th:if="${painel.promocoes.isEmpty()}">Nenhuma promoção usada no período.</p>
+        <table class="dados" id="tabela-promocoes" th:unless="${painel.promocoes.isEmpty()}">
+            <thead><tr><th scope="col">Promoção</th><th scope="col" class="num">Vendas</th><th scope="col" class="num">Desconto concedido</th>
+                <th scope="col" class="num">Receita das vendas com a promoção</th></tr></thead>
+            <tbody>
+            <tr th:each="p : ${painel.promocoes}">
+                <td th:text="${p.promocao}">Pacote</td>
+                <td class="num" th:text="${p.vendas}">1</td>
+                <td class="num" th:text="${R.reais(p.descontoTotal)}">R$ 0,00</td>
+                <td class="num" th:text="${R.reais(p.receitaLiquida)}">R$ 0,00</td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+    </th:block>
+
+    <!--/* 12. Estoque (aparece mesmo sem vendas: os parados importam) */-->
+    <section class="cartao" aria-labelledby="titulo-estoque" th:with="R=${T(br.com.lac.caixa.util.Dinheiro)}">
+        <h2 id="titulo-estoque">Estoque</h2>
+        <div class="indicadores">
+            <div class="indicador" id="estoque-a-custo"><div class="indicador-rotulo">Estoque a custo</div>
+                <div class="indicador-valor" th:text="${R.reais(painel.valorEstoque.aCusto)}">R$ 0,00</div>
+                <div class="indicador-rodape" th:if="${painel.valorEstoque.produtosSemCusto > 0}"
+                     th:text="${painel.valorEstoque.produtosSemCusto} + ' produto(s) com estoque e sem custo ficam fora'">sem custo</div></div>
+            <div class="indicador" id="estoque-a-preco"><div class="indicador-rotulo">Estoque a preço de venda</div>
+                <div class="indicador-valor" th:text="${R.reais(painel.valorEstoque.aPreco)}">R$ 0,00</div></div>
+        </div>
+        <h3>Giro (o que acaba primeiro vem primeiro)</h3>
+        <div class="tabela-area">
+        <table class="dados" id="tabela-giro">
+            <thead><tr><th scope="col">Produto</th><th scope="col" class="num">Vendidas no período</th><th scope="col" class="num">Média por dia</th>
+                <th scope="col" class="num">Estoque</th><th scope="col" class="num">Dias até acabar</th><th scope="col" class="num">A custo</th><th scope="col" class="num">A preço</th></tr></thead>
+            <tbody>
+            <tr th:each="g : ${painel.giro}">
+                <td th:text="${g.nome}">Bóton</td>
+                <td class="num" th:text="${g.vendidas}">0</td>
+                <td class="num" th:text="${#numbers.formatDecimal(g.mediaPorDia, 1, 2, 'COMMA')}">0,00</td>
+                <td class="num" th:text="${g.estoque}">0</td>
+                <td class="num" th:text="${g.semGiro} ? 'sem giro' : ${#numbers.formatDecimal(g.diasAteAcabar, 1, 1, 'COMMA')}">—</td>
+                <td class="num" th:text="${g.valorACusto == null} ? 'sem custo' : ${R.reais(g.valorACusto)}">R$ 0,00</td>
+                <td class="num" th:text="${R.reais(g.valorAPreco)}">R$ 0,00</td>
+            </tr>
+            </tbody>
+        </table>
+        </div>
+        <h3>Produtos parados (com estoque e sem venda no período)</h3>
+        <p class="vazio" th:if="${painel.parados.isEmpty()}">Nenhum produto parado.</p>
+        <div class="tabela-area" th:unless="${painel.parados.isEmpty()}">
+        <table class="dados" id="tabela-parados">
+            <thead><tr><th scope="col">Produto</th><th scope="col">Categoria</th><th scope="col" class="num">Estoque</th>
+                <th scope="col" class="num">A custo</th><th scope="col" class="num">A preço</th></tr></thead>
+            <tbody>
+            <tr th:each="g : ${painel.parados}">
+                <td th:text="${g.nome}">Bóton</td>
+                <td th:text="${g.categoria ?: 'Sem categoria'}">Bóton</td>
+                <td class="num" th:text="${g.estoque}">0</td>
+                <td class="num" th:text="${g.valorACusto == null} ? 'sem custo' : ${R.reais(g.valorACusto)}">R$ 0,00</td>
+                <td class="num" th:text="${R.reais(g.valorAPreco)}">R$ 0,00</td>
+            </tr>
+            </tbody>
+        </table>
+        </div>
+    </section>
 </main>
 <script th:src="@{/js/vendor/chart-4.4.1.umd.js}"></script>
+<script th:src="@{/js/financas.js}" th:attr="data-dados=@{/financas/dados}" id="script-financas"></script>
 </body>
 </html>

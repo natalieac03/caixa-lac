@@ -31,9 +31,14 @@ public class EstoqueController {
         this.categorias = categorias;
     }
 
+    /** semCusto=true: só os produtos sem custo (link do aviso de lucro parcial nas Finanças). */
     @GetMapping("/estoque")
-    public String listar(Model model) {
-        model.addAttribute("produtos", estoque.listar());
+    public String listar(@RequestParam(required = false) boolean semCusto, Model model) {
+        var produtos = estoque.listar();
+        model.addAttribute("soSemCusto", semCusto);
+        model.addAttribute(
+                "produtos",
+                semCusto ? produtos.stream().filter(p -> p.isSemCusto()).toList() : produtos);
         model.addAttribute("categorias", categorias.listar());
         model.addAttribute("hoje", LocalDate.now());
         return "estoque";

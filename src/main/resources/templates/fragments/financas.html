@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--/* Pedaços da tela de Finanças reaproveitados no relatório do evento. Só exibem o que vem do servidor. */-->
+
+<div th:fragment="cartoes(painel)" class="indicadores cartoes-financas">
+    <div class="indicador cartao-financas" th:each="c : ${painel.cartoes}" th:id="'cartao-' + ${c.id}"
+         th:classappend="'variacao-' + ${c.direcao}">
+        <div class="indicador-rotulo" th:text="${c.rotulo}">Receita líquida</div>
+        <div class="indicador-valor" th:text="${c.valor}">R$ 0,00</div>
+        <div class="indicador-rodape variacao" th:text="${c.variacao}">▲ +10,00% em relação a ...</div>
+        <div class="indicador-rodape" th:if="${c.nota != null}" th:text="${c.nota}"></div>
+    </div>
+</div>
+
+<div th:fragment="aviso-parcial(painel)" th:if="${painel.resumo.lucroParcial}" class="aviso aviso-alerta" id="aviso-parcial" role="note">
+    <span>Lucro <strong>parcial</strong>: <strong th:text="${painel.resumo.cobertura.itensSemCusto}">1</strong>
+        item(ns) vendido(s) sem custo cadastrado, então o CMV está incompleto.
+        <strong th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(painel.resumo.cobertura.receitaSemCusto)}">R$ 0,00</strong>
+        da receita líquida
+        (<span th:text="${painel.resumo.cobertura.percentualSemCusto == null} ? '-' : ${#numbers.formatDecimal(painel.resumo.cobertura.percentualSemCusto, 1, 2, 'COMMA')} + '%'">0%</span>)
+        não tem custo.
+        <a th:href="@{/estoque(semCusto=true)}" class="nao-imprimir">Ver produtos sem custo</a></span>
+</div>
+
+<table th:fragment="demonstrativo(painel)" class="dados demonstrativo" id="demonstrativo">
+    <caption class="sr-only">Demonstrativo do resultado</caption>
+    <thead><tr><th scope="col">Linha</th><th scope="col" class="num">Valor</th><th scope="col" class="num">% da receita líquida</th></tr></thead>
+    <tbody>
+    <tr th:each="l : ${painel.demonstrativo}" th:classappend="${l.resultado} ? 'linha-resultado'">
+        <th scope="row"><span class="operador" th:text="${l.operador}">(-)</span> <span th:text="${l.rotulo}">Taxas</span></th>
+        <td class="num" th:text="${l.valor == null} ? '—' : ${T(br.com.lac.caixa.util.Dinheiro).reais(l.valor)}">R$ 0,00</td>
+        <td class="num" th:text="${l.percentualDaReceita == null} ? '—' : ${#numbers.formatDecimal(l.percentualDaReceita, 1, 2, 'COMMA')} + '%'">0,00%</td>
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>

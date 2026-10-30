@@ -57,7 +57,15 @@ public final class Financas {
             BigDecimal receitaSemCusto,
             BigDecimal percentual,
             long itensSemCusto,
-            boolean parcial) {}
+            boolean parcial) {
+
+        /** % da receita líquida vinda de itens sem custo (100 - percentual); null sem receita. */
+        public BigDecimal percentualSemCusto() {
+            return percentual == null
+                    ? null
+                    : BigDecimal.valueOf(100).setScale(2).subtract(percentual);
+        }
+    }
 
     /** Os mesmos números no período anterior de mesmo tamanho (ou no evento anterior). */
     public record Comparacao(Resumo atual, Resumo anterior, String periodoAnterior, List<Variacao> variacoes) {}

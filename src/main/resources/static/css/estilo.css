@@ -1022,3 +1022,36 @@ tr.linha-edicao.oculto { display: none; }
 }
 .atalhos-periodo a:hover { background: var(--roxo-fundo); }
 .atalhos-periodo a.ativo { background: var(--roxo); border-color: var(--roxo); color: var(--on-roxo); }
+.cartoes-financas { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.cartao-financas .variacao::before { content: none; }
+.variacao-sobe .variacao { color: var(--verde-texto); }
+.variacao-desce .variacao { color: var(--coral-texto); }
+.aviso-alerta { display: block; background: var(--laranja-fundo); color: var(--laranja-texto); font-weight: 400; }
+.aviso-alerta a { color: inherit; font-weight: 700; }
+.demonstrativo .operador { display: inline-block; min-width: 3.2em; color: var(--tinta-suave); font-family: var(--font-mono, monospace); }
+.demonstrativo th { font-weight: 400; text-align: left; }
+.demonstrativo tr.linha-resultado th, .demonstrativo tr.linha-resultado td { font-weight: 700; border-top: 2px solid var(--linha-forte); }
+.grafico { margin: 0 0 12px; }
+.grafico canvas { width: 100% !important; }
+.grafico-linha { height: 300px; }
+.grafico-barras { height: 320px; }
+.grafico figcaption { font-size: 13px; color: var(--tinta-suave); margin-top: 6px; }
+.grafico-linha canvas, .grafico-barras canvas { height: calc(100% - 28px) !important; }
+.busca-tabela { margin: 8px 0 10px; }
+table.ordenavel th button {
+    background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-decoration: underline dotted;
+}
+table.ordenavel th[aria-sort="ascending"] button::after { content: " ▲"; }
+table.ordenavel th[aria-sort="descending"] button::after { content: " ▼"; }
+.selo-arquivado { background: var(--linha); color: var(--tinta); margin-left: 4px; }
+.selo-abc { min-width: 1.6em; text-align: center; }
+.abc-A { background: var(--verde-fundo); color: var(--verde-texto); }
+.abc-B { background: var(--ipe-fundo); color: var(--ipe-texto); }
+.abc-C { background: var(--linha); color: var(--tinta-suave); }
+.mapa-calor td { min-width: 2.2em; text-align: center; padding: 6px 4px; }
+.mapa-calor td.nivel-0 { color: var(--tinta-suave); }
+.mapa-calor td.nivel-1 { background: color-mix(in srgb, var(--roxo) 15%, transparent); }
+.mapa-calor td.nivel-2 { background: color-mix(in srgb, var(--roxo) 35%, transparent); }
+.mapa-calor td.nivel-3 { background: color-mix(in srgb, var(--roxo) 60%, transparent); color: var(--on-roxo); font-weight: 700; }
+.mapa-calor td.nivel-4 { background: var(--roxo); color: var(--on-roxo); font-weight: 700; }
+.drill h3 { margin: 10px 0; }

@@ -24,6 +24,11 @@
         </div>
     </div>
 
+    <p class="aviso aviso-info" id="filtro-sem-custo" th:if="${soSemCusto}">
+        Mostrando só os produtos <strong>sem custo</strong> cadastrado. Informe o custo na edição de cada um
+        (ou registre uma entrada de estoque com o custo da compra).
+        <a th:href="@{/estoque}">Ver todos</a>
+    </p>
     <div class="indicadores" th:unless="${produtos.isEmpty()}">
         <div class="indicador">
             <div class="indicador-rotulo">Produtos
