@@ -742,14 +742,6 @@ table.dados th.num, table.dados td.num { text-align: right; }
     top: 84px;
 }
 .venda-lateral .cartao { margin-bottom: 16px; }
-.dica-promo {
-    font-size: 12px;
-    color: var(--verde-texto);
-    font-weight: 700;
-    margin-top: 2px;
-}
-.dica-promo:empty { display: none; }
-
 .item-carrinho {
     display: flex;
     justify-content: space-between;
