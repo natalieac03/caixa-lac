@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -44,7 +43,34 @@ public class PromocaoController {
                        @RequestParam TipoPromocao tipo,
                        @RequestParam String preco,
                        RedirectAttributes flash) {
-        BigDecimal valor = Dinheiro.parse(preco);
+        promocoes.criar(qtdPorCategoria(params), tipo, Dinheiro.parse(preco));
+        flash.addFlashAttribute("sucesso", "Promoção criada.");
+        return "redirect:/descontos";
+    }
+
+    /** Mesmo formulário da criação, já preenchido com a promoção. */
+    @GetMapping("/descontos/{id}/editar")
+    public String editar(@PathVariable Long id, Model model) {
+        listar(model);
+        model.addAttribute("edicao", promocoes.buscar(id));
+        return "descontos";
+    }
+
+    @PostMapping("/descontos/{id}/editar")
+    public String salvarEdicao(@PathVariable Long id,
+                               @RequestParam Map<String, String> params,
+                               @RequestParam String preco,
+                               RedirectAttributes flash) {
+        var p = promocoes.editar(id, qtdPorCategoria(params), Dinheiro.parse(preco));
+        flash.addFlashAttribute("sucesso", "Promoção " + p.getNomesCategorias() + " atualizada.");
+        return "redirect:/descontos";
+    }
+
+    /**
+     * O formulário envia qtdCat_{catId} para cada categoria marcada.
+     * Categorias desmarcadas ficam disabled e não chegam no params.
+     */
+    private static Map<Long, Integer> qtdPorCategoria(Map<String, String> params) {
         Map<Long, Integer> qtdPorCat = new LinkedHashMap<>();
         for (Map.Entry<String, String> e : params.entrySet()) {
             if (e.getKey().startsWith("qtdCat_")) {
@@ -53,9 +79,7 @@ public class PromocaoController {
                 if (qtd > 0) qtdPorCat.put(catId, qtd);
             }
         }
-        promocoes.criar(qtdPorCat, tipo, valor);
-        flash.addFlashAttribute("sucesso", "Promoção criada.");
-        return "redirect:/descontos";
+        return qtdPorCat;
     }
 
     @PostMapping("/descontos/{id}/alternar")

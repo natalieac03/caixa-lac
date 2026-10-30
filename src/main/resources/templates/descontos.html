@@ -63,6 +63,8 @@
                     </td>
                     <td>
                         <div class="acoes-linha">
+                            <a class="botao botao-secundario botao-pequeno"
+                               th:href="@{'/descontos/' + ${p.id} + '/editar'} + '#nova-promocao'">Editar</a>
                             <form th:action="@{'/descontos/' + ${p.id} + '/alternar'}" method="post">
                                 <button type="submit" class="botao botao-secundario botao-pequeno"
                                         th:text="${p.ativo} ? 'Desligar' : 'Ligar'">Desligar</button>
@@ -80,13 +82,14 @@
     </div>
 
     <div class="cartao cartao-lac" id="nova-promocao">
-        <h2>Nova promoção</h2>
+        <h2 th:text="${edicao != null} ? 'Editar promoção' : 'Nova promoção'">Nova promoção</h2>
         <div class="corpo">
             <div class="vazio" th:if="${categorias.isEmpty()}">
                 <strong>Ainda não há categorias</strong>
                 Cadastre um produto com categoria no <a th:href="@{/estoque}">Estoque</a> primeiro.
             </div>
-            <form th:action="@{/descontos/novo}" method="post" th:unless="${categorias.isEmpty()}">
+            <form th:action="${edicao != null} ? @{'/descontos/' + ${edicao.id} + '/editar'} : @{/descontos/novo}"
+                  method="post" th:unless="${categorias.isEmpty()}">
 
                 <div class="campo">
                     <label>Categorias do combo</label>
@@ -96,18 +99,22 @@
                             <label class="check-cat">
                                 <input type="checkbox"
                                        th:attr="data-catid=${c.id}"
+                                       th:checked="${edicao != null and edicao.quantidadePorCategoria.containsKey(c.id)}"
                                        onchange="toggleQtd(this)">
                                 <span th:text="${c.nome}">Bóton</span>
                             </label>
-                            <div class="qtd-combo-wrap oculto" th:id="'wrap_' + ${c.id}">
+                            <div class="qtd-combo-wrap"
+                                 th:classappend="${edicao != null and edicao.quantidadePorCategoria.containsKey(c.id)} ? '' : 'oculto'"
+                                 th:id="'wrap_' + ${c.id}">
                                 <input type="number"
                                        th:id="'qtdCat_' + ${c.id}"
                                        th:name="'qtdCat_' + ${c.id}"
-                                       value="1" min="1"
+                                       th:value="${edicao != null and edicao.quantidadePorCategoria.containsKey(c.id)} ? ${edicao.quantidadePorCategoria.get(c.id)} : 1"
+                                       min="1"
                                        class="qtd-combo-input"
                                        placeholder="qtd"
                                        th:attr="aria-label='Quantidade de ' + ${c.nome} + ' no combo'"
-                                       disabled>
+                                       th:disabled="${edicao == null or !edicao.quantidadePorCategoria.containsKey(c.id)}">
                                 <span class="suave" style="font-size:13px;">un.</span>
                             </div>
                         </div>
@@ -117,19 +124,23 @@
                 <div class="linha-campos" style="margin-top:18px;">
                     <div class="campo" style="flex:2;">
                         <label for="tipo">Tipo</label>
-                        <select id="tipo" name="tipo" onchange="atualizarRotulo()">
-                            <option th:each="t : ${tipos}" th:value="${t}" th:text="${t.rotulo}"></option>
+                        <select id="tipo" name="tipo" onchange="atualizarRotulo()" th:disabled="${edicao != null}">
+                            <option th:each="t : ${tipos}" th:value="${t}" th:text="${t.rotulo}"
+                                    th:selected="${edicao != null and edicao.tipo == t}"></option>
                         </select>
+                        <p class="ajuda" th:if="${edicao != null}" style="margin:0;">O tipo não muda na edição; para trocar, crie outra promoção.</p>
                     </div>
                     <div class="campo">
                         <label for="preco" id="rotuloPreco">Cada uma por (R$)</label>
-                        <input type="text" id="preco" name="preco" placeholder="5,00" required inputmode="decimal" class="mono">
+                        <input type="text" id="preco" name="preco" placeholder="5,00" required inputmode="decimal" class="mono"
+                               th:value="${edicao != null} ? ${#numbers.formatDecimal(edicao.preco,1,2,'COMMA')} : ''">
                     </div>
                 </div>
                 <p id="exemploTipo" class="ajuda"></p>
 
                 <div style="margin-top:16px;">
-                    <button type="submit" class="botao botao-principal">Criar promoção</button>
+                    <button type="submit" class="botao botao-principal" th:text="${edicao != null} ? 'Salvar promoção' : 'Criar promoção'">Criar promoção</button>
+                    <a th:if="${edicao != null}" class="botao botao-secundario" th:href="@{/descontos}">Cancelar</a>
                 </div>
             </form>
         </div>

@@ -54,9 +54,25 @@ public class Promocao {
 
     public Promocao(List<PromocaoItem> itens, TipoPromocao tipo, BigDecimal preco) {
         if (preco == null || preco.signum() <= 0) throw new RegraDeNegocioException("Preço deve ser maior que zero.");
-        this.itens = itens;
+        this.itens = new ArrayList<>(itens);
         this.tipo = tipo;
         this.preco = preco;
+    }
+
+    /** Edição: troca preço e quantidades por categoria; o tipo continua o mesmo. */
+    public void alterar(List<PromocaoItem> novosItens, BigDecimal novoPreco) {
+        if (novoPreco == null || novoPreco.signum() <= 0) throw new RegraDeNegocioException("Preço deve ser maior que zero.");
+        if (novosItens == null || novosItens.isEmpty()) {
+            throw new RegraDeNegocioException("Selecione ao menos uma categoria com quantidade.");
+        }
+        itens.clear();
+        itens.addAll(novosItens);
+        preco = novoPreco;
+    }
+
+    /** catId -> quantidade exigida, para preencher o formulário de edição. */
+    public Map<Long, Integer> getQuantidadePorCategoria() {
+        return itens.stream().collect(Collectors.toMap(i -> i.getCategoria().getId(), PromocaoItem::getQuantidade));
     }
 
     /** "Bóton x2 + Adesivo Grande x3" */

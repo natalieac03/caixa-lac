@@ -1005,3 +1005,9 @@ td.pagamento .selo { margin: 1px 0; }
 .saldo-pagamento:empty { display: none; }
 .saldo-falta { color: var(--coral-texto); }
 .saldo-ok { color: var(--verde-texto); }
+
+/* Edição inline no estoque e lista de categorias. */
+tr.linha-edicao td { background: var(--roxo-fundo); }
+tr.linha-edicao.oculto { display: none; }
+.form-edicao .acoes-linha { margin-top: 8px; }
+.linha-categoria { align-items: flex-end; margin-top: 8px; }

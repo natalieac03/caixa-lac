@@ -51,7 +51,7 @@ public class Produto {
     }
 
     public Produto(String nome, BigDecimal preco, int quantidade) {
-        this.nome = nome;
+        setNome(nome);
         setPreco(preco);
         if (quantidade < 0) throw new RegraDeNegocioException("Quantidade não pode ser negativa.");
         this.quantidade = quantidade;
@@ -66,7 +66,19 @@ public class Produto {
     }
 
     public void setNome(String nome) {
-        this.nome = nome;
+        if (nome == null || nome.isBlank()) throw new RegraDeNegocioException("O nome do produto não pode ficar vazio.");
+        if (nome.trim().length() > 255) throw new RegraDeNegocioException("Nome do produto com até 255 caracteres.");
+        this.nome = nome.trim();
+    }
+
+    /**
+     * Edição do cadastro. O preço novo só vale para vendas novas: cada item de
+     * venda guarda o preço unitário do momento da venda (ItemVenda).
+     */
+    public void editar(String nome, BigDecimal preco, Categoria categoria) {
+        setNome(nome);
+        setPreco(preco);
+        setCategoria(categoria);
     }
 
     public BigDecimal getPreco() {

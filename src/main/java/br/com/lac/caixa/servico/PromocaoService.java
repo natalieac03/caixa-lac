@@ -44,6 +44,27 @@ public class PromocaoService {
      */
     @Transactional
     public void criar(Map<Long, Integer> qtdPorCategoria, TipoPromocao tipo, BigDecimal preco) {
+        promocoes.save(new Promocao(itens(qtdPorCategoria), tipo, preco));
+    }
+
+    /** Edição: mesmo formulário da criação; troca preço e quantidades, mantém o tipo. */
+    @Transactional
+    public Promocao editar(Long id, Map<Long, Integer> qtdPorCategoria, BigDecimal preco) {
+        Promocao p = buscar(id);
+        p.alterar(itens(qtdPorCategoria), preco);
+        return promocoes.save(p);
+    }
+
+    @Transactional(readOnly = true)
+    public Promocao buscar(Long id) {
+        Promocao p = promocoes.findById(id)
+                .orElseThrow(() -> new RegraDeNegocioException("Promoção não encontrada."));
+        // O formulário de edição lê as categorias fora da transação.
+        p.getItens().forEach(i -> i.getCategoria().getNome());
+        return p;
+    }
+
+    private List<PromocaoItem> itens(Map<Long, Integer> qtdPorCategoria) {
         if (qtdPorCategoria == null || qtdPorCategoria.isEmpty()) {
             throw new RegraDeNegocioException("Selecione ao menos uma categoria.");
         }
@@ -57,7 +78,7 @@ public class PromocaoService {
         if (itens.isEmpty()) {
             throw new RegraDeNegocioException("Selecione ao menos uma categoria com quantidade.");
         }
-        promocoes.save(new Promocao(itens, tipo, preco));
+        return itens;
     }
 
     @Transactional
@@ -67,8 +88,7 @@ public class PromocaoService {
 
     @Transactional
     public void alternar(Long id) {
-        Promocao p = promocoes.findById(id)
-                .orElseThrow(() -> new RegraDeNegocioException("Promoção não encontrada."));
+        Promocao p = buscar(id);
         p.setAtivo(!p.isAtivo());
         promocoes.save(p);
     }

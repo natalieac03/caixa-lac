@@ -27,6 +27,24 @@ public class CategoriaService {
     }
 
     /**
+     * Renomeia. Recusa se outra categoria já tem o mesmo nome padronizado
+     * ("BÓTON" e "bóton" são o mesmo nome).
+     */
+    @Transactional
+    public Categoria renomear(Long id, String nomeDigitado) {
+        Categoria categoria = buscar(id);
+        String normalizado = Categoria.normalizar(nomeDigitado);
+        categorias.findByNomeNormalizado(normalizado)
+                .filter(outra -> !outra.getId().equals(id))
+                .ifPresent(outra -> {
+                    throw new RegraDeNegocioException("Já existe a categoria \"" + outra.getNome()
+                            + "\". Escolha outro nome.");
+                });
+        categoria.renomear(nomeDigitado);
+        return categorias.save(categoria);
+    }
+
+    /**
      * Devolve a categoria com esse nome, criando se não existir.
      * "BÓTON", "bóton" e "Bóton" caem na mesma categoria.
      */

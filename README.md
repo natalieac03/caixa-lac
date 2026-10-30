@@ -127,6 +127,19 @@ um POST (um link em outra página não consegue deslogar ninguém). O perfil loc
 escuta apenas em `127.0.0.1`, que é o que protege o console do H2: ele é um
 servlet à parte e não passa pelo interceptor de login.
 
+## Editar cadastro
+
+- **Produto** (Estoque → Editar): nome, preço e categoria (escolher uma ou criar
+  nova), num formulário que abre na própria linha. O preço novo vale **só para
+  vendas novas**: cada venda guarda o preço unitário da época, então o histórico
+  e o CSV das vendas antigas não mudam. O nome mostrado nas vendas antigas é o
+  nome atual do produto.
+- **Promoção** (Descontos → Editar): o mesmo formulário da criação, preenchido;
+  muda preço e quantidades por categoria. O tipo não muda (crie outra promoção).
+- **Categoria** (Estoque → Categorias → Renomear): recusa se outra categoria já
+  tiver o mesmo nome padronizado ("BÓTON" = "bóton").
+- Preço maior que zero e nome não vazio são conferidos no servidor.
+
 ## Regras de preço e promoção
 
 - A calculadora Java é a única fonte dos valores. A tela consulta

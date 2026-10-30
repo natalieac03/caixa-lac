@@ -43,6 +43,14 @@ public class EstoqueService {
         return produtos.save(p);
     }
 
+    /** Edita nome, preço e categoria. Vendas já feitas guardam o preço da época. */
+    @Transactional
+    public Produto editar(Long id, String nome, BigDecimal preco, Categoria categoria) {
+        Produto p = buscar(id);
+        p.editar(nome, preco, categoria);
+        return produtos.save(p);
+    }
+
     /** Soma unidades ao estoque de um produto que ja existe. */
     @Transactional
     public void adicionarUnidades(Long id, int quantidade) {

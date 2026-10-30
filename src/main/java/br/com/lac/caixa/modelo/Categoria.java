@@ -1,5 +1,6 @@
 package br.com.lac.caixa.modelo;
 
+import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -30,7 +31,15 @@ public class Categoria {
     }
 
     public Categoria(String nomeDigitado) {
-        this.nomeNormalizado = normalizar(nomeDigitado);
+        renomear(nomeDigitado);
+    }
+
+    /** Novo nome (padronizado). Quem chama confere se já existe outra igual. */
+    public void renomear(String nomeDigitado) {
+        String normalizado = normalizar(nomeDigitado);
+        if (normalizado.isEmpty()) throw new RegraDeNegocioException("Nome de categoria vazio.");
+        if (normalizado.length() > 255) throw new RegraDeNegocioException("Nome de categoria com até 255 caracteres.");
+        this.nomeNormalizado = normalizado;
         this.nome = titulo(nomeDigitado);
     }
 

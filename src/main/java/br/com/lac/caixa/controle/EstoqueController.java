@@ -1,5 +1,6 @@
 package br.com.lac.caixa.controle;
 
+import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.Categoria;
 import br.com.lac.caixa.servico.CategoriaService;
 import br.com.lac.caixa.servico.EstoqueService;
@@ -51,21 +52,41 @@ public class EstoqueController {
                        @RequestParam(required = false) String novaCategoria,
                        RedirectAttributes flash) {
         BigDecimal valor = Dinheiro.parse(preco);
-
-        Categoria categoria;
-        if (novaCategoria != null && !novaCategoria.isBlank()) {
-            categoria = categorias.obterOuCriar(novaCategoria);
-        } else if (categoriaId != null) {
-            categoria = categorias.buscar(categoriaId);
-        } else {
-            flash.addFlashAttribute("erro", "Escolha uma categoria ou crie uma nova.");
-            return "redirect:/estoque";
-        }
-
+        Categoria categoria = categoriaEscolhida(categoriaId, novaCategoria);
         estoque.criarNovo(nome, valor, quantidade, categoria);
         flash.addFlashAttribute("sucesso",
                 "Produto \"" + nome + "\" cadastrado na categoria " + categoria.getNome() + ".");
         return "redirect:/estoque";
+    }
+
+    /** Edição inline: nome, preço e categoria. O preço novo só vale para vendas novas. */
+    @PostMapping("/estoque/{id}/editar")
+    public String editar(@PathVariable Long id,
+                         @RequestParam String nome,
+                         @RequestParam String preco,
+                         @RequestParam(required = false) Long categoriaId,
+                         @RequestParam(required = false) String novaCategoria,
+                         RedirectAttributes flash) {
+        BigDecimal valor = Dinheiro.parse(preco);
+        if (valor == null) throw new RegraDeNegocioException("Informe o preço.");
+        Categoria categoria = categoriaEscolhida(categoriaId, novaCategoria);
+        var p = estoque.editar(id, nome, valor, categoria);
+        flash.addFlashAttribute("sucesso", "Produto \"" + p.getNome() + "\" atualizado. O preço novo vale só para vendas novas.");
+        return "redirect:/estoque";
+    }
+
+    @PostMapping("/estoque/categorias/{id}/renomear")
+    public String renomearCategoria(@PathVariable Long id, @RequestParam String nome, RedirectAttributes flash) {
+        var c = categorias.renomear(id, nome);
+        flash.addFlashAttribute("sucesso", "Categoria renomeada para \"" + c.getNome() + "\".");
+        return "redirect:/estoque";
+    }
+
+    /** Nova categoria digitada (cria ou reaproveita) ou a selecionada na lista. */
+    private Categoria categoriaEscolhida(Long categoriaId, String novaCategoria) {
+        if (novaCategoria != null && !novaCategoria.isBlank()) return categorias.obterOuCriar(novaCategoria);
+        if (categoriaId != null) return categorias.buscar(categoriaId);
+        throw new RegraDeNegocioException("Escolha uma categoria ou crie uma nova.");
     }
 
     /** Soma unidades a um produto existente. */

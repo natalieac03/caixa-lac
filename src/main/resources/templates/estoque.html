@@ -80,7 +80,8 @@
                     </tr>
                     </thead>
                     <tbody>
-                    <tr th:each="p : ${produtos}" th:classappend="${p.quantidade == 0} ? 'zerado'"
+                    <th:block th:each="p : ${produtos}">
+                    <tr th:classappend="${p.quantidade == 0} ? 'zerado'"
                         th:attr="data-busca=${p.nome} + ' ' + ${p.nomeCategoria}">
                         <td class="celula-categoria" th:text="${p.nomeCategoria}">BÓTON</td>
                         <td class="nome-produto" th:text="${p.nome}">Produto</td>
@@ -107,17 +108,76 @@
                             </div>
                         </td>
                         <td>
-                            <form th:action="@{'/estoque/' + ${p.id} + '/remover'}" method="post"
-                                  onsubmit="return confirm('Excluir este produto do estoque? Ele some da lista inteira.');">
-                                <button type="submit" class="botao botao-perigo">Excluir</button>
+                            <div class="acoes-linha">
+                                <button type="button" class="botao botao-secundario botao-pequeno"
+                                        th:attr="aria-controls='edicao_' + ${p.id}, aria-label='Editar ' + ${p.nome}"
+                                        th:onclick="|alternarEdicao('edicao_${p.id}')|">Editar</button>
+                                <form th:action="@{'/estoque/' + ${p.id} + '/remover'}" method="post"
+                                      onsubmit="return confirm('Excluir este produto do estoque? Ele some da lista inteira.');">
+                                    <button type="submit" class="botao botao-perigo">Excluir</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    <!-- Edição inline: nome, preço e categoria. -->
+                    <tr class="linha-edicao oculto" th:id="'edicao_' + ${p.id}">
+                        <td colspan="6">
+                            <form th:action="@{'/estoque/' + ${p.id} + '/editar'}" method="post" class="form-edicao">
+                                <div class="linha-campos">
+                                    <div class="campo" style="flex:2;">
+                                        <label th:for="'nome_' + ${p.id}">Nome</label>
+                                        <input type="text" th:id="'nome_' + ${p.id}" name="nome" th:value="${p.nome}" required maxlength="255">
+                                    </div>
+                                    <div class="campo">
+                                        <label th:for="'preco_' + ${p.id}">Preço (R$)</label>
+                                        <input type="text" th:id="'preco_' + ${p.id}" name="preco" class="mono" inputmode="decimal" required
+                                               th:value="${#numbers.formatDecimal(p.preco,1,2,'COMMA')}">
+                                    </div>
+                                    <div class="campo">
+                                        <label th:for="'categoria_' + ${p.id}">Categoria</label>
+                                        <select th:id="'categoria_' + ${p.id}" name="categoriaId">
+                                            <option th:each="c : ${categorias}" th:value="${c.id}" th:text="${c.nome}"
+                                                    th:selected="${p.categoria != null and p.categoria.id == c.id}">Bóton</option>
+                                        </select>
+                                    </div>
+                                    <div class="campo">
+                                        <label th:for="'novaCategoria_' + ${p.id}">…ou nova categoria</label>
+                                        <input type="text" th:id="'novaCategoria_' + ${p.id}" name="novaCategoria" maxlength="255">
+                                    </div>
+                                </div>
+                                <p class="ajuda">O preço novo vale só para vendas novas; as vendas já feitas guardam o preço da época.</p>
+                                <div class="acoes-linha">
+                                    <button type="submit" class="botao botao-principal botao-pequeno">Salvar</button>
+                                    <button type="button" class="botao botao-secundario botao-pequeno"
+                                            th:onclick="|alternarEdicao('edicao_${p.id}')|">Cancelar</button>
+                                </div>
                             </form>
                         </td>
                     </tr>
+                    </th:block>
                     </tbody>
                 </table>
                 <p class="vazio oculto" id="semResultado">Nenhum produto com esse nome.</p>
             </div>
         </div>
+    </div>
+
+    <div class="cartao" id="categorias" th:unless="${categorias.isEmpty()}">
+        <div class="cartao-cabecalho">
+            <h2>Categorias</h2>
+            <span class="contagem-itens" th:text="${categorias.size()} + ' categoria(s)'">2 categorias</span>
+        </div>
+        <p class="ajuda">Renomear muda o nome em todos os produtos e promoções da categoria.</p>
+        <form th:each="c : ${categorias}" th:action="@{'/estoque/categorias/' + ${c.id} + '/renomear'}" method="post"
+              class="linha-campos linha-categoria">
+            <div class="campo" style="flex:2;">
+                <label th:for="'cat_' + ${c.id}" class="sr-only" th:text="'Novo nome de ' + ${c.nome}">Novo nome</label>
+                <input type="text" th:id="'cat_' + ${c.id}" name="nome" th:value="${c.nome}" required maxlength="255">
+            </div>
+            <div class="campo campo-acao">
+                <button type="submit" class="botao botao-secundario botao-pequeno">Renomear</button>
+            </div>
+        </form>
     </div>
 
     <div class="cartao cartao-lac" id="produto-novo">
@@ -165,13 +225,23 @@
 </main>
 
 <script th:inline="none">
+    /* Abre/fecha a linha de edição do produto (só uma aberta por vez). */
+    function alternarEdicao(id) {
+        const linha = document.getElementById(id);
+        const abrir = linha.classList.contains('oculto');
+        document.querySelectorAll('tr.linha-edicao').forEach(tr => tr.classList.add('oculto'));
+        if (abrir) {
+            linha.classList.remove('oculto');
+            linha.querySelector('input[name=nome]').focus();
+        }
+    }
     function sem(t) {
         return (t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
     }
     function filtrar() {
         const q = sem(document.getElementById('busca').value);
         let visiveis = 0;
-        document.querySelectorAll('#tabelaEstoque tbody tr').forEach(function (tr) {
+        document.querySelectorAll('#tabelaEstoque tbody tr[data-busca]').forEach(function (tr) {
             const ok = sem(tr.getAttribute('data-busca')).indexOf(q) !== -1;
             tr.style.display = ok ? '' : 'none';
             if (ok) visiveis++;
