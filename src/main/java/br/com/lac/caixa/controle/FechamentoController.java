@@ -1,14 +1,15 @@
 package br.com.lac.caixa.controle;
 
 import br.com.lac.caixa.repositorio.FiltroHistorico;
-import br.com.lac.caixa.servico.*;
+import br.com.lac.caixa.servico.FechamentoService;
 import br.com.lac.caixa.util.ExportadorCSV;
 import java.time.LocalDate;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
 public class FechamentoController {

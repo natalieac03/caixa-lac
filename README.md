@@ -291,6 +291,10 @@ sozinhos: usam o Chromium instalado pelo Playwright ou o Google Chrome da
 máquina; sem nenhum dos dois são pulados (no CI, com `CI=true`, é erro). O CI
 instala o Chromium antes do `verify` e confere no fim que eles rodaram.
 
+**Estilo:** o `verify` também roda o Spotless (palantir-java-format, sem imports
+com `*` nem sem uso). Se o build reclamar de formatação, rode
+`./mvnw spotless:apply` e faça o commit do resultado.
+
 **Cobertura:** o `verify` gera o relatório do JaCoCo em
 `target/site/jacoco/index.html` (sem piso mínimo); no CI ele fica como artefato
 `cobertura-jacoco` do job.

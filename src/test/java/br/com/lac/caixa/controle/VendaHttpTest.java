@@ -1,13 +1,31 @@
 package br.com.lac.caixa.controle;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import br.com.lac.caixa.modelo.*;
-import br.com.lac.caixa.repositorio.*;
+import br.com.lac.caixa.modelo.Categoria;
+import br.com.lac.caixa.modelo.ItemVenda;
+import br.com.lac.caixa.modelo.Produto;
+import br.com.lac.caixa.modelo.Promocao;
+import br.com.lac.caixa.modelo.PromocaoItem;
+import br.com.lac.caixa.modelo.TipoPromocao;
+import br.com.lac.caixa.modelo.Venda;
+import br.com.lac.caixa.repositorio.CategoriaRepository;
+import br.com.lac.caixa.repositorio.ProdutoRepository;
+import br.com.lac.caixa.repositorio.PromocaoRepository;
+import br.com.lac.caixa.repositorio.VendaRepository;
 import java.math.BigDecimal;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;

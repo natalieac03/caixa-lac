@@ -1,10 +1,16 @@
 package br.com.lac.caixa.servico;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-import br.com.lac.caixa.modelo.*;
-import br.com.lac.caixa.repositorio.*;
+import br.com.lac.caixa.modelo.FormaPagamento;
+import br.com.lac.caixa.modelo.ItemVenda;
+import br.com.lac.caixa.modelo.PagamentoVenda;
+import br.com.lac.caixa.modelo.Produto;
+import br.com.lac.caixa.modelo.Venda;
 import br.com.lac.caixa.repositorio.FiltroHistorico;
+import br.com.lac.caixa.repositorio.ProdutoRepository;
+import br.com.lac.caixa.repositorio.VendaRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;

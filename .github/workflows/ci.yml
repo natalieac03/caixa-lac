@@ -32,6 +32,7 @@ jobs:
         # Os testes de sistema não baixam navegador sozinhos (PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD).
         run: ./mvnw -B -q exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.classpathScope=test -Dexec.args="install --with-deps chromium"
       - name: Verificar projeto
+        # Inclui o spotless:check (palantir-java-format, sem imports com *).
         run: ./mvnw -B verify
       - name: Publicar relatório de cobertura (JaCoCo)
         if: always()

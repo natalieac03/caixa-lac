@@ -1,10 +1,16 @@
 package br.com.lac.caixa.servico.preco;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import br.com.lac.caixa.modelo.*;
+import br.com.lac.caixa.modelo.Categoria;
+import br.com.lac.caixa.modelo.Produto;
+import br.com.lac.caixa.modelo.Promocao;
+import br.com.lac.caixa.modelo.PromocaoItem;
+import br.com.lac.caixa.modelo.TipoPromocao;
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 

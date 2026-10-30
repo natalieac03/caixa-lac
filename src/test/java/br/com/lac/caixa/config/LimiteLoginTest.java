@@ -1,6 +1,7 @@
 package br.com.lac.caixa.config;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import br.com.lac.caixa.RelogioDeTeste;
 import br.com.lac.caixa.config.LimiteLogin.Situacao;

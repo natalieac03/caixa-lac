@@ -1,9 +1,15 @@
 package br.com.lac.caixa.util;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
-import br.com.lac.caixa.modelo.*;
+import br.com.lac.caixa.modelo.FormaPagamento;
+import br.com.lac.caixa.modelo.PagamentoVenda;
+import br.com.lac.caixa.modelo.Produto;
+import br.com.lac.caixa.modelo.Venda;
 import br.com.lac.caixa.pagamento.PagamentoFactory;
 import java.math.BigDecimal;
 import java.util.List;

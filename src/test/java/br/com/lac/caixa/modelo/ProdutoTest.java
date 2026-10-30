@@ -1,6 +1,7 @@
 package br.com.lac.caixa.modelo;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import br.com.lac.caixa.dominio.EstoqueInsuficienteException;
 import br.com.lac.caixa.dominio.RegraDeNegocioException;

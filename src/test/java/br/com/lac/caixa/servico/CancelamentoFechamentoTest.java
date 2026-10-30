@@ -1,15 +1,25 @@
 package br.com.lac.caixa.servico;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
-import br.com.lac.caixa.modelo.*;
-import br.com.lac.caixa.repositorio.*;
+import br.com.lac.caixa.modelo.FormaPagamento;
+import br.com.lac.caixa.modelo.PagamentoVenda;
+import br.com.lac.caixa.modelo.Produto;
+import br.com.lac.caixa.modelo.Venda;
 import br.com.lac.caixa.repositorio.FiltroHistorico;
+import br.com.lac.caixa.repositorio.ProdutoRepository;
+import br.com.lac.caixa.repositorio.VendaRepository;
 import br.com.lac.caixa.util.ExportadorCSV;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
