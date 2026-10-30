@@ -132,18 +132,31 @@ servlet à parte e não passa pelo interceptor de login.
 - A calculadora Java é a única fonte dos valores. A tela consulta
   `POST /venda/previa` e apresenta o orçamento retornado, sem regras de promoção
   em JavaScript. Produtos sem categoria mantêm o preço normal.
-- `A_PARTIR_DE`: os mínimos são contados por categoria no carrinho. Em combos
-  de várias categorias, todas precisam atingir seus mínimos. O preço se aplica
-  a todas as unidades das categorias envolvidas, somente quando reduz o preço
-  normal de cada produto. Entre promoções elegíveis, vence o menor preço por
-  categoria; empates são processados pelo menor ID.
-- `PACOTE`: uma busca exata com memoização escolhe a combinação com maior
-  economia, incluindo a opção de não usar pacotes. Unidades fora dos pacotes
-  conservam seu preço unitário aplicado. Por exemplo, quatro bótons de R$ 2,00,
-  com pacotes de três por R$ 4,00 e dois por R$ 2,80, custam R$ 5,60.
-- **A confirmar com a LAC:** os itens mais caros de cada categoria entram
-  primeiro no pacote; `A_PARTIR_DE` e `PACOTE` podem se somar. A busca de pacotes
-  usa os preços já reduzidos por `A_PARTIR_DE`.
+- **Regra única: o cliente paga o menor total possível, e cada unidade entra em
+  no máximo uma promoção.** `A_PARTIR_DE` e `PACOTE` não se somam na mesma
+  unidade; a calculadora testa todas as combinações e fica com a mais barata.
+- `A_PARTIR_DE`: os mínimos são contados por categoria no carrinho (em combos de
+  várias categorias, todas precisam atingir seus mínimos). Quando usada, todas
+  as unidades das categorias envolvidas saem pelo preço promocional, só nos
+  produtos em que ele é mais barato que o normal; essas unidades não entram em
+  pacote. Com duas na mesma categoria, vale a de menor preço.
+- `PACOTE`: as unidades que não usaram `A_PARTIR_DE` podem formar pacotes; cada
+  pacote leva as unidades mais caras que restam na categoria (é o que mais
+  economiza). O que sobra sai no preço normal.
+- Exemplos, bóton de R$ 6,00, "a partir de 2 por R$ 5,00" e pacote "3 por R$ 12,00":
+  - 3 bótons: 3 × 5 = 15,00 ou o pacote = 12,00 → **R$ 12,00** (só o pacote);
+  - 4 bótons: 4 × 5 = 20,00 ou 12 + 6 = 18,00 → **R$ 18,00**;
+  - 6 bótons: 6 × 5 = 30,00 ou 2 pacotes = 24,00 → **R$ 24,00**;
+  - se a promoção fosse "a partir de 2 por R$ 4,00", 4 bótons: 4 × 4 = **R$ 16,00**.
+- Outro exemplo: 4 bótons de R$ 2,00 com pacotes "3 por R$ 4,00" e "2 por R$ 2,80"
+  custam R$ 5,60 (dois pacotes de 2), não R$ 6,00.
+- Empate entre combinações: vale a que usa menos `A_PARTIR_DE` (e as de menor id);
+  entre pacotes de mesma economia, o de menor id. O resultado não depende da
+  ordem em que as promoções foram cadastradas.
+- Limite: a busca é exata e serve para carrinhos de evento (50 unidades em 5
+  categorias calculam em menos de 100 ms). Com mais de 12 `A_PARTIR_DE` ativas ao
+  mesmo tempo no carrinho, ou um carrinho grande demais para os pacotes, a venda
+  é recusada com o aviso "Divida a venda".
 - O orçamento inclui itens com preço unitário aplicado, economias descritas e
   total. As economias de `A_PARTIR_DE` já estão refletidas nos preços dos itens.
 - O campo **Valor ajustado** é opcional. Vazio, cobra o total calculado; se for
