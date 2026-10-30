@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Descontos')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav('descontos')}"></nav>
+
+<main class="conteudo">
+    <div th:replace="~{fragments/layout :: avisos}"></div>
+
+    <div class="cabecalho-pagina">
+        <div>
+            <h1>Descontos</h1>
+            <p>Promoções por categoria, aplicadas sozinhas na hora da venda.</p>
+        </div>
+        <a class="botao botao-principal botao-pequeno" href="#nova-promocao" th:unless="${categorias.isEmpty()}">
+            <svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            Nova promoção
+        </a>
+    </div>
+
+    <div class="explica-tipos" style="margin-bottom:20px;">
+        <div>
+            <strong>A partir de X</strong>
+            Atingiu o mínimo em todas as categorias do combo, cada unidade sai pelo preço promocional.
+        </div>
+        <div>
+            <strong>Pacote</strong>
+            A cada combo completo cobra-se o preço fixo; o que passar sai no preço normal
+            (1 bóton R$ 6, pacote de 2 por R$ 10: quem leva 3 paga R$ 16).
+        </div>
+    </div>
+
+    <div class="cartao">
+        <div class="cartao-cabecalho">
+            <h2>Promoções</h2>
+            <span class="contagem-itens" th:unless="${promocoes.isEmpty()}"
+                  th:text="${promocoes.?[ativo].size()} + ' ativa(s) de ' + ${promocoes.size()}">2 ativa(s) de 3</span>
+        </div>
+        <div class="vazio" th:if="${promocoes.isEmpty()}">
+            <strong>Nenhuma promoção cadastrada</strong>
+            Crie a primeira no formulário abaixo.
+        </div>
+        <div class="tabela-area" th:unless="${promocoes.isEmpty()}">
+            <table class="dados">
+                <thead><tr><th>Combo</th><th>Regra</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                <tr th:each="p : ${promocoes}" th:classappend="${!p.ativo} ? 'zerado'">
+                    <td class="nome-produto" th:text="${p.nomesCategorias}">Bóton x2 + Adesivo Grande x3</td>
+                    <td>
+                        <span th:if="${p.tipo.name() == 'A_PARTIR_DE'}">
+                            A partir do combo, cada un. por
+                            <span class="mono">R$ <span th:text="${#numbers.formatDecimal(p.preco,1,2,'COMMA')}">5,00</span></span>
+                        </span>
+                        <span th:if="${p.tipo.name() == 'PACOTE'}">
+                            Pacote por
+                            <span class="mono">R$ <span th:text="${#numbers.formatDecimal(p.preco,1,2,'COMMA')}">10,00</span></span>
+                            <span class="suave">(excedente no preço normal)</span>
+                        </span>
+                    </td>
+                    <td>
+                        <span class="selo" th:classappend="${p.ativo} ? 'selo-ativo' : 'selo-inativo'"
+                              th:text="${p.ativo} ? 'Ativa' : 'Desligada'">Ativa</span>
+                    </td>
+                    <td>
+                        <div class="acoes-linha">
+                            <form th:action="@{'/descontos/' + ${p.id} + '/alternar'}" method="post">
+                                <button type="submit" class="botao botao-secundario botao-pequeno"
+                                        th:text="${p.ativo} ? 'Desligar' : 'Ligar'">Desligar</button>
+                            </form>
+                            <form th:action="@{'/descontos/' + ${p.id} + '/remover'}" method="post"
+                                  onsubmit="return confirm('Remover esta promoção?');">
+                                <button type="submit" class="botao botao-perigo">Remover</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="cartao cartao-lac" id="nova-promocao">
+        <h2>Nova promoção</h2>
+        <div class="corpo">
+            <div class="vazio" th:if="${categorias.isEmpty()}">
+                <strong>Ainda não há categorias</strong>
+                Cadastre um produto com categoria no <a th:href="@{/estoque}">Estoque</a> primeiro.
+            </div>
+            <form th:action="@{/descontos/novo}" method="post" th:unless="${categorias.isEmpty()}">
+
+                <div class="campo">
+                    <label>Categorias do combo</label>
+                    <p class="ajuda" style="margin:0;">Marque as categorias e defina quantas unidades de cada uma formam o combo.</p>
+                    <div class="grupo-combo">
+                        <div class="combo-cat" th:each="c : ${categorias}">
+                            <label class="check-cat">
+                                <input type="checkbox"
+                                       th:attr="data-catid=${c.id}"
+                                       onchange="toggleQtd(this)">
+                                <span th:text="${c.nome}">Bóton</span>
+                            </label>
+                            <div class="qtd-combo-wrap oculto" th:id="'wrap_' + ${c.id}">
+                                <input type="number"
+                                       th:id="'qtdCat_' + ${c.id}"
+                                       th:name="'qtdCat_' + ${c.id}"
+                                       value="1" min="1"
+                                       class="qtd-combo-input"
+                                       placeholder="qtd"
+                                       th:attr="aria-label='Quantidade de ' + ${c.nome} + ' no combo'"
+                                       disabled>
+                                <span class="suave" style="font-size:13px;">un.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="linha-campos" style="margin-top:18px;">
+                    <div class="campo" style="flex:2;">
+                        <label for="tipo">Tipo</label>
+                        <select id="tipo" name="tipo" onchange="atualizarRotulo()">
+                            <option th:each="t : ${tipos}" th:value="${t}" th:text="${t.rotulo}"></option>
+                        </select>
+                    </div>
+                    <div class="campo">
+                        <label for="preco" id="rotuloPreco">Cada uma por (R$)</label>
+                        <input type="text" id="preco" name="preco" placeholder="5,00" required inputmode="decimal" class="mono">
+                    </div>
+                </div>
+                <p id="exemploTipo" class="ajuda"></p>
+
+                <div style="margin-top:16px;">
+                    <button type="submit" class="botao botao-principal">Criar promoção</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+
+<script th:inline="none">
+    function toggleQtd(cb) {
+        const catId = cb.getAttribute('data-catid');
+        const wrap = document.getElementById('wrap_' + catId);
+        const input = document.getElementById('qtdCat_' + catId);
+        if (cb.checked) {
+            wrap.classList.remove('oculto');
+            input.disabled = false;
+            if (!input.value || parseInt(input.value) < 1) input.value = 1;
+            input.focus();
+            input.select();
+        } else {
+            wrap.classList.add('oculto');
+            input.disabled = true;
+        }
+        atualizarExemplo();
+    }
+
+    function atualizarRotulo() {
+        const tipo = document.getElementById('tipo') ? document.getElementById('tipo').value : '';
+        const lbl = document.getElementById('rotuloPreco');
+        if (lbl) lbl.textContent = (tipo === 'PACOTE') ? 'Preço do pacote (R$)' : 'Cada uma por (R$)';
+        atualizarExemplo();
+    }
+
+    function atualizarExemplo() {
+        const tipo = document.getElementById('tipo') ? document.getElementById('tipo').value : '';
+        const ex = document.getElementById('exemploTipo');
+        if (!ex) return;
+        if (tipo === 'PACOTE') {
+            ex.textContent = 'Ex.: 2 bótons + 3 adesivos = R$ 25 o pacote. Quem leva 4 bótons paga R$ 25 + o preço normal dos outros 2.';
+        } else {
+            ex.textContent = 'Ex.: a partir de 2 bótons, cada um por R$ 5. 3 bótons = R$ 15.';
+        }
+    }
+
+    if (document.getElementById('tipo')) { atualizarRotulo(); }
+</script>
+</body>
+</html>

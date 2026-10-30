@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Início')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav('')}"></nav>
+
+<main class="conteudo conteudo-estreito">
+    <div class="hero-caixa hero-inicio">
+        <div class="midia">
+            <img th:src="@{/img/logo.png}" alt="Brasão da Liga Acadêmica de Computação"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <span class="emoji-fallback" style="display:none;" aria-hidden="true">🦫</span>
+        </div>
+        <h1>Caixa da Liga</h1>
+        <p>Registre vendas, controle o estoque e acompanhe o histórico.</p>
+    </div>
+
+    <div class="atalhos">
+        <a class="atalho atalho-destaque" th:href="@{/venda/nova}">
+            <span class="atalho-icone"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>
+            <strong>Nova venda</strong>
+            <span>Vai direto pro carrinho.</span>
+        </a>
+        <a class="atalho" th:href="@{/estoque}">
+            <span class="atalho-icone"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span>
+            <strong>Estoque</strong>
+            <span>Produtos, preços e quantidades.</span>
+        </a>
+        <a class="atalho" th:href="@{/descontos}">
+            <span class="atalho-icone"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.6 2.6 21 11a2 2 0 0 1 0 2.8l-7.2 7.2a2 2 0 0 1-2.8 0L2.6 12.6A2 2 0 0 1 2 11.2V4a2 2 0 0 1 2-2h7.2a2 2 0 0 1 1.4.6Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg></span>
+            <strong>Descontos</strong>
+            <span>Combos e promoções ativas.</span>
+        </a>
+        <a class="atalho" th:href="@{/historico}">
+            <span class="atalho-icone"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+            <strong>Histórico</strong>
+            <span>Vendas, filtros e CSV.</span>
+        </a>
+    </div>
+</main>
+</body>
+</html>

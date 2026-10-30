@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Nova venda')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav('caixa')}"></nav>
+
+<main class="conteudo com-barra-fixa">
+    <div th:replace="~{fragments/layout :: avisos}"></div>
+    <div class="cabecalho-pagina">
+        <div>
+            <h1>Nova venda</h1>
+            <p>Escolha as quantidades; as promoções entram sozinhas.</p>
+        </div>
+    </div>
+
+    <form th:action="@{/venda}" method="post" id="formVenda">
+    <div class="venda-grade">
+
+        <!-- Coluna da esquerda: produtos -->
+        <div class="cartao">
+            <div class="cartao-cabecalho">
+                <h2>Produtos</h2>
+                <span class="contagem-itens" th:unless="${produtos.isEmpty()}"
+                      th:text="${produtos.size()} + ' no estoque'">12 no estoque</span>
+            </div>
+
+            <div class="vazio" th:if="${produtos.isEmpty()}">
+                <strong>Nenhum produto no estoque</strong>
+                Cadastre um na aba <a th:href="@{/estoque}">Estoque</a> primeiro.
+            </div>
+
+            <div th:unless="${produtos.isEmpty()}">
+                <div class="busca">
+                    <svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                    <input type="search" id="busca" aria-label="Pesquisar produto"
+                           oninput="filtrar()"
+                           onkeydown="if(event.key==='Enter')event.preventDefault(); if(event.key==='Escape'){this.value='';filtrar();}"
+                           placeholder="Pesquisar produto ou categoria" title="Atalho: tecla /">
+                </div>
+                <div class="tabela-area">
+                    <table class="dados" id="tabelaProdutos">
+                        <thead>
+                        <tr>
+                            <th>Produto</th>
+                            <th class="num">Preço</th>
+                            <th class="num col-opcional">Estoque</th>
+                            <th class="num" style="width:150px;">Qtd</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="p : ${produtos}" th:classappend="${p.quantidade == 0} ? 'zerado'">
+                            <td>
+                                <div class="celula-categoria" th:text="${p.nomeCategoria}">BÓTON</div>
+                                <div class="nome-produto" th:text="${p.nome}">Bóton capivara</div>
+                                <!-- dicas de promoção injetadas pelo JS abaixo -->
+                                <div class="dica-promo" th:id="'dica_' + ${p.id}"></div>
+                            </td>
+                            <td class="num">R$ <span th:text="${#numbers.formatDecimal(p.preco,1,2,'COMMA')}">6,00</span></td>
+                            <td class="num col-opcional">
+                                <span th:if="${p.quantidade > 0}" th:text="${p.quantidade}">10</span>
+                                <span th:if="${p.quantidade == 0}" class="selo selo-esgotado">esgotado</span>
+                            </td>
+                            <td class="num">
+                                <div class="passo">
+                                    <button type="button" onclick="passo(this, -1)" aria-label="Menos um">−</button>
+                                    <input type="number" min="0" th:max="${p.quantidade}" value="0"
+                                           class="qtd"
+                                           th:name="'qtd_' + ${p.id}"
+                                           th:attr="data-prod-id=${p.id},data-preco=${p.preco},data-nome=${p.nome},data-catnome=${p.nomeCategoria},data-cat-id=${p.categoria != null ? p.categoria.id : ''},aria-label='Quantidade de ' + ${p.nome}"
+                                           oninput="recalcular()">
+                                    <button type="button" onclick="passo(this, 1)" aria-label="Mais um">+</button>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                    <p class="vazio oculto" id="semResultado">Nenhum produto com esse nome.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Coluna da direita: resumo e pagamento -->
+        <div class="venda-lateral">
+            <div class="cartao">
+                <div class="cartao-cabecalho">
+                    <h2>Resumo do pedido</h2>
+                    <span class="contagem-itens" id="contagemItens">0 itens</span>
+                </div>
+                <div id="carrinho"><p class="vazio">Nenhum item selecionado.</p></div>
+                <div class="total-carrinho">
+                    <span>Total</span>
+                    <span class="total-grande">R$ <span id="totalCarrinho">0,00</span></span>
+                </div>
+            </div>
+
+            <div class="cartao">
+                <fieldset class="pilulas">
+                    <legend>Forma de pagamento</legend>
+                    <label class="pilula" th:each="f, st : ${formas}">
+                        <input type="radio" name="formaPagamento" th:value="${f}" th:checked="${st.first}"
+                               onchange="alternarOutro()">
+                        <span th:text="${f.rotulo}">Pix</span>
+                    </label>
+                </fieldset>
+                <div class="campo oculto" id="campoOutro" style="margin-top:14px;">
+                    <label for="formaPagamentoOutro">Qual?</label>
+                    <input type="text" id="formaPagamentoOutro" name="formaPagamentoOutro"
+                           placeholder="Ex.: parte em dinheiro, parte no Pix">
+                </div>
+                <div class="campo" style="margin-top:16px;">
+                    <label for="valorTotal">Valor a cobrar</label>
+                    <input type="text" id="valorTotal" name="valorTotal" class="mono" value="0.00" inputmode="decimal">
+                    <p class="ajuda" style="margin:0;">Já vem com o total. Ajuste só se combinar outro valor.</p>
+                </div>
+            </div>
+
+            <div class="barra-inferior barra-fixa">
+                <a class="botao botao-secundario" th:href="@{/caixa}">Cancelar</a>
+                <button type="submit" class="botao botao-principal botao-grande" id="botaoConfirmar">
+                    Confirmar venda
+                </button>
+            </div>
+        </div>
+    </div>
+    </form>
+</main>
+
+<script th:inline="javascript">
+/* Promoções ativas vindas do servidor. */
+const PROMOS = JSON.parse([[${promosJson}]]);
+</script>
+
+<script th:inline="none">
+    function reais(v) {
+        return 'R$ ' + v.toFixed(2).replace('.', ',');
+    }
+
+    /* --- normalização para a busca --- */
+    function sem(t) {
+        return (t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    }
+
+    function filtrar() {
+        const q = sem(document.getElementById('busca').value);
+        let visiveis = 0;
+        document.querySelectorAll('#tabelaProdutos tbody tr').forEach(function (tr) {
+            const inp = tr.querySelector('.qtd');
+            if (!inp) return;
+            const ok = sem(inp.getAttribute('data-nome')).indexOf(q) !== -1
+                    || sem(inp.getAttribute('data-catnome')).indexOf(q) !== -1;
+            tr.style.display = ok ? '' : 'none';
+            if (ok) visiveis++;
+        });
+        document.getElementById('semResultado').classList.toggle('oculto', visiveis > 0);
+    }
+
+    /* Botões − e + ao lado da quantidade */
+    function passo(botao, delta) {
+        const inp = botao.parentNode.querySelector('.qtd');
+        const max = parseInt(inp.getAttribute('max'));
+        let v = (parseInt(inp.value) || 0) + delta;
+        if (v < 0) v = 0;
+        if (!isNaN(max) && v > max) v = max;
+        inp.value = v;
+        recalcular();
+    }
+
+    function formaEscolhida() {
+        const r = document.querySelector('input[name=formaPagamento]:checked');
+        return r ? r.value : '';
+    }
+
+    function alternarOutro() {
+        const outro = formaEscolhida() === 'OUTRO';
+        document.getElementById('campoOutro').classList.toggle('oculto', !outro);
+        if (outro) document.getElementById('formaPagamentoOutro').focus();
+    }
+
+    /* ---- cálculo principal (mesma regra do servidor) ---- */
+    function recalcular() {
+        const inputs = Array.from(document.querySelectorAll('.qtd'));
+
+        /* 1) Quantidades por produto e por categoria */
+        const qtdProd = {};   // prodId -> qtd
+        const qtdCat = {};    // catId  -> qtd
+        const precosCat = {}; // catId  -> [preco, preco, ...] (um por unidade)
+        let unidades = 0;
+
+        inputs.forEach(function (inp) {
+            const qtd = parseInt(inp.value) || 0;
+            const tr = inp.closest('tr');
+            const max = parseInt(inp.getAttribute('max'));
+            /* estado visual da linha e dos botões − / + */
+            if (tr) tr.classList.toggle('selecionada', qtd > 0);
+            const botoes = inp.parentNode.querySelectorAll('button');
+            if (botoes.length === 2) {
+                botoes[0].disabled = qtd <= 0;
+                botoes[1].disabled = !isNaN(max) && qtd >= max;
+            }
+            if (qtd <= 0) return;
+            unidades += qtd;
+            const pid = inp.getAttribute('data-prod-id');
+            const cid = inp.getAttribute('data-cat-id');
+            const preco = parseFloat(inp.getAttribute('data-preco')) || 0;
+            qtdProd[pid] = qtd;
+            if (cid) {
+                qtdCat[cid] = (qtdCat[cid] || 0) + qtd;
+                precosCat[cid] = precosCat[cid] || [];
+                for (let k = 0; k < qtd; k++) precosCat[cid].push(preco);
+            }
+        });
+        /* Ordena precos desc (mais caros primeiro para maximizar desconto no pacote) */
+        Object.values(precosCat).forEach(function (arr) { arr.sort(function (a, b) { return b - a; }); });
+
+        /* 2) Identifica promos A_PARTIR_DE ativas e marca catIds com preço promo */
+        const remaining = Object.assign({}, qtdCat);
+        const precoApDe = {}; // catId -> precoPromo
+
+        PROMOS.forEach(function (promo) {
+            if (promo.tipo !== 'A_PARTIR_DE') return;
+            /* Combos disponíveis: min(remaining[cat] / required[cat]) */
+            let combos = Infinity;
+            promo.itens.forEach(function (it) {
+                combos = Math.min(combos, Math.floor((remaining[it.catId] || 0) / it.qtd));
+            });
+            if (!isFinite(combos) || combos === 0) return;
+            promo.itens.forEach(function (it) {
+                precoApDe[String(it.catId)] = promo.preco;
+                remaining[it.catId] = 0;
+            });
+        });
+
+        /* 3) Monta linhas do carrinho aplicando A_PARTIR_DE */
+        let total = 0;
+        let linhas = '';
+
+        inputs.forEach(function (inp) {
+            const qtd = parseInt(inp.value) || 0;
+            if (qtd <= 0) return;
+            const cid = inp.getAttribute('data-cat-id');
+            const normalPreco = parseFloat(inp.getAttribute('data-preco')) || 0;
+            const promoPreco = cid && precoApDe[cid] !== undefined ? precoApDe[cid] : null;
+            const preco = (promoPreco !== null) ? promoPreco : normalPreco;
+            const sub = qtd * preco;
+            total += sub;
+
+            linhas += '<div class="item-carrinho"><span><span class="nome">'
+                + inp.getAttribute('data-nome') + '</span>'
+                + (promoPreco !== null ? ' <span class="tag-promo">promo</span>' : '')
+                + '<span class="meta">' + qtd + ' × ' + reais(preco)
+                + (promoPreco !== null ? ' (era ' + reais(normalPreco) + ')' : '') + '</span>'
+                + '</span><span class="num">' + reais(sub) + '</span></div>';
+        });
+
+        /* 4) Desconto PACOTE: aplica primeiro o melhor negócio
+              (menor preço por unidade), igual ao servidor. */
+        const remPacote = Object.assign({}, qtdCat);
+
+        const pacotesOrdenados = PROMOS
+            .filter(function (p) { return p.tipo === 'PACOTE'; })
+            .sort(function (a, b) {
+                const ua = a.preco / a.itens.reduce(function (s, i) { return s + i.qtd; }, 0);
+                const ub = b.preco / b.itens.reduce(function (s, i) { return s + i.qtd; }, 0);
+                return ua - ub;
+            });
+
+        pacotesOrdenados.forEach(function (promo) {
+            let combos = Infinity;
+            promo.itens.forEach(function (it) {
+                combos = Math.min(combos, Math.floor((remPacote[it.catId] || 0) / it.qtd));
+            });
+            if (!isFinite(combos) || combos === 0) return;
+
+            let custNormal = 0;
+            promo.itens.forEach(function (it) {
+                const precos = precosCat[it.catId] || [];
+                const jaUsados = qtdCat[it.catId] - (remPacote[it.catId] || 0);
+                const ini = jaUsados;
+                const fim = ini + combos * it.qtd;
+                for (let k = ini; k < Math.min(fim, precos.length); k++) custNormal += precos[k];
+                remPacote[it.catId] = (remPacote[it.catId] || 0) - combos * it.qtd;
+            });
+
+            const custPromo = combos * promo.preco;
+            const economia = custNormal - custPromo;
+            if (economia > 0.001) {
+                total -= economia;
+                linhas += '<div class="item-carrinho linha-desconto"><span>Pacote '
+                    + promo.nome
+                    + (combos > 1 ? ' ×' + combos : '')
+                    + '</span><span class="num">− ' + reais(economia) + '</span></div>';
+            }
+        });
+
+        /* 5) Atualiza tela */
+        document.getElementById('carrinho').innerHTML = linhas
+            || '<p class="vazio">Nenhum item selecionado.</p>';
+        document.getElementById('totalCarrinho').textContent = total.toFixed(2).replace('.', ',');
+        document.getElementById('valorTotal').value = total.toFixed(2);
+        document.getElementById('contagemItens').textContent =
+            unidades + (unidades === 1 ? ' item' : ' itens');
+        const confirmar = document.getElementById('botaoConfirmar');
+        confirmar.disabled = unidades === 0;
+        confirmar.textContent = unidades === 0 ? 'Confirmar venda' : 'Confirmar ' + reais(total);
+
+        /* 6) Atualiza dicas de promoção em cada linha da tabela */
+        inputs.forEach(function (inp) {
+            const cid = inp.getAttribute('data-cat-id');
+            const pid = inp.getAttribute('data-prod-id');
+            const dica = document.getElementById('dica_' + pid);
+            if (!dica || !cid) return;
+            const hints = [];
+            PROMOS.forEach(function (promo) {
+                const it = promo.itens.find(function (x) { return String(x.catId) === String(cid); });
+                if (!it) return;
+                if (promo.tipo === 'A_PARTIR_DE') {
+                    hints.push(promo.nome + ': cada un. ' + reais(promo.preco));
+                } else {
+                    hints.push('Pacote ' + promo.nome + ' = ' + reais(promo.preco));
+                }
+            });
+            dica.textContent = hints.join(' · ');
+        });
+    }
+
+    /* Atalho: "/" foca a busca */
+    document.addEventListener('keydown', function (e) {
+        const busca = document.getElementById('busca');
+        if (e.key === '/' && busca && document.activeElement !== busca
+                && !/input|textarea|select/i.test(document.activeElement.tagName)) {
+            e.preventDefault();
+            busca.focus();
+        }
+    });
+
+    alternarOutro();
+    recalcular();
+    /* alternarOutro() acima não deve roubar o foco na abertura */
+    if (document.activeElement && document.activeElement.id === 'formaPagamentoOutro') document.activeElement.blur();
+</script>
+</body>
+</html>

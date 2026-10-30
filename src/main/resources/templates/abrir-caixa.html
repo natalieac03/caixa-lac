@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Abrir caixa')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav('caixa')}"></nav>
+
+<main class="conteudo conteudo-estreito">
+    <div th:replace="~{fragments/layout :: avisos}"></div>
+
+    <div class="cartao palco-caixa">
+        <div class="midia">
+            <img th:src="@{/img/caixa.png}" alt="Capivara contando dinheiro"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <span class="emoji-fallback" style="display:none;" aria-hidden="true">🦫</span>
+        </div>
+        <h1>Caixa aberto</h1>
+        <p>Toque no + para registrar uma venda nova.</p>
+        <a class="botao-mais" th:href="@{/venda/nova}" aria-label="Nova venda" id="botaoNovaVenda">
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        </a>
+        <p style="margin-top:14px; font-size:13px;">ou aperte <span class="atalho-teclado">N</span></p>
+    </div>
+</main>
+
+<script th:inline="none">
+    // Atalho de teclado: N abre uma venda nova.
+    document.addEventListener('keydown', function (e) {
+        if (e.key && e.key.toLowerCase() === 'n' && !e.ctrlKey && !e.metaKey && !e.altKey
+                && !/input|textarea|select/i.test(document.activeElement.tagName)) {
+            document.getElementById('botaoNovaVenda').click();
+        }
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+Coloque suas imagens PNG (de preferência sem fundo) aqui:
+
+  logo.png    -> aparece nas telas iniciais (início e login)
+  caixa.png   -> aparece na tela "Abrir caixa"
+
+Enquanto os arquivos não existirem, um emoji 🦫 aparece no lugar.
+As imagens ficam dentro de um círculo roxo claro.

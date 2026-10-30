@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Ops')}"></head>
+<body>
+<div class="botao-tema-flutuante"><button th:replace="~{fragments/layout :: tema}"></button></div>
+<main class="tela-centro">
+    <div class="cartao" style="max-width:500px;">
+        <span class="emoji-fallback" aria-hidden="true" style="font-size:88px;">🦫</span>
+        <h1 style="margin-top:8px;">Ops, algo deu errado</h1>
+        <p>
+            Aconteceu um erro inesperado<span th:if="${status}" th:text="' (código ' + ${status} + ')'"></span>.
+            Tenta voltar pro início; se continuar acontecendo, avisa quem cuida do sistema.
+        </p>
+        <a class="botao botao-principal" th:href="@{/}" style="margin-top:10px;">Voltar ao início</a>
+    </div>
+</main>
+</body>
+</html>
