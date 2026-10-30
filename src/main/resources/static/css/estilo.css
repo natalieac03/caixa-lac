@@ -1098,3 +1098,9 @@ table.ordenavel th[aria-sort="descending"] button::after { content: " ▼"; }
 .cartao-atencao h2 { margin-top: 0; }
 .cartao-atencao h3 { font-size: 16px; margin: 12px 0 4px; }
 .cartao-atencao ul { margin: 0 0 4px; padding-left: 20px; }
+
+/* Metas do evento */
+.metas { display: grid; gap: 12px; margin: 0 0 20px; }
+.meta-texto { margin-bottom: 4px; }
+.barra-meta { height: 14px; border-radius: 999px; background: var(--linha); overflow: hidden; border: 1px solid var(--linha-forte); }
+.barra-meta-cheia { height: 100%; background: var(--verde); }

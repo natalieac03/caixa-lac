@@ -23,6 +23,21 @@
         <a th:href="@{/estoque(semCusto=true)}" class="nao-imprimir">Ver produtos sem custo</a></span>
 </div>
 
+<div th:fragment="metas(painel)" th:unless="${painel.metas.isEmpty()}" class="metas" id="metas">
+    <div class="meta" th:each="m : ${painel.metas}" th:id="'meta-' + ${m.id}">
+        <div class="meta-texto">
+            <strong th:text="${m.rotulo}">Meta de receita</strong>:
+            <span class="meta-numeros" th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(m.atual)} + ' de ' + ${T(br.com.lac.caixa.util.Dinheiro).reais(m.meta)} + ' (' + ${#numbers.formatDecimal(m.percentual, 1, 2, 'COMMA')} + '%)'">R$ 0,00 de R$ 0,00 (0%)</span>
+            <span class="selo selo-abc abc-A" th:if="${m.atingida}">meta atingida</span>
+            <span class="suave" th:if="${m.parcial}">(lucro parcial: há itens sem custo)</span>
+        </div>
+        <div class="barra-meta" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+             th:attr="aria-valuenow=${m.barra}, aria-label=${m.rotulo}">
+            <div class="barra-meta-cheia" th:style="'width:' + ${m.barra} + '%'"></div>
+        </div>
+    </div>
+</div>
+
 <table th:fragment="demonstrativo(painel)" class="dados demonstrativo" id="demonstrativo">
     <caption class="sr-only">Demonstrativo do resultado</caption>
     <thead><tr><th scope="col">Linha</th><th scope="col" class="num">Valor</th><th scope="col" class="num">% da receita líquida</th></tr></thead>

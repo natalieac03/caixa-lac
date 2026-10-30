@@ -545,4 +545,36 @@ public class FinancasService {
                                 new PeriodoDoEvento(e.getId(), e.getNome(), e.getInicio(), e.getFim())))))
                 .toList();
     }
+
+    // ---------------------------------------------------------------- metas
+
+    /**
+     * Metas do evento do filtro (receita líquida e lucro líquido). Só com filtro
+     * de evento e sem categoria nem forma: a meta é do evento inteiro.
+     */
+    public List<Financas.Meta> metas(FiltroFinancas f, Resumo r) {
+        if (f.evento() == null || !f.aceitaDespesas()) return List.of();
+        var evento = eventos.findById(f.evento().id());
+        if (evento.isEmpty()) return List.of();
+        List<Financas.Meta> metas = new ArrayList<>();
+        if (evento.get().getMetaReceita() != null) {
+            metas.add(meta(
+                    "receita", "Meta de receita líquida", evento.get().getMetaReceita(), r.receitaLiquida(), false));
+        }
+        if (evento.get().getMetaLucro() != null && r.lucroLiquido() != null) {
+            metas.add(meta(
+                    "lucro",
+                    "Meta de lucro líquido",
+                    evento.get().getMetaLucro(),
+                    r.lucroLiquido(),
+                    r.isLucroParcial()));
+        }
+        return metas;
+    }
+
+    private static Financas.Meta meta(String id, String rotulo, BigDecimal meta, BigDecimal atual, boolean parcial) {
+        BigDecimal p = percentual(atual, meta);
+        BigDecimal barra = p.max(BigDecimal.ZERO).min(CEM.setScale(2));
+        return new Financas.Meta(id, rotulo, meta, atual, p, barra, atual.compareTo(meta) >= 0, parcial);
+    }
 }

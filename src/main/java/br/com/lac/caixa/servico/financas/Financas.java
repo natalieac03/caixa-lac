@@ -181,4 +181,18 @@ public final class Financas {
 
     /** Um evento com o resumo dele, para o comparativo entre eventos. */
     public record ResumoDoEvento(Long eventoId, String nome, LocalDateTime inicio, LocalDateTime fim, Resumo resumo) {}
+
+    /**
+     * Progresso de uma meta do evento: percentual = atual / meta x 100 (pode
+     * passar de 100 ou ser negativo); barra = o mesmo limitado a 0..100.
+     */
+    public record Meta(
+            String id,
+            String rotulo,
+            BigDecimal meta,
+            BigDecimal atual,
+            BigDecimal percentual,
+            BigDecimal barra,
+            boolean atingida,
+            boolean parcial) {}
 }

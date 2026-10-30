@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -31,6 +32,13 @@ public class Evento {
 
     private String observacao;
 
+    /** Metas opcionais (maiores que zero): receita líquida e lucro líquido do evento. */
+    @Column(precision = 38, scale = 2)
+    private BigDecimal metaReceita;
+
+    @Column(precision = 38, scale = 2)
+    private BigDecimal metaLucro;
+
     protected Evento() {}
 
     public Evento(String nome, LocalDateTime inicio, LocalDateTime fim, String observacao) {
@@ -49,6 +57,28 @@ public class Evento {
         this.inicio = inicio;
         this.fim = fim;
         this.observacao = obs;
+    }
+
+    /** null = sem meta. */
+    public void definirMetas(BigDecimal receita, BigDecimal lucro) {
+        this.metaReceita = meta(receita, "receita");
+        this.metaLucro = meta(lucro, "lucro");
+    }
+
+    private static BigDecimal meta(BigDecimal valor, String nome) {
+        if (valor == null) return null;
+        if (valor.signum() <= 0) throw new RegraDeNegocioException("A meta de " + nome + " deve ser maior que zero.");
+        if (valor.stripTrailingZeros().scale() > 2)
+            throw new RegraDeNegocioException("Meta de " + nome + " com no máximo 2 casas decimais.");
+        return valor.setScale(2);
+    }
+
+    public BigDecimal getMetaReceita() {
+        return metaReceita;
+    }
+
+    public BigDecimal getMetaLucro() {
+        return metaLucro;
     }
 
     /** A data e hora está dentro do evento (início incluído, fim excluído)? */

@@ -54,6 +54,7 @@
         <strong>Nenhuma venda neste período.</strong>
         Escolha outro período ou evento nos filtros acima.
     </div>
+    <div th:if="${painel.vazio}" th:replace="~{fragments/financas :: metas(${painel})}"></div>
 
     <th:block th:unless="${painel.vazio}" th:with="R=${T(br.com.lac.caixa.util.Dinheiro)}">
     <!--/* 4. Cartões */-->
@@ -61,6 +62,7 @@
         <h2 id="titulo-indicadores" class="sr-only">Indicadores</h2>
         <div th:replace="~{fragments/financas :: cartoes(${painel})}"></div>
         <div th:replace="~{fragments/financas :: aviso-parcial(${painel})}"></div>
+        <div th:replace="~{fragments/financas :: metas(${painel})}"></div>
     </section>
 
     <!--/* 5. Demonstrativo */-->

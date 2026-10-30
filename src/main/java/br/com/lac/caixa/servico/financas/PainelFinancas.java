@@ -76,7 +76,8 @@ public class PainelFinancas {
             List<LinhaPromocao> promocoes,
             List<LinhaGiro> giro,
             List<LinhaGiro> parados,
-            ValorEstoque valorEstoque) {}
+            ValorEstoque valorEstoque,
+            List<Financas.Meta> metas) {}
 
     /** Os gráficos: rótulos, valores (números) e os mesmos valores escritos. */
     public record Grafico(List<String> rotulos, List<BigDecimal> valores, List<String> textos) {}
@@ -121,7 +122,8 @@ public class PainelFinancas {
                 financas.promocoes(f),
                 giro,
                 financas.parados(f),
-                financas.valorDoEstoque(f));
+                financas.valorDoEstoque(f),
+                financas.metas(f, r));
     }
 
     public Dados dados(FiltroFinancas f, Metrica metrica) {

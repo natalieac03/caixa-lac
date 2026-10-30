@@ -4,6 +4,7 @@ import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.Evento;
 import br.com.lac.caixa.repositorio.EventoRepository;
 import br.com.lac.caixa.repositorio.PeriodoDoEvento;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -54,18 +55,45 @@ public class EventoService {
 
     @Transactional
     public Evento criar(String nome, LocalDateTime inicio, LocalDateTime fim, String observacao) {
+        return criar(nome, inicio, fim, observacao, null, null);
+    }
+
+    @Transactional
+    public Evento criar(
+            String nome,
+            LocalDateTime inicio,
+            LocalDateTime fim,
+            String observacao,
+            BigDecimal metaReceita,
+            BigDecimal metaLucro) {
         Evento e = new Evento(nome, inicio, fim, observacao);
+        e.definirMetas(metaReceita, metaLucro);
         recusarSobreposicao(e, null);
         Evento salvo = eventos.save(e);
         auditoria.registrar("evento_criado", "id", salvo.getId(), "depois", descrever(salvo));
         return salvo;
     }
 
+    /** Edita sem mexer nas metas. */
     @Transactional
     public Evento editar(Long id, String nome, LocalDateTime inicio, LocalDateTime fim, String observacao) {
         Evento e = buscar(id);
+        return editar(id, nome, inicio, fim, observacao, e.getMetaReceita(), e.getMetaLucro());
+    }
+
+    @Transactional
+    public Evento editar(
+            Long id,
+            String nome,
+            LocalDateTime inicio,
+            LocalDateTime fim,
+            String observacao,
+            BigDecimal metaReceita,
+            BigDecimal metaLucro) {
+        Evento e = buscar(id);
         String antes = descrever(e);
         e.alterar(nome, inicio, fim, observacao);
+        e.definirMetas(metaReceita, metaLucro);
         recusarSobreposicao(e, id);
         Evento salvo = eventos.save(e);
         auditoria.registrar("evento_editado", "id", id, "antes", antes, "depois", descrever(salvo));

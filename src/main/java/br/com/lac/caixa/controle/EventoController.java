@@ -2,6 +2,7 @@ package br.com.lac.caixa.controle;
 
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.servico.EventoService;
+import br.com.lac.caixa.util.Dinheiro;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import org.springframework.stereotype.Controller;
@@ -33,8 +34,16 @@ public class EventoController {
             @RequestParam String inicio,
             @RequestParam String fim,
             @RequestParam(required = false) String observacao,
+            @RequestParam(required = false) String metaReceita,
+            @RequestParam(required = false) String metaLucro,
             RedirectAttributes flash) {
-        var e = eventos.criar(nome, dataHora(inicio), dataHora(fim), observacao);
+        var e = eventos.criar(
+                nome,
+                dataHora(inicio),
+                dataHora(fim),
+                observacao,
+                Dinheiro.parse(metaReceita),
+                Dinheiro.parse(metaLucro));
         flash.addFlashAttribute("sucesso", "Evento \"" + e.getNome() + "\" criado.");
         return "redirect:/eventos";
     }
@@ -46,8 +55,18 @@ public class EventoController {
             @RequestParam String inicio,
             @RequestParam String fim,
             @RequestParam(required = false) String observacao,
+            @RequestParam(required = false) String metaReceita,
+            @RequestParam(required = false) String metaLucro,
             RedirectAttributes flash) {
-        var e = eventos.editar(id, nome, dataHora(inicio), dataHora(fim), observacao);
+        // Campos de meta vazios = sem meta.
+        var e = eventos.editar(
+                id,
+                nome,
+                dataHora(inicio),
+                dataHora(fim),
+                observacao,
+                Dinheiro.parse(metaReceita),
+                Dinheiro.parse(metaLucro));
         flash.addFlashAttribute("sucesso", "Evento \"" + e.getNome() + "\" atualizado.");
         return "redirect:/eventos";
     }
