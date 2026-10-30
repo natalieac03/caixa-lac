@@ -1004,4 +1004,5 @@ tr.linha-edicao.oculto { display: none; }
 
 /* Custo no estoque. */
 .selo-sem-custo { background: var(--coral-fundo); color: var(--coral-texto); }
+.selo-retroativo { background: var(--coral-fundo); color: var(--coral-texto); margin-left: 4px; }
 .check-inline { display: flex; align-items: center; gap: 6px; font-weight: 400; margin-top: 4px; }

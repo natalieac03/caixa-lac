@@ -184,6 +184,21 @@ class PostgresLegadoTest {
                 jdbc.queryForObject(
                         "select count(*) from item_venda where venda_id <= 4 and custo_unitario is not null",
                         Integer.class));
+        // V12: rateio retroativo nas vendas antigas com itens; soma dos líquidos = cobrado.
+        assertEquals(
+                0,
+                jdbc.queryForObject(
+                        "select count(*) from venda v where v.rateio_retroativo and v.valor_cobrado <>"
+                                + " (select sum(i.valor_liquido) from item_venda i where i.venda_id = v.id)",
+                        Integer.class));
+        assertEquals(
+                List.of(1L, 2L),
+                jdbc.queryForList("select id from venda where rateio_retroativo order by id", Long.class));
+        assertEquals(
+                0,
+                new BigDecimal("23.00")
+                        .compareTo(jdbc.queryForObject(
+                                "select sum(valor_liquido) from item_venda where venda_id = 1", BigDecimal.class)));
         // V7: a venda antiga (só valor_total) passa a ter cobrado e calculado iguais ao total.
         assertEquals(
                 0,
@@ -273,7 +288,8 @@ class PostgresLegadoTest {
             mvc.perform(get(url).sessionAttr("autenticado", true)).andExpect(status().isOk());
         }
         mvc.perform(get("/historico").sessionAttr("autenticado", true))
-                .andExpect(content().string(containsString("23,00")));
+                .andExpect(content().string(containsString("23,00")))
+                .andExpect(content().string(containsString("Rateio retroativo")));
         mvc.perform(get("/historico/exportar.csv").param("forma", "OUTRO").sessionAttr("autenticado", true))
                 .andExpect(content().string(containsString("\"Vale\"")));
     }
@@ -299,6 +315,13 @@ class PostgresLegadoTest {
                         .compareTo(jdbc.queryForObject(
                                 "select valor_cobrado from venda where id = ?", java.math.BigDecimal.class, id)));
         assertEquals(antes - 2, jdbc.queryForObject("select quantidade from produto where id = 3", Integer.class));
+        // Venda nova no Postgres: rateio na hora (não retroativo) e líquidos = cobrado.
+        assertEquals(
+                0,
+                new BigDecimal("14")
+                        .compareTo(jdbc.queryForObject(
+                                "select sum(valor_liquido) from item_venda where venda_id = ?", BigDecimal.class, id)));
+        assertTrue(!jdbc.queryForObject("select rateio_retroativo from venda where id = ?", Boolean.class, id));
         mvc.perform(post("/historico/" + id + "/cancelar")
                         .sessionAttr("autenticado", true)
                         .param("motivo", "Ensaio"))

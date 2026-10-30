@@ -16,5 +16,6 @@ public record Orcamento(List<Item> itens, List<Desconto> descontos, BigDecimal t
 
     public record Item(Long produtoId, String nome, String categoria, int quantidade, BigDecimal precoUnitario) {}
 
-    public record Desconto(String descricao, BigDecimal valor) {}
+    /** promocaoId: a promoção que deu o desconto (a A_PARTIR_DE vencedora da categoria, ou o pacote). */
+    public record Desconto(String descricao, BigDecimal valor, Long promocaoId) {}
 }

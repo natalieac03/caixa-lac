@@ -2,6 +2,7 @@ package br.com.lac.caixa.modelo;
 
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.util.Dinheiro;
+import br.com.lac.caixa.util.Rateio;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -15,6 +16,7 @@ import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -64,6 +66,19 @@ public class Venda {
 
     private LocalDateTime dataCancelamento;
     private String motivoCancelamento;
+
+    /** Descontos promocionais da venda, congelados (vendas anteriores à V12 não têm). */
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "venda_id", nullable = false)
+    @OrderBy("id")
+    private List<VendaDesconto> descontosAplicados = new ArrayList<>();
+
+    /**
+     * true nas vendas anteriores à V12: o rateio por item foi reconstruído a
+     * partir dos totais (preço unitário gravado e valor cobrado), não na hora da venda.
+     */
+    @Column(nullable = false)
+    private boolean rateioRetroativo;
 
     @Version
     private long versao;
@@ -193,6 +208,36 @@ public class Venda {
 
     public void adicionarItem(ItemVenda item) {
         this.itens.add(item);
+    }
+
+    public void registrarDescontos(List<VendaDesconto> descontos) {
+        descontosAplicados.clear();
+        descontosAplicados.addAll(descontos);
+    }
+
+    public List<VendaDesconto> getDescontosAplicados() {
+        return descontosAplicados;
+    }
+
+    public boolean isRateioRetroativo() {
+        return rateioRetroativo;
+    }
+
+    /**
+     * Rateia (soma dos brutos - valor cobrado) entre os itens, proporcional ao
+     * valor bruto, em centavos pelo maior resto (Rateio). Cobre promoções e
+     * ajuste manual (com sinal); na cortesia todo líquido fica zero. Itens de
+     * bruto zero só recebem parte se todos forem zero (aí pela quantidade).
+     */
+    public void ratearDesconto() {
+        if (valorCobrado == null) throw new IllegalStateException("Registre os valores da venda antes do rateio.");
+        long[] brutos = itens.stream()
+                .mapToLong(i -> Rateio.centavos(i.getValorBruto()))
+                .toArray();
+        long[] quantidades = itens.stream().mapToLong(ItemVenda::getQuantidade).toArray();
+        long desconto = Arrays.stream(brutos).sum() - Rateio.centavos(valorCobrado);
+        long[] partes = Rateio.ratear(desconto, brutos, quantidades);
+        for (int i = 0; i < itens.size(); i++) itens.get(i).registrarRateio(Rateio.reais(partes[i]));
     }
 
     /** Soma os subtotais de todos os itens. */

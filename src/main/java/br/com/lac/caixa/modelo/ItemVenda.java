@@ -36,6 +36,22 @@ public class ItemVenda {
     @Column(precision = 38, scale = 4)
     private BigDecimal custoUnitario;
 
+    /**
+     * Preço normal do produto x quantidade, sem promoção. O desconto da venda
+     * (promoções + ajuste manual) é rateado entre os itens proporcional a este
+     * valor: valorLiquido = valorBruto - descontoRateado, e a soma dos líquidos
+     * é exatamente o valor cobrado. Vendas antigas: preenchido pela V12.
+     */
+    @Column(precision = 38, scale = 2)
+    private BigDecimal valorBruto;
+
+    /** Pode ser negativo (ajuste para mais). */
+    @Column(precision = 38, scale = 2)
+    private BigDecimal descontoRateado;
+
+    @Column(precision = 38, scale = 2)
+    private BigDecimal valorLiquido;
+
     public ItemVenda() {}
 
     public ItemVenda(Produto produto, int quantidade) {
@@ -48,6 +64,26 @@ public class ItemVenda {
         this.quantidade = quantidade;
         this.precoUnitario = precoUnitario;
         this.custoUnitario = produto.getCustoUnitario();
+        this.valorBruto =
+                produto.getPreco().multiply(BigDecimal.valueOf(quantidade)).setScale(2);
+    }
+
+    /** Recebe a parte do desconto da venda (Venda.ratearDesconto). */
+    void registrarRateio(BigDecimal desconto) {
+        this.descontoRateado = desconto;
+        this.valorLiquido = valorBruto.subtract(desconto);
+    }
+
+    public BigDecimal getValorBruto() {
+        return valorBruto;
+    }
+
+    public BigDecimal getDescontoRateado() {
+        return descontoRateado;
+    }
+
+    public BigDecimal getValorLiquido() {
+        return valorLiquido;
     }
 
     public BigDecimal getCustoUnitario() {

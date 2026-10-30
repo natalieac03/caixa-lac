@@ -8,6 +8,7 @@ import br.com.lac.caixa.modelo.PagamentoVenda;
 import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.modelo.Promocao;
 import br.com.lac.caixa.modelo.Venda;
+import br.com.lac.caixa.modelo.VendaDesconto;
 import br.com.lac.caixa.pagamento.PagamentoFactory;
 import br.com.lac.caixa.repositorio.VendaRepository;
 import br.com.lac.caixa.servico.preco.CalculadoraDePreco;
@@ -126,6 +127,10 @@ public class CaixaService {
             estoque.darBaixa(p, item.quantidade());
             venda.adicionarItem(new ItemVenda(p, item.quantidade(), item.precoUnitario()));
         }
+        venda.ratearDesconto();
+        venda.registrarDescontos(orcamento.descontos().stream()
+                .map(d -> new VendaDesconto(d.promocaoId(), d.descricao(), d.valor()))
+                .toList());
 
         Venda salva = vendas.save(venda);
         // Movimentos de saída na mesma transação, já apontando para a venda salva.

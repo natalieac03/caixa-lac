@@ -170,7 +170,11 @@
                                   th:text="${p.texto}">Pix R$ 10,00</span>
                         </th:block>
                     </td>
-                    <td th:text="${v.resumoProdutos}">X-Burger x2</td>
+                    <td>
+                        <span th:text="${v.resumoProdutos}">X-Burger x2</span>
+                        <span th:if="${v.rateioRetroativo}" class="selo selo-retroativo"
+                              title="Venda anterior ao rateio por item: o desconto de cada item foi reconstruído a partir do preço gravado e do valor cobrado.">Rateio retroativo</span>
+                    </td>
                     <td class="num" th:text="${v.quantidadeTotal}">2</td>
                     <td class="num"><strong>R$ <span th:text="${#numbers.formatDecimal(v.valorCobrado,1,2,'COMMA')}">0,00</span></strong></td>
                     <td>
