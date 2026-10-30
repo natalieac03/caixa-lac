@@ -2,6 +2,7 @@ package br.com.lac.caixa.servico;
 
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.repositorio.VendaRepository;
+import br.com.lac.caixa.repositorio.VendaSpecs;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
@@ -15,14 +16,14 @@ public class FechamentoService {
 
     @Transactional(readOnly = true)
     public Fechamento consultar(LocalDate inicio, LocalDate fim) {
-        var filtro = new FiltroHistorico(null, inicio, fim, "");
-        var agregados = vendas.fechamento(filtro.inicioConsulta(), filtro.fimConsulta());
+        var filtro = VendaSpecs.doFiltro(FiltroHistorico.periodo(inicio, fim)).and(VendaSpecs.naoCancelada());
+        var agregados = vendas.resumoPorForma(filtro);
         var linhas = new ArrayList<Fechamento.Linha>();
         long quantidade = 0;
         BigDecimal total = BigDecimal.ZERO, descontos = BigDecimal.ZERO, ajustes = BigDecimal.ZERO;
         for (FormaPagamento forma : FormaPagamento.values()) {
-            var resumo = agregados.stream().filter(r -> r.getForma() == forma).findFirst();
-            var linha = resumo.map(r -> new Fechamento.Linha(forma, r.getQuantidade(), r.getTotal(), r.getDescontos(), r.getAjustes()))
+            var resumo = agregados.stream().filter(r -> r.forma() == forma).findFirst();
+            var linha = resumo.map(r -> new Fechamento.Linha(forma, r.quantidade(), r.total(), r.descontos(), r.ajustes()))
                     .orElseGet(() -> new Fechamento.Linha(forma, 0, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO));
             linhas.add(linha);
             quantidade += linha.quantidade(); total = total.add(linha.total());

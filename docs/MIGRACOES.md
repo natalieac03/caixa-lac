@@ -53,8 +53,9 @@ promoções pelas telas. A versão nova subiu sobre esse banco com o perfil `pro
 baseline na versão 1, V2 a V5 aplicadas, `validate` aprovado, vínculos e valores
 antigos preservados. O ensaio achou um erro que o H2 não mostra: com algum filtro
 vazio, o histórico dava 500 (`cannot cast type bytea to timestamp`), porque o
-Hibernate envia `null` sem tipo. As consultas passaram a receber sempre valores
-(limites de data fixos e lista de formas de pagamento).
+Hibernate envia `null` sem tipo. O histórico, o CSV e o fechamento passaram a
+usar `Specification` (`VendaSpecs`): só entra na consulta o predicado do filtro
+preenchido, sem `:x is null or ...` e sem limites de data artificiais.
 
 Esse banco virou `src/test/resources/db/postgres-legado.sql`. `PostgresLegadoTest`
 e `PostgresBancoNovoTest` sobem um PostgreSQL 16 com Testcontainers e repetem o

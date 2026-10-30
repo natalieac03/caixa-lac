@@ -2,24 +2,17 @@ package br.com.lac.caixa.servico;
 
 import br.com.lac.caixa.modelo.FormaPagamento;
 
-import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
-import java.util.List;
 import java.util.Locale;
 
 /**
+ * Filtro do histórico, do CSV e do fechamento. Campo vazio = sem filtro:
+ * VendaSpecs só adiciona o predicado dos campos preenchidos.
  * Datas da tela são inclusivas; a consulta usa limite final exclusivo.
- *
- * Os parâmetros da consulta nunca são null: no Postgres o Hibernate envia
- * null sem tipo (bytea), e "cast(:inicio as timestamp) is null" quebra. Sem
- * data, valem os limites abaixo; sem forma, valem todas as formas.
  */
 public record FiltroHistorico(FormaPagamento forma, LocalDate inicio, LocalDate fim, String produto) {
-
-    static final LocalDateTime SEM_INICIO = LocalDateTime.of(1900, 1, 1, 0, 0);
-    static final LocalDateTime SEM_FIM = LocalDateTime.of(9999, 1, 1, 0, 0);
 
     public FiltroHistorico {
         if (inicio != null && fim != null && inicio.isAfter(fim))
@@ -27,17 +20,16 @@ public record FiltroHistorico(FormaPagamento forma, LocalDate inicio, LocalDate 
         produto = produto == null ? "" : produto.trim().toLowerCase(Locale.ROOT);
     }
 
-    public LocalDateTime inicioConsulta() { return inicio == null ? SEM_INICIO : inicio.atStartOfDay(); }
-    public LocalDateTime fimConsulta() { return fim == null ? SEM_FIM : fim.plusDays(1).atStartOfDay(); }
-
-    public List<FormaPagamento> formas() {
-        return forma == null ? List.of(FormaPagamento.values()) : List.of(forma);
+    /** Só por intervalo de datas (fechamento). */
+    public static FiltroHistorico periodo(LocalDate inicio, LocalDate fim) {
+        return new FiltroHistorico(null, inicio, fim, "");
     }
 
-    /** Mesmas formas, como texto, para a consulta nativa. */
-    public List<String> formasConsulta() {
-        return formas().stream().map(Enum::name).toList();
-    }
+    /** Início do primeiro dia, ou null sem data inicial. */
+    public LocalDateTime inicioConsulta() { return inicio == null ? null : inicio.atStartOfDay(); }
+
+    /** Início do dia seguinte ao último (exclusivo), ou null sem data final. */
+    public LocalDateTime fimConsulta() { return fim == null ? null : fim.plusDays(1).atStartOfDay(); }
 
     public static FiltroHistorico criar(FormaPagamento forma, String inicio, String fim, String dia, String produto) {
         if ((inicio == null || inicio.isBlank()) && (fim == null || fim.isBlank()) && dia != null && !dia.isBlank()) {
@@ -49,14 +41,9 @@ public record FiltroHistorico(FormaPagamento forma, LocalDate inicio, LocalDate 
     private static LocalDate data(String texto) {
         if (texto == null || texto.isBlank()) return null;
         try {
-            LocalDate data = LocalDate.parse(texto.trim());
-            if (data.isBefore(SEM_INICIO.toLocalDate()) || !data.isBefore(SEM_FIM.toLocalDate()))
-                throw new DateTimeException("fora do intervalo");
-            return data;
+            return LocalDate.parse(texto.trim());
         } catch (DateTimeParseException ex) {
             throw new IllegalArgumentException("Data inválida.");
-        } catch (DateTimeException ex) {
-            throw new IllegalArgumentException("Data fora do intervalo aceito (1900 a 9998).");
         }
     }
 }

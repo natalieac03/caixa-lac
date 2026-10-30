@@ -173,7 +173,7 @@ transparência e têm largura máxima de 512 pixels. CSS e imagens vão com
 
 ## Histórico
 
-O histórico filtra no banco por forma de pagamento, intervalo de dias (inclusive)
+O histórico filtra no banco (Specification: só entra o filtro preenchido) por forma de pagamento, intervalo de dias (inclusive)
 e trecho literal do nome do produto, sem diferenciar maiúsculas de minúsculas.
 Cada página tem até 50 vendas, ordenadas por data e ID decrescentes. Os
 indicadores e o CSV usam todo o filtro, sem limitar à página visível. A carga dos

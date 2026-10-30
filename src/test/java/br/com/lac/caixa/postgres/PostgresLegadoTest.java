@@ -1,6 +1,10 @@
 package br.com.lac.caixa.postgres;
 
+import br.com.lac.caixa.servico.ConsultaHistorico;
+import br.com.lac.caixa.servico.FechamentoService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -44,6 +48,38 @@ class PostgresLegadoTest {
 
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
+    @Autowired ConsultaHistorico historico;
+    @Autowired FechamentoService fechamento;
+
+    /**
+     * Vendas antigas, ambas em 10/05/2024: #1 Pix R$ 23 (Bóton Capivara x3,
+     * Adesivo Capivara Grande x1) e #2 Outro "Vale" R$ 5 (Bóton Logo LAC x1).
+     */
+    @ParameterizedTest(name = "forma={0} inicio={1} fim={2} produto={3}")
+    @CsvSource({
+            // vazio
+            ",,,,                                  2, 5, 28",
+            // só data
+            ",2024-05-10,2024-05-10,,              2, 5, 28",
+            ",2024-05-11,,,                        0, 0, 0",
+            ",,2024-05-09,,                        0, 0, 0",
+            // só forma
+            "PIX,,,,                               1, 4, 23",
+            "OUTRO,,,,                             1, 1, 5",
+            "DEBITO,,,,                            0, 0, 0",
+            // só produto (trecho, sem diferenciar maiúsculas)
+            ",,,CAPIVARA,                          1, 4, 23",
+            ",,,logo,                              1, 1, 5",
+            ",,,bóton,                             2, 5, 28",
+            ",,,%,                                 0, 0, 0",
+            // todos juntos
+            "PIX,2024-05-10,2024-05-10,capivara,   1, 4, 23",
+            "PIX,2024-05-10,2024-05-10,logo,       0, 0, 0",
+            "OUTRO,2024-05-01,2024-05-31,lac,      1, 1, 5"})
+    void filtrosNoBancoLegado(String forma, String inicio, String fim, String produto,
+                              long vendas, long itens, String total) throws Exception {
+        ConferenciaDeFiltros.conferir(mvc, historico, fechamento, forma, inicio, fim, produto, vendas, itens, total);
+    }
 
     @Test void migracaoPreservaVendasEVinculos() {
         assertEquals(1, jdbc.queryForObject("select count(*) from flyway_schema_history where type = 'BASELINE'", Integer.class));
