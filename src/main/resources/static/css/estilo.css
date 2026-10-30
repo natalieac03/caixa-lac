@@ -678,10 +678,17 @@ table.dados th.num, table.dados td.num { text-align: right; }
 .atalho .atalho-icone .icone { width: 22px; height: 22px; }
 .atalho strong { font-family: var(--font-display); font-size: 19px; color: var(--roxo-forte); line-height: 1.2; }
 .atalho span { font-size: 14px; color: var(--tinta-suave); }
-.atalho-destaque { background: var(--laranja); border-color: var(--laranja); color: var(--on-destaque); }
-.atalho-destaque:hover { background: var(--laranja); border-color: var(--laranja); filter: brightness(0.96); }
-.atalho-destaque .atalho-icone { background: var(--on-destaque); color: var(--laranja); }
-.atalho-destaque strong, .atalho-destaque span { color: var(--on-destaque); }
+/* O cartão principal (Nova venda) é o único preenchido: roxo do tema com texto on-roxo
+   (contraste AA: 6,2:1 no claro e 6,4:1 no escuro). O laranja fica só no acento da
+   borda de baixo e no foco, como nos outros destaques pequenos. */
+.atalho-destaque {
+    background: var(--roxo); border-color: var(--roxo); color: var(--on-roxo);
+    border-bottom: 4px solid var(--laranja);
+}
+.atalho-destaque:hover { background: var(--roxo-forte); border-color: var(--roxo-forte); border-bottom-color: var(--laranja); }
+.atalho-destaque:focus-visible { outline-color: var(--laranja); }
+.atalho-destaque .atalho-icone { background: var(--on-roxo); color: var(--roxo); }
+.atalho-destaque strong, .atalho-destaque span { color: var(--on-roxo); }
 
 /* ---------- Tela "Abrir caixa" ---------- */
 .palco-caixa {
