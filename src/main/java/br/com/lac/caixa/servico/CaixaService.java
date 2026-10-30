@@ -40,19 +40,23 @@ public class CaixaService {
 
     private final Clock relogio;
 
+    private final TaxaService taxas;
+
     public CaixaService(
             VendaRepository vendas,
             EstoqueService estoque,
             PromocaoService promocoes,
             Auditoria auditoria,
             CobrancaPixService cobrancasPix,
-            Clock relogio) {
+            Clock relogio,
+            TaxaService taxas) {
         this.vendas = vendas;
         this.estoque = estoque;
         this.promocoes = promocoes;
         this.auditoria = auditoria;
         this.cobrancasPix = cobrancasPix;
         this.relogio = relogio;
+        this.taxas = taxas;
     }
 
     /**
@@ -126,6 +130,12 @@ public class CaixaService {
                 motivoAjuste);
         // O servidor confere o pagamento de novo: soma, formas, descrição do Outro, recebido.
         venda.registrarPagamentos(partes(pagamentos, total, token));
+        // Taxa estimada de cada parte pela taxa vigente no dia (Pix do Mercado Pago usa a do Pix).
+        for (PagamentoVenda parte : venda.getPagamentos()) {
+            parte.registrarTaxa(
+                    taxas.vigente(parte.getForma(), venda.getDataHora().toLocalDate())
+                            .orElse(null));
+        }
 
         for (var item : orcamento.itens()) {
             Produto p = selecionados.get(item.produtoId());

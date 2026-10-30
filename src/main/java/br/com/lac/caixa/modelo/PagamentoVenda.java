@@ -49,6 +49,17 @@ public class PagamentoVenda {
     @Column(length = 64)
     private String mpOrderId;
 
+    /** Taxa estimada da forma, pela taxa vigente no dia da venda (zero se não há taxa). */
+    @Column(nullable = false, precision = 38, scale = 2)
+    private BigDecimal taxaEstimada = BigDecimal.ZERO.setScale(2);
+
+    /** false nas partes anteriores às taxas (V15): "sem taxa registrada". */
+    @Column(nullable = false)
+    private boolean taxaRegistrada;
+
+    /** A configuração de taxa usada (null se não havia taxa para a forma). */
+    private Long taxaId;
+
     protected PagamentoVenda() {}
 
     /** Parte comum; Pix sai como manual. */
@@ -103,6 +114,26 @@ public class PagamentoVenda {
             }
             this.mpOrderId = mpOrderId;
         }
+    }
+
+    /** Grava a taxa estimada pela taxa vigente (null = nenhuma taxa para a forma: zero). */
+    public void registrarTaxa(TaxaPagamento taxa) {
+        if (taxa != null && taxa.getForma() != forma) throw new IllegalArgumentException("Taxa de outra forma.");
+        this.taxaEstimada = taxa == null ? BigDecimal.ZERO.setScale(2) : taxa.estimar(valor);
+        this.taxaId = taxa == null ? null : taxa.getId();
+        this.taxaRegistrada = true;
+    }
+
+    public BigDecimal getTaxaEstimada() {
+        return taxaEstimada;
+    }
+
+    public boolean isTaxaRegistrada() {
+        return taxaRegistrada;
+    }
+
+    public Long getTaxaId() {
+        return taxaId;
     }
 
     /** Troco do dinheiro; null se não informou o recebido. */

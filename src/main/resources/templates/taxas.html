@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Taxas')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav('taxas')}"></nav>
+<main class="conteudo">
+    <div th:replace="~{fragments/layout :: avisos}"></div>
+    <div class="cabecalho-pagina">
+        <div>
+            <h1>Taxas de pagamento</h1>
+            <p>Quanto a maquininha, o banco ou o Mercado Pago cobram em cada forma de pagamento.</p>
+        </div>
+    </div>
+    <p class="aviso aviso-info">
+        Cada venda grava a taxa estimada de cada parte do pagamento pela taxa vigente no dia da venda:
+        valor × percentual + valor fixo, arredondado ao centavo. Mudar a taxa vale daí em diante e não altera
+        vendas já feitas. Pix pelo Mercado Pago e Pix manual usam a taxa do Pix.
+        <span th:if="${semTaxa > 0}"><br><strong id="sem-taxa" th:text="${semTaxa}">0</strong> vendas anteriores às
+            taxas estão marcadas como <em>sem taxa registrada</em> (contam taxa zero).</span>
+    </p>
+
+    <div class="cartao tabela-area">
+        <h2>Vigentes hoje</h2>
+        <table class="dados">
+            <thead><tr><th>Forma</th><th class="num">Percentual</th><th class="num">Fixo por transação</th><th>Desde</th></tr></thead>
+            <tbody>
+            <tr th:each="f : ${formas}" th:with="t=${vigentes.get(f)}">
+                <td th:text="${f.rotulo}">Crédito</td>
+                <td class="num" th:text="${t == null} ? 'sem taxa' : ${#numbers.formatDecimal(t.percentual, 1, 2, 'COMMA')} + '%'">3,50%</td>
+                <td class="num" th:text="${t == null} ? '-' : ${T(br.com.lac.caixa.util.Dinheiro).reais(t.valorFixo)}">R$ 0,00</td>
+                <td th:text="${t == null} ? '-' : ${#temporals.format(t.vigenteDesde, 'dd/MM/yyyy')}">01/01/2025</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="cartao cartao-lac" id="taxa-form">
+        <h2>Definir taxa</h2>
+        <div class="corpo">
+        <form method="post" th:action="@{/taxas}">
+            <div class="linha-campos">
+                <div class="campo">
+                    <label for="taxaForma">Forma</label>
+                    <select id="taxaForma" name="forma" required>
+                        <option th:each="f : ${formas}" th:value="${f}" th:text="${f.rotulo}">Crédito</option>
+                    </select>
+                </div>
+                <div class="campo">
+                    <label for="taxaPercentual">Percentual (%)</label>
+                    <input type="text" id="taxaPercentual" name="percentual" inputmode="decimal" class="mono" placeholder="3,5">
+                </div>
+                <div class="campo">
+                    <label for="taxaFixo">Fixo por transação (R$)</label>
+                    <input type="text" id="taxaFixo" name="valorFixo" inputmode="decimal" class="mono" placeholder="0,00">
+                </div>
+                <div class="campo">
+                    <label for="taxaDesde">Vale a partir de</label>
+                    <input type="date" id="taxaDesde" name="vigenteDesde" th:value="${hoje}" th:min="${hoje}">
+                </div>
+            </div>
+            <p class="ajuda">A data é hoje ou no futuro (para agendar uma mudança). Na mesma forma e data, a nova taxa
+                substitui a anterior.</p>
+            <div style="margin-top:16px;"><button type="submit" class="botao botao-principal">Salvar taxa</button></div>
+        </form>
+        </div>
+    </div>
+
+    <div class="cartao tabela-area" th:unless="${historico.isEmpty()}">
+        <h2>Histórico</h2>
+        <table class="dados">
+            <thead><tr><th>Forma</th><th>Desde</th><th class="num">Percentual</th><th class="num">Fixo</th></tr></thead>
+            <tbody>
+            <tr th:each="t : ${historico}">
+                <td th:text="${t.forma.rotulo}">Crédito</td>
+                <td th:text="${#temporals.format(t.vigenteDesde, 'dd/MM/yyyy')}">01/01/2025</td>
+                <td class="num" th:text="${#numbers.formatDecimal(t.percentual, 1, 2, 'COMMA')} + '%'">3,50%</td>
+                <td class="num" th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(t.valorFixo)}">R$ 0,00</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>
