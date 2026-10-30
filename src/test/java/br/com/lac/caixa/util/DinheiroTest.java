@@ -68,7 +68,7 @@ class DinheiroTest {
         // Arrange
         var p = new Produto("Produto \"especial\"", new BigDecimal("12.50"), 2);
         var v = Venda.nova();
-        v.setValorTotal(new BigDecimal("12.50"));
+        v.registrarValores(new BigDecimal("12.50"), BigDecimal.ZERO, new BigDecimal("12.50"), null);
         v.registrarPagamentos(List.of(parte(FormaPagamento.PIX, "12.50", null)));
 
         // Act

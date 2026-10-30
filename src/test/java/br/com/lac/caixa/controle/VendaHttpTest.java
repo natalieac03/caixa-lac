@@ -167,19 +167,6 @@ class VendaHttpTest {
                 .andExpect(flash().attributeExists("erro"));
     }
 
-    @Test
-    @DisplayName("Venda antiga sem valor cobrado usa o total legado")
-    void vendaAntigaUsaTotalLegado() {
-        // Arrange
-        var v = new Venda();
-
-        // Act
-        v.setValorTotal(new BigDecimal("9.50"));
-
-        // Assert
-        assertEquals(new BigDecimal("9.50"), v.getValorCobrado());
-    }
-
     // ---------- estoque e envio duplicado ----------
 
     @Test
@@ -273,11 +260,11 @@ class VendaHttpTest {
     // ---------- telas ----------
 
     @Test
-    @DisplayName("Tela de venda tem o token e o histórico mostra o valor de venda antiga")
+    @DisplayName("Tela de venda tem o token e o histórico mostra o valor cobrado")
     void telasRenderizamEHistoricoExibeValorLegado() throws Exception {
         // Arrange
         var antiga = Venda.nova();
-        antiga.setValorTotal(new BigDecimal("9.50"));
+        antiga.registrarValores(new BigDecimal("9.50"), BigDecimal.ZERO, new BigDecimal("9.50"), null);
         antiga.registrarPagamentos(List.of(pix("9.50")));
         vendas.save(antiga);
 

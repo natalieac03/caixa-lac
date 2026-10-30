@@ -58,7 +58,7 @@ public final class ExportadorCSV {
                     .append(';')
                     .append(v.getQuantidadeTotal())
                     .append(';')
-                    .append(Dinheiro.numero(v.getValorTotal()));
+                    .append(Dinheiro.numero(v.getValorCobrado()));
             for (FormaPagamento forma : FormaPagamento.values()) {
                 sb.append(';').append(Dinheiro.numero(v.valorPago(forma)));
             }

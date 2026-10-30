@@ -256,7 +256,8 @@ não bater, a tela mostra um alerta vermelho (não feche o caixa por ela e confi
 as vendas). **OUTRO** é agrupado como uma única forma, independentemente da
 descrição. Ajuste é `cobrado -
 calculado`, com sinal; a soma pode compensar aumentos e reduções. Vendas antigas
-usam `valor_total` e contribuem com zero em descontos/ajustes não registrados.
+(anteriores ao cálculo no servidor) têm valor calculado igual ao cobrado desde a
+V7 e contribuem com zero em ajustes; sem desconto registrado, com zero em descontos.
 Os CSVs incluem o intervalo consultado e seguem a mesma regra de exclusão de
 canceladas. As datas usam o horário local do aplicativo, como nas vendas atuais.
 

@@ -24,9 +24,9 @@ class VendaConsultasImpl implements VendaConsultas {
         this.em = em;
     }
 
-    /** Valor cobrado; vendas antigas só têm valor_total. */
+    /** Valor cobrado (sempre preenchido desde a V7). */
     static Expression<BigDecimal> cobrado(CriteriaBuilder cb, Root<Venda> v) {
-        return cb.coalesce(v.get("valorCobrado"), v.<BigDecimal>get("valorTotal"));
+        return v.get("valorCobrado");
     }
 
     @Override
@@ -74,10 +74,8 @@ class VendaConsultasImpl implements VendaConsultas {
         CriteriaQuery<Tuple> q = cb.createTupleQuery();
         Root<Venda> v = q.from(Venda.class);
         Expression<BigDecimal> cobrado = cobrado(cb, v);
-        Expression<BigDecimal> calculado = cb.<BigDecimal>coalesce()
-                .value(v.get("valorCalculado"))
-                .value(v.get("valorCobrado"))
-                .value(v.get("valorTotal"));
+        // Sem valor calculado, o ajuste conta zero (calculado = cobrado).
+        Expression<BigDecimal> calculado = cb.coalesce(v.<BigDecimal>get("valorCalculado"), cobrado);
         q.multiselect(
                         cb.count(v),
                         cb.coalesce(cb.sum(cobrado), BigDecimal.ZERO),

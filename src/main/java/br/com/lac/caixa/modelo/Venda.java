@@ -21,12 +21,13 @@ import java.util.stream.Collectors;
 /**
  * Uma venda registrada no caixa. O id funciona como numero da compra.
  * Guarda o total calculado, desconto promocional e valor cobrado com eventual
- * motivo de ajuste. valorTotal permanece como compatibilidade com vendas antigas.
+ * motivo de ajuste. O valor cobrado é sempre preenchido (desde a V7 também nas
+ * vendas antigas, que tinham só valor_total).
  *
  * O pagamento fica em PagamentoVenda (uma linha por forma; venda dividida tem
  * várias). A soma das linhas é exatamente o valor cobrado; cortesia (cobrado
- * zero) não tem linha. As colunas antigas forma_pagamento e
- * forma_pagamento_outro continuam no banco, sem uso desde a V6.
+ * zero) não tem linha. As colunas antigas forma_pagamento, forma_pagamento_outro
+ * e valor_total foram apagadas na V7.
  */
 @Entity
 public class Venda {
@@ -50,10 +51,12 @@ public class Venda {
     @OrderBy("id")
     private List<PagamentoVenda> pagamentos = new ArrayList<>();
 
-    private BigDecimal valorTotal;
     private BigDecimal valorCalculado;
     private BigDecimal desconto;
+
+    @Column(nullable = false)
     private BigDecimal valorCobrado;
+
     private String motivoAjuste;
 
     @Column(nullable = false)
@@ -117,7 +120,7 @@ public class Venda {
     }
 
     public BigDecimal getValorCobrado() {
-        return valorCobrado != null ? valorCobrado : valorTotal;
+        return valorCobrado;
     }
 
     public String getMotivoAjuste() {
@@ -128,7 +131,6 @@ public class Venda {
         this.valorCalculado = calculado;
         this.desconto = desconto;
         this.valorCobrado = cobrado;
-        this.valorTotal = cobrado;
         this.motivoAjuste = motivo;
     }
 
@@ -223,13 +225,5 @@ public class Venda {
 
     public List<ItemVenda> getItens() {
         return itens;
-    }
-
-    public BigDecimal getValorTotal() {
-        return getValorCobrado();
-    }
-
-    public void setValorTotal(BigDecimal valorTotal) {
-        this.valorTotal = valorTotal;
     }
 }

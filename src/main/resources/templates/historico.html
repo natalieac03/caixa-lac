@@ -145,7 +145,7 @@
                     </td>
                     <td th:text="${v.resumoProdutos}">X-Burger x2</td>
                     <td class="num" th:text="${v.quantidadeTotal}">2</td>
-                    <td class="num"><strong>R$ <span th:text="${#numbers.formatDecimal(v.valorTotal,1,2,'COMMA')}">0,00</span></strong></td>
+                    <td class="num"><strong>R$ <span th:text="${#numbers.formatDecimal(v.valorCobrado,1,2,'COMMA')}">0,00</span></strong></td>
                     <td>
                         <div th:if="${v.cancelada}">
                             <strong>Cancelada</strong>

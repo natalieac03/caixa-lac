@@ -157,7 +157,7 @@ class CancelamentoFechamentoTest {
         vendas.saveAndFlush(fora);
         var legado = Venda.nova();
         legado.setDataHora(dia.atStartOfDay());
-        legado.setValorTotal(new BigDecimal("4"));
+        legado.registrarValores(new BigDecimal("4"), BigDecimal.ZERO, new BigDecimal("4"), null);
         legado.registrarPagamentos(List.of(new PagamentoVenda(FormaPagamento.DEBITO, new BigDecimal("4"), null, null)));
         vendas.saveAndFlush(legado);
 

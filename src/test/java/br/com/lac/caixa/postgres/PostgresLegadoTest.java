@@ -2,7 +2,6 @@ package br.com.lac.caixa.postgres;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -17,10 +16,14 @@ import br.com.lac.caixa.servico.FechamentoService;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.sql.DriverManager;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.flywaydb.core.Flyway;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -44,8 +47,13 @@ import org.testcontainers.containers.PostgreSQLContainer;
 @AutoConfigureMockMvc
 class PostgresLegadoTest {
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
-    /** Total por forma do fechamento antigo (V5), calculado antes da V6. */
-    static final Map<FormaPagamento, BigDecimal> ANTES_DA_V6 = new EnumMap<>(FormaPagamento.class);
+    /** Total por forma do fechamento antigo (V5), calculado antes da V6 e da V7. */
+    static final Map<FormaPagamento, BigDecimal> ANTES = new EnumMap<>(FormaPagamento.class);
+
+    /** Cada venda antiga como estava na V5: forma e valor (as colunas somem na V7). */
+    record VendaAntiga(long id, String forma, BigDecimal valor, boolean cancelada) {}
+
+    static final List<VendaAntiga> VENDAS_ANTES = new ArrayList<>();
 
     @DynamicPropertySource
     static void banco(DynamicPropertyRegistry registro) throws Exception {
@@ -60,7 +68,8 @@ class PostgresLegadoTest {
                 var s = c.createStatement()) {
             s.execute(sql);
         }
-        // Até a V5, como estava em produção antes do pagamento dividido. Mais duas
+        // Até a V5, como estava em produção antes do pagamento dividido; o app aplica
+        // depois a V6 e a V7. Mais duas
         // vendas antigas: uma de valor zero e uma cancelada.
         Flyway.configure()
                 .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
@@ -80,7 +89,14 @@ class PostgresLegadoTest {
             try (var r = s.executeQuery(
                     "select forma_pagamento, count(*), sum(coalesce(valor_cobrado, valor_total)) from venda"
                             + " where not cancelada group by forma_pagamento")) {
-                while (r.next()) ANTES_DA_V6.put(FormaPagamento.valueOf(r.getString(1)), r.getBigDecimal(3));
+                while (r.next()) ANTES.put(FormaPagamento.valueOf(r.getString(1)), r.getBigDecimal(3));
+            }
+            try (var r = s.executeQuery("select id, forma_pagamento, coalesce(valor_cobrado, valor_total), cancelada"
+                    + " from venda order by id")) {
+                while (r.next()) {
+                    VENDAS_ANTES.add(
+                            new VendaAntiga(r.getLong(1), r.getString(2), r.getBigDecimal(3), r.getBoolean(4)));
+                }
             }
         }
         registro.add("spring.datasource.url", POSTGRES::getJdbcUrl);
@@ -138,13 +154,14 @@ class PostgresLegadoTest {
     }
 
     @Test
+    @DisplayName("Banco legado: baseline, V2-V7 aplicadas e vínculos de itens e promoções preservados")
     void migracaoPreservaVendasEVinculos() {
         assertEquals(
                 1,
                 jdbc.queryForObject(
                         "select count(*) from flyway_schema_history where type = 'BASELINE'", Integer.class));
         assertEquals(
-                5,
+                6,
                 jdbc.queryForObject(
                         "select count(*) from flyway_schema_history where type = 'SQL' and success", Integer.class));
         assertEquals(2, jdbc.queryForObject("select count(*) from item_venda where venda_id = 1", Integer.class));
@@ -156,38 +173,64 @@ class PostgresLegadoTest {
                 jdbc.queryForObject(
                         "select count(*) from information_schema.tables where table_name in ('venda_itens', 'promocao_itens')",
                         Integer.class));
-        assertNull(jdbc.queryForObject("select valor_cobrado from venda where id = 1", Object.class));
+        // V7: a venda antiga (só valor_total) passa a ter cobrado e calculado iguais ao total.
+        assertEquals(
+                0,
+                new BigDecimal("23.00")
+                        .compareTo(
+                                jdbc.queryForObject("select valor_cobrado from venda where id = 1", BigDecimal.class)));
+        assertEquals(
+                0,
+                new BigDecimal("23.00")
+                        .compareTo(jdbc.queryForObject(
+                                "select valor_calculado from venda where id = 1", BigDecimal.class)));
     }
 
     @Test
-    void v6DaUmaLinhaDePagamentoPorVendaAntigaEOFechamentoNaoMuda() {
+    @DisplayName(
+            "Depois da V7: mesmas vendas, uma linha de pagamento por venda antiga e fechamento por forma igual ao de antes")
+    void v7MantemVendasEFechamentoDeAntes() {
+        // Arrange: o que havia na V5 (VENDAS_ANTES, ANTES) e o que há agora
+        var idsAntigos = VENDAS_ANTES.stream().map(VendaAntiga::id).toList();
+        long maiorId = idsAntigos.stream().mapToLong(Long::longValue).max().orElseThrow();
+        var depois = fechamento.consultar(null, LocalDate.of(2024, 12, 31));
+
+        // Assert: as colunas legadas sumiram
         assertEquals(
-                5,
+                0,
                 jdbc.queryForObject(
-                        "select count(*) from flyway_schema_history where type = 'SQL' and success", Integer.class));
-        // Cada venda antiga com valor tem exatamente uma linha, com a forma e o valor que tinha.
-        var semLinhaCerta = jdbc.queryForList("""
-                select v.id from venda v
-                where v.id <= 4 and coalesce(v.valor_cobrado, v.valor_total) > 0
-                  and (select count(*) from pagamento_venda p where p.venda_id = v.id
-                       and p.forma = v.forma_pagamento and p.valor = coalesce(v.valor_cobrado, v.valor_total)) <> 1
-                """, Long.class);
-        assertEquals(java.util.List.of(), semLinhaCerta);
-        assertEquals(3, jdbc.queryForObject("select count(*) from pagamento_venda where venda_id <= 4", Integer.class));
+                        "select count(*) from information_schema.columns where table_name = 'venda'"
+                                + " and column_name in ('forma_pagamento', 'forma_pagamento_outro', 'valor_total')",
+                        Integer.class));
+        // Assert: mesma contagem de vendas antigas
+        assertEquals(
+                VENDAS_ANTES.size(),
+                jdbc.queryForObject("select count(*) from venda where id <= ?", Integer.class, maiorId));
+        // Assert: cada venda antiga com o mesmo valor cobrado e, se tem valor, uma linha com a forma de antes
+        for (VendaAntiga antes : VENDAS_ANTES) {
+            BigDecimal cobrado =
+                    jdbc.queryForObject("select valor_cobrado from venda where id = ?", BigDecimal.class, antes.id());
+            assertEquals(0, antes.valor().compareTo(cobrado), "venda " + antes.id());
+            int linhas = jdbc.queryForObject(
+                    "select count(*) from pagamento_venda where venda_id = ?", Integer.class, antes.id());
+            int linhasIguais = jdbc.queryForObject(
+                    "select count(*) from pagamento_venda where venda_id = ? and forma = ? and valor = ?",
+                    Integer.class,
+                    antes.id(),
+                    antes.forma(),
+                    antes.valor());
+            if (antes.valor().signum() > 0) {
+                assertEquals(1, linhas, "venda " + antes.id());
+                assertEquals(1, linhasIguais, "venda " + antes.id());
+            } else {
+                assertEquals(0, linhas, "cortesia " + antes.id());
+            }
+        }
         assertEquals(
                 "Vale", jdbc.queryForObject("select descricao from pagamento_venda where venda_id = 2", String.class));
-        // Conferência pós-deploy: vendas = vendas com pagamento + cortesias.
-        int antigas = jdbc.queryForObject("select count(*) from venda where id <= 4", Integer.class);
-        int comPagamento = jdbc.queryForObject(
-                "select count(distinct venda_id) from pagamento_venda where venda_id <= 4", Integer.class);
-        int cortesias = jdbc.queryForObject(
-                "select count(*) from venda v where id <= 4 and coalesce(valor_cobrado, valor_total) = 0",
-                Integer.class);
-        assertEquals(antigas, comPagamento + cortesias);
-
-        var depois = fechamento.consultar(null, java.time.LocalDate.of(2024, 12, 31));
+        // Assert: fechamento por forma e total cobrado iguais aos de antes
         for (FormaPagamento forma : FormaPagamento.values()) {
-            BigDecimal antes = ANTES_DA_V6.getOrDefault(forma, BigDecimal.ZERO);
+            BigDecimal antes = ANTES.getOrDefault(forma, BigDecimal.ZERO);
             BigDecimal agora = depois.formas().stream()
                     .filter(l -> l.forma() == forma)
                     .findFirst()
@@ -195,8 +238,12 @@ class PostgresLegadoTest {
                     .total();
             assertEquals(0, antes.compareTo(agora), forma + ": antes " + antes + ", depois " + agora);
         }
+        BigDecimal totalAntes = ANTES.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertEquals(0, totalAntes.compareTo(depois.total()));
+        assertEquals(VENDAS_ANTES.stream().filter(v -> !v.cancelada()).count(), depois.quantidade());
         assertTrue(depois.isConfere());
         assertEquals(1, depois.cortesias());
+        assertEquals(0, BigDecimal.ZERO.compareTo(depois.ajustes()), "ajuste das vendas antigas continua zero");
     }
 
     @Test

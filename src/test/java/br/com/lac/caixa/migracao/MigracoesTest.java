@@ -43,6 +43,14 @@ class MigracoesTest {
         }
     }
 
+    /** Quantas das colunas apagadas pela V7 ainda existem em venda. */
+    long colunasLegadas(String url) throws Exception {
+        return numero(
+                url,
+                "select count(*) from information_schema.columns where table_name='VENDA'"
+                        + " and column_name in ('FORMA_PAGAMENTO','FORMA_PAGAMENTO_OUTRO','VALOR_TOTAL')");
+    }
+
     /** O banco recusa o comando (constraint, NOT NULL, FK ou CHECK). */
     void assertRecusa(String url, String sql) {
         assertThrows(SQLException.class, () -> executar(url, sql), sql);
@@ -63,7 +71,7 @@ class MigracoesTest {
 
         // Assert: seis migrações SQL aplicadas
         assertEquals(
-                6,
+                7,
                 numero(
                         url,
                         "select count(*) from \"flyway_schema_history\" where \"success\"=true and \"type\"='SQL'"));
@@ -71,10 +79,12 @@ class MigracoesTest {
         assertRecusa(url, "insert into produto(nome,ativo,preco,quantidade) values ('P',true,1,-1)");
         assertRecusa(url, "insert into produto(nome,ativo,preco,quantidade) values ('P',true,0,1)");
         assertRecusa(url, "insert into produto(ativo,preco,quantidade) values (true,1,1)");
-        assertRecusa(
-                url, "insert into venda(data_hora,forma_pagamento,valor_cobrado) values (current_timestamp,'PIX',-1)");
-        assertRecusa(url, "insert into venda(forma_pagamento) values ('PIX')");
-        // Assert: desde a V6 a forma fica em pagamento_venda; venda.forma_pagamento aceita null
+        assertRecusa(url, "insert into venda(data_hora,valor_cobrado) values (current_timestamp,-1)");
+        assertRecusa(url, "insert into venda(valor_cobrado) values (1)");
+        // Desde a V7 o valor cobrado é obrigatório e as colunas antigas não existem.
+        assertRecusa(url, "insert into venda(data_hora) values (current_timestamp)");
+        assertEquals(0, colunasLegadas(url));
+        // Assert: a forma fica em pagamento_venda
         executar(url, "insert into venda(id,data_hora,valor_cobrado) values (500,current_timestamp,10)");
         assertRecusa(url, "insert into pagamento_venda(venda_id,valor) values (500,10)");
         assertRecusa(url, "insert into pagamento_venda(venda_id,forma,valor) values (500,'PIX',0)");
@@ -115,11 +125,14 @@ class MigracoesTest {
 
         // Assert
         assertEquals(3, numero(url, "select count(*) from produto"));
-        assertRecusa(url, "update venda set forma_pagamento='INVALIDA' where id=10");
+        assertRecusa(url, "update pagamento_venda set forma='INVALIDA' where venda_id=10");
         assertRecusa(url, "update promocao set tipo='INVALIDO' where id=10");
         assertEquals(10, numero(url, "select venda_id from item_venda where id=10"));
         assertEquals(10, numero(url, "select promocao_id from promocao_item where id=10"));
-        assertEquals(12, numero(url, "select valor_total from venda where id=10 and valor_cobrado is null"));
+        assertEquals(12, numero(url, "select valor_cobrado from venda where id=10 and valor_calculado = 12"));
+        assertEquals(
+                1, numero(url, "select count(*) from pagamento_venda where venda_id=10 and forma='PIX' and valor=12"));
+        assertEquals(0, colunasLegadas(url));
         assertEquals(
                 0,
                 numero(
@@ -196,5 +209,68 @@ class MigracoesTest {
         // Assert
         assertTrue(erro.getMessage().toLowerCase().contains("ck_produto_preco"));
         assertEquals(-1, numero(url, "select preco from produto"));
+    }
+
+    @Test
+    @DisplayName("V7 preenche valor cobrado e calculado das vendas antigas e apaga as colunas legadas")
+    void v7PreencheValoresEApagaColunas() throws Exception {
+        // Arrange: em V6, uma venda antiga só com valor_total e uma nova completa
+        String url = banco();
+        flywayAte(url, "6").migrate();
+        executar(
+                url,
+                "insert into venda(id,data_hora,forma_pagamento,valor_total) values (1,current_timestamp,'PIX',12)");
+        executar(url, "insert into pagamento_venda(venda_id,forma,valor) values (1,'PIX',12)");
+        executar(
+                url,
+                "insert into venda(id,data_hora,valor_cobrado,valor_calculado,valor_total) values (2,current_timestamp,8,10,8)");
+        executar(url, "insert into pagamento_venda(venda_id,forma,valor) values (2,'DINHEIRO',8)");
+
+        // Act
+        flyway(url).migrate();
+
+        // Assert
+        assertEquals(12, numero(url, "select valor_cobrado from venda where id=1"));
+        assertEquals(12, numero(url, "select valor_calculado from venda where id=1"));
+        assertEquals(8, numero(url, "select valor_cobrado from venda where id=2"));
+        assertEquals(10, numero(url, "select valor_calculado from venda where id=2"));
+        assertEquals(0, colunasLegadas(url));
+    }
+
+    @Test
+    @DisplayName("V7 para com mensagem clara se sobrar venda sem valor, sem apagar as colunas")
+    void v7ParaSemValor() throws Exception {
+        // Arrange
+        String url = banco();
+        flywayAte(url, "6").migrate();
+        executar(url, "insert into venda(id,data_hora) values (55,current_timestamp)");
+
+        // Act
+        var erro = assertThrows(FlywayException.class, () -> flyway(url).migrate());
+
+        // Assert
+        assertTrue(erro.getMessage().contains("V7 parada: a venda 55 continua sem valor_cobrado"), erro.getMessage());
+        assertEquals(3, colunasLegadas(url));
+    }
+
+    @Test
+    @DisplayName("V7 para se uma venda com valor não tem linha de pagamento (a forma antiga se perderia)")
+    void v7ParaSemLinhaDePagamento() throws Exception {
+        // Arrange
+        String url = banco();
+        flywayAte(url, "6").migrate();
+        executar(
+                url,
+                "insert into venda(id,data_hora,forma_pagamento,valor_cobrado) values (66,current_timestamp,'PIX',5)");
+
+        // Act
+        var erro = assertThrows(FlywayException.class, () -> flyway(url).migrate());
+
+        // Assert
+        assertTrue(
+                erro.getMessage().contains("V7 parada: a venda 66 tem valor mas não tem linha em pagamento_venda"),
+                erro.getMessage());
+        assertEquals(3, colunasLegadas(url));
+        assertEquals(5, numero(url, "select valor_cobrado from venda where id=66"));
     }
 }
