@@ -199,6 +199,12 @@ class PostgresLegadoTest {
                 new BigDecimal("23.00")
                         .compareTo(jdbc.queryForObject(
                                 "select sum(valor_liquido) from item_venda where venda_id = 1", BigDecimal.class)));
+        // V15: partes de pagamento antigas com taxa zero e "sem taxa registrada".
+        assertEquals(
+                0,
+                jdbc.queryForObject(
+                        "select count(*) from pagamento_venda where venda_id <= 4 and (taxa_registrada or taxa_estimada <> 0)",
+                        Integer.class));
         // V7: a venda antiga (só valor_total) passa a ter cobrado e calculado iguais ao total.
         assertEquals(
                 0,

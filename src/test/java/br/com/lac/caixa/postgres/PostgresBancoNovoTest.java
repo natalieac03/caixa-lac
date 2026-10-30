@@ -187,4 +187,70 @@ class PostgresBancoNovoTest {
                         String.class,
                         p.getId()));
     }
+
+    @Autowired
+    br.com.lac.caixa.servico.EventoService eventos;
+
+    @Autowired
+    br.com.lac.caixa.servico.DespesaService despesas;
+
+    @Autowired
+    br.com.lac.caixa.servico.TaxaService taxas;
+
+    @Test
+    @DisplayName("Postgres: sobreposição de eventos, venda no evento, despesas por evento/período e taxa vigente")
+    void eventosDespesasETaxas() {
+        // Eventos: parâmetros nulos (criar) e não nulos (editar) na consulta de sobreposição
+        var e = eventos.criar(
+                "Feira PG",
+                java.time.LocalDateTime.of(2024, 6, 1, 9, 0),
+                java.time.LocalDateTime.of(2024, 6, 1, 18, 0),
+                null);
+        org.junit.jupiter.api.Assertions.assertThrows(
+                br.com.lac.caixa.dominio.RegraDeNegocioException.class,
+                () -> eventos.criar(
+                        "Cruza PG",
+                        java.time.LocalDateTime.of(2024, 6, 1, 17, 0),
+                        java.time.LocalDateTime.of(2024, 6, 1, 19, 0),
+                        null));
+        eventos.editar(e.getId(), "Feira PG", e.getInicio(), e.getFim(), "ok");
+        // A venda de 01/06/2024 10:00 (criada no @BeforeEach) cai no evento.
+        var f = fechamento.consultar(br.com.lac.caixa.repositorio.FiltroHistorico.doEvento(eventos.periodo(e.getId())));
+        assertEquals(1, f.quantidade());
+        assertEquals(
+                "Feira PG",
+                eventos.doMomento(java.time.LocalDateTime.of(2024, 6, 1, 10, 0))
+                        .orElseThrow()
+                        .getNome());
+
+        // Despesas: filtros com e sem evento e datas nulas
+        Long material = despesas.categorias().get(0).getId();
+        despesas.criar(LocalDate.of(2024, 5, 31), "Lona", material, new BigDecimal("30"), e.getId(), null);
+        despesas.criar(LocalDate.of(2024, 6, 1), "Avulsa", material, new BigDecimal("5"), null, null);
+        assertEquals(
+                0,
+                new BigDecimal("30")
+                        .compareTo(despesas.total(
+                                new br.com.lac.caixa.servico.DespesaService.Filtro(e.getId(), null, null))));
+        assertEquals(
+                0,
+                new BigDecimal("35")
+                        .compareTo(
+                                despesas.total(new br.com.lac.caixa.servico.DespesaService.Filtro(null, null, null))));
+        assertEquals(
+                1,
+                despesas.filtrar(new br.com.lac.caixa.servico.DespesaService.Filtro(
+                                null, LocalDate.of(2024, 6, 1), null))
+                        .size());
+
+        // Taxas: vigente e contagem de partes sem taxa registrada (as do @BeforeEach têm taxa registrada)
+        taxas.definir(FormaPagamento.CREDITO, new BigDecimal("3.5"), null, LocalDate.now());
+        assertEquals(
+                0,
+                new BigDecimal("3.5")
+                        .compareTo(taxas.vigente(FormaPagamento.CREDITO, LocalDate.now())
+                                .orElseThrow()
+                                .getPercentual()));
+        assertEquals(0, taxas.vendasSemTaxaRegistrada());
+    }
 }
