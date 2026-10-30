@@ -21,9 +21,16 @@ public class PromocaoService {
     private final PromocaoRepository promocoes;
     private final CategoriaService categorias;
 
-    public PromocaoService(PromocaoRepository promocoes, CategoriaService categorias) {
+    private final Auditoria auditoria;
+
+    public PromocaoService(PromocaoRepository promocoes, CategoriaService categorias, Auditoria auditoria) {
         this.promocoes = promocoes;
         this.categorias = categorias;
+        this.auditoria = auditoria;
+    }
+
+    private static String descrever(Promocao p) {
+        return p.getTipo() + " | " + p.getNomesCategorias() + " | " + p.getPreco().toPlainString() + (p.isAtivo() ? "" : " | desligada");
     }
 
     public List<Promocao> listar() {
@@ -44,15 +51,19 @@ public class PromocaoService {
      */
     @Transactional
     public void criar(Map<Long, Integer> qtdPorCategoria, TipoPromocao tipo, BigDecimal preco) {
-        promocoes.save(new Promocao(itens(qtdPorCategoria), tipo, preco));
+        Promocao salva = promocoes.save(new Promocao(itens(qtdPorCategoria), tipo, preco));
+        auditoria.registrar("promocao_criada", "id", salva.getId(), "depois", descrever(salva));
     }
 
     /** Edição: mesmo formulário da criação; troca preço e quantidades, mantém o tipo. */
     @Transactional
     public Promocao editar(Long id, Map<Long, Integer> qtdPorCategoria, BigDecimal preco) {
         Promocao p = buscar(id);
+        String antes = descrever(p);
         p.alterar(itens(qtdPorCategoria), preco);
-        return promocoes.save(p);
+        Promocao salva = promocoes.save(p);
+        auditoria.registrar("promocao_editada", "id", id, "antes", antes, "depois", descrever(salva));
+        return salva;
     }
 
     @Transactional(readOnly = true)
@@ -84,6 +95,7 @@ public class PromocaoService {
     @Transactional
     public void remover(Long id) {
         promocoes.deleteById(id);
+        auditoria.registrar("promocao_removida", "id", id);
     }
 
     @Transactional
@@ -91,5 +103,6 @@ public class PromocaoService {
         Promocao p = buscar(id);
         p.setAtivo(!p.isAtivo());
         promocoes.save(p);
+        auditoria.registrar(p.isAtivo() ? "promocao_ligada" : "promocao_desligada", "id", id);
     }
 }

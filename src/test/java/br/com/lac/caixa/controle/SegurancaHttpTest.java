@@ -20,7 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class SegurancaHttpTest {
     static final Set<String> PUBLICAS = Set.of("/login", "/logout", "/error");
     @Autowired MockMvc mvc;
-    @Autowired RequestMappingHandlerMapping mapeamentos;
+    @Autowired @org.springframework.beans.factory.annotation.Qualifier("requestMappingHandlerMapping") RequestMappingHandlerMapping mapeamentos;
 
     MockHttpServletRequestBuilder doIp(MockHttpServletRequestBuilder req, String ip) {
         return req.with(r -> { r.setRemoteAddr(ip); return r; });

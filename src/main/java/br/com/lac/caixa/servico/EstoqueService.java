@@ -21,9 +21,16 @@ public class EstoqueService {
     private final ProdutoRepository produtos;
     private final ItemVendaRepository itensVenda;
 
-    public EstoqueService(ProdutoRepository produtos, ItemVendaRepository itensVenda) {
+    private final Auditoria auditoria;
+
+    public EstoqueService(ProdutoRepository produtos, ItemVendaRepository itensVenda, Auditoria auditoria) {
         this.produtos = produtos;
         this.itensVenda = itensVenda;
+        this.auditoria = auditoria;
+    }
+
+    private static String descrever(Produto p) {
+        return p.getNome() + " | " + p.getPreco().toPlainString() + " | " + p.getNomeCategoria();
     }
 
     /** Só os produtos ativos: os arquivados somem das telas. */
@@ -40,23 +47,30 @@ public class EstoqueService {
     public Produto criarNovo(String nome, BigDecimal preco, int quantidade, Categoria categoria) {
         Produto p = new Produto(nome.trim(), preco, quantidade);
         p.setCategoria(categoria);
-        return produtos.save(p);
+        Produto salvo = produtos.save(p);
+        auditoria.registrar("produto_criado", "id", salvo.getId(), "depois", descrever(salvo), "quantidade", quantidade);
+        return salvo;
     }
 
     /** Edita nome, preço e categoria. Vendas já feitas guardam o preço da época. */
     @Transactional
     public Produto editar(Long id, String nome, BigDecimal preco, Categoria categoria) {
         Produto p = buscar(id);
+        String antes = descrever(p);
         p.editar(nome, preco, categoria);
-        return produtos.save(p);
+        Produto salvo = produtos.save(p);
+        auditoria.registrar("produto_editado", "id", id, "antes", antes, "depois", descrever(salvo));
+        return salvo;
     }
 
     /** Soma unidades ao estoque de um produto que ja existe. */
     @Transactional
     public void adicionarUnidades(Long id, int quantidade) {
         Produto p = buscar(id);
+        int antes = p.getQuantidade();
         p.repor(quantidade);
         produtos.save(p);
+        auditoria.registrar("estoque_reposto", "id", id, "antes", antes, "depois", p.getQuantidade());
     }
 
     /**
@@ -66,8 +80,10 @@ public class EstoqueService {
     @Transactional
     public void removerUnidades(Long produtoId, int quantidade) {
         Produto p = buscar(produtoId);
+        int antes = p.getQuantidade();
         p.baixar(quantidade);
         produtos.save(p);
+        auditoria.registrar("estoque_retirado", "id", produtoId, "antes", antes, "depois", p.getQuantidade());
     }
 
     /**
@@ -84,9 +100,11 @@ public class EstoqueService {
         if (jaVendido) {
             p.setAtivo(false);
             produtos.save(p);
+            auditoria.registrar("produto_arquivado", "id", id, "antes", descrever(p));
             return true;
         }
         produtos.delete(p);
+        auditoria.registrar("produto_removido", "id", id, "antes", descrever(p));
         return false;
     }
 

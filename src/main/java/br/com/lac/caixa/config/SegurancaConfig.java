@@ -24,6 +24,7 @@ public class SegurancaConfig implements WebMvcConfigurer {
                         "/login",
                         "/logout",
                         "/error",
+                        "/actuator/health",
                         "/css/**",
                         "/img/**",
                         "/favicon.ico"

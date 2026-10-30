@@ -87,9 +87,10 @@ falha se os relatórios não mostrarem esses testes rodando. Diferenças do banc
 `promocao_tipo_check`) convivem com os explícitos da V5, e as sequences de
 identidade mantêm o nome gerado pelo Postgres.
 
-Os testes e os perfis local/prod usam Flyway e `ddl-auto=validate`. Flyway está
-fixado em 10.20.1 e o BOM Jackson em 2.18.2 para manter também o módulo TOML
-alinhado; essas dependências estão disponíveis no cache do ambiente de trabalho.
+Os testes e os perfis local/prod usam Flyway e `ddl-auto=validate` (configurados
+só em `application.properties`). Com o Spring Boot 3.5.16 as versões vêm do Boot
+(Flyway 11.7, Hibernate 6.6, H2 2.3.232), sem forçar nada no pom. Uma cópia do
+`dados/caixa.mv.db` local (H2 2.2) abriu no H2 2.3.232 e migrou até a V6.
 
 ## Aplicação em produção
 

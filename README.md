@@ -1,6 +1,6 @@
 # Caixa LAC 🦫
 
-Caixa eletrônico da Liga Acadêmica de Computação, em **Java + Spring Boot**, com
+Caixa eletrônico da Liga Acadêmica de Computação, em **Java 17 + Spring Boot 3.5**, com
 banco **PostgreSQL** e telas web (Thymeleaf). Tem três áreas: **Abrir caixa**
 (registrar vendas), **Estoque** (produtos e quantidades) e **Histórico** (todas
 as vendas, com filtro e exportação em CSV). A aba **Descontos** gerencia
@@ -83,6 +83,12 @@ usuário `sa`, senha em branco).
 5. Em **Settings → Networking** do serviço do app, clique em **Generate Domain**
    para receber a URL pública. Pronto: o caixa está no ar, e os dados ficam
    guardados no Postgres mesmo se o app reiniciar ou você subir uma versão nova.
+
+6. **Healthcheck:** em **Settings → Deploy → Healthcheck Path** do serviço do app,
+   coloque `/actuator/health`. O Railway só troca a versão no ar quando esse
+   endereço responde `{"status":"UP"}` (o que inclui conseguir falar com o
+   banco). É o único endpoint do Actuator ligado, não precisa de login e não
+   mostra detalhes.
 
 > As tabelas são versionadas pelo Flyway; o Hibernate usa `ddl-auto=validate`.
 > Consulte [migrações e ordem de deploy](docs/MIGRACOES.md) antes de atualizar uma base existente.
@@ -258,6 +264,15 @@ Veja [as mudanças de esquema e o roteiro de produção](docs/MIGRACOES.md),
 incluindo backup e interrupção das instâncias antigas antes da migração V3.
 
 
+## Auditoria
+
+O logger `auditoria` escreve uma linha por venda, ajuste de valor, correção de
+data, cancelamento e mudança de cadastro (produto, estoque, promoção, categoria),
+no formato `evento=venda id=12 ip=203.0.113.9 calculado=18.00 cobrado=15.00 ...`,
+com os valores de antes e depois e o IP de quem fez. A linha só é escrita depois
+que a mudança foi gravada (o que foi desfeito não aparece). Senha nunca vai para
+o log. No Railway, filtre os logs do serviço por `evento=`.
+
 ## CI e Maven Wrapper
 
 O GitHub Actions executa `./mvnw -B verify` com Java 17 em pushes e pull requests
@@ -268,6 +283,17 @@ PostgreSQL **não podem ser pulados**: com `CI=true`, falta de Docker é erro
 (`ExigeDocker`), e um passo final lê os relatórios do surefire e falha se esses
 testes não rodaram; o número de testes com PostgreSQL real aparece no resumo do
 job.
+
+**Testes de sistema (Playwright):** `sistema/VendaNoNavegadorTest` abre a tela
+de venda num Chromium e faz uma venda dividida Pix + Dinheiro com troco do
+início ao fim, e confere o aviso de sessão expirada. Eles não baixam navegador
+sozinhos: usam o Chromium instalado pelo Playwright ou o Google Chrome da
+máquina; sem nenhum dos dois são pulados (no CI, com `CI=true`, é erro). O CI
+instala o Chromium antes do `verify` e confere no fim que eles rodaram.
+
+**Cobertura:** o `verify` gera o relatório do JaCoCo em
+`target/site/jacoco/index.html` (sem piso mínimo); no CI ele fica como artefato
+`cobertura-jacoco` do job.
 
 O Maven Wrapper oficial 3.3.4 fixa Maven 3.9.9: `./mvnw -B verify` no
 Linux/macOS ou `mvnw.cmd -B verify` no Windows. A primeira execução baixa a

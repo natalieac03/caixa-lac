@@ -28,24 +28,42 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
+      - name: Instalar Chromium para o Playwright
+        # Os testes de sistema não baixam navegador sozinhos (PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD).
+        run: ./mvnw -B -q exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.classpathScope=test -Dexec.args="install --with-deps chromium"
       - name: Verificar projeto
         run: ./mvnw -B verify
-      - name: Conferir testes com PostgreSQL real
-        # Segunda trava: os relatórios do surefire precisam mostrar os testes do
-        # pacote postgres rodando, nenhum pulado.
+      - name: Publicar relatório de cobertura (JaCoCo)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura-jacoco
+          path: target/site/jacoco/
+          if-no-files-found: warn
+      - name: Conferir testes com PostgreSQL real e no navegador
+        # Segunda trava: os relatórios do surefire precisam mostrar os testes com
+        # Postgres (pacote postgres) e com Playwright (pacote sistema) rodando,
+        # nenhum pulado. As contagens vão para o resumo do job.
         run: |
           python3 - <<'PY'
           import glob, os, sys
           import xml.etree.ElementTree as ET
-          rodados = pulados = 0
-          for arquivo in glob.glob("target/surefire-reports/TEST-br.com.lac.caixa.postgres.Postgres*.xml"):
-              suite = ET.parse(arquivo).getroot()
-              rodados += int(suite.get("tests")) - int(suite.get("skipped"))
-              pulados += int(suite.get("skipped"))
-          linha = f"Testes com PostgreSQL real: {rodados} rodaram, {pulados} pulados."
-          print(linha)
+          def contar(padrao):
+              rodados = pulados = 0
+              for arquivo in glob.glob(padrao):
+                  suite = ET.parse(arquivo).getroot()
+                  rodados += int(suite.get("tests")) - int(suite.get("skipped"))
+                  pulados += int(suite.get("skipped"))
+              return rodados, pulados
+          falhou = False
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as resumo:
-              resumo.write(linha + "\n")
-          if rodados == 0 or pulados > 0:
-              sys.exit("Os testes com PostgreSQL real não rodaram por completo.")
+              for nome, padrao in [("PostgreSQL real", "target/surefire-reports/TEST-br.com.lac.caixa.postgres.Postgres*.xml"),
+                                   ("Playwright", "target/surefire-reports/TEST-br.com.lac.caixa.sistema.*NoNavegador*.xml")]:
+                  rodados, pulados = contar(padrao)
+                  linha = f"Testes com {nome}: {rodados} rodaram, {pulados} pulados."
+                  print(linha)
+                  resumo.write(linha + "\n")
+                  falhou = falhou or rodados == 0 or pulados > 0
+          if falhou:
+              sys.exit("Testes com PostgreSQL real ou com navegador não rodaram por completo.")
           PY

@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -30,7 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class IdempotenciaHttpTest {
     @Autowired MockMvc mvc;
     @Autowired ProdutoRepository produtos;
-    @SpyBean CaixaService caixa;
+    @MockitoSpyBean CaixaService caixa;
 
     @Test
     @DisplayName("Mesmo token de novo: o serviço devolve a venda existente e a tela avisa que já estava registrada")

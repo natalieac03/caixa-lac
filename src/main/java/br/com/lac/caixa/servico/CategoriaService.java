@@ -13,8 +13,11 @@ public class CategoriaService {
 
     private final CategoriaRepository categorias;
 
-    public CategoriaService(CategoriaRepository categorias) {
+    private final Auditoria auditoria;
+
+    public CategoriaService(CategoriaRepository categorias, Auditoria auditoria) {
         this.categorias = categorias;
+        this.auditoria = auditoria;
     }
 
     public List<Categoria> listar() {
@@ -40,8 +43,11 @@ public class CategoriaService {
                     throw new RegraDeNegocioException("Já existe a categoria \"" + outra.getNome()
                             + "\". Escolha outro nome.");
                 });
+        String antes = categoria.getNome();
         categoria.renomear(nomeDigitado);
-        return categorias.save(categoria);
+        Categoria salva = categorias.save(categoria);
+        auditoria.registrar("categoria_renomeada", "id", id, "antes", antes, "depois", salva.getNome());
+        return salva;
     }
 
     /**
