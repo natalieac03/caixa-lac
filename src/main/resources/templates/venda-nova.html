@@ -374,13 +374,19 @@
         const preco = document.createElement('span'); preco.textContent = valor;
         div.append(nome, preco); document.getElementById('carrinho').append(div);
     }
+    /* Prévia em andamento: cancelada quando outra é pedida (só a última desenha). */
+    let previaEmAndamento = null;
     function recalcular() {
         clearTimeout(timer);
         const atual = ++versao;
         document.getElementById('botaoConfirmar').disabled = true;
         timer = setTimeout(async function () {
+            if (previaEmAndamento) previaEmAndamento.abort();
+            const controle = new AbortController();
+            previaEmAndamento = controle;
             try {
-                const resposta = await fetch('/venda/previa', {method:'POST', body:new URLSearchParams(new FormData(document.getElementById('formVenda')))});
+                const resposta = await fetch('/venda/previa', {method:'POST', signal: controle.signal,
+                        body:new URLSearchParams(new FormData(document.getElementById('formVenda')))});
                 if (!resposta.ok || !resposta.headers.get('content-type')?.includes('application/json')) throw new Error('Não foi possível calcular a prévia.');
                 const o = await resposta.json();
                 if (atual !== versao) return;
@@ -388,12 +394,13 @@
                 unidades = 0;
                 o.itens.forEach(i => { unidades += i.quantidade; linha(i.nome + ' · ' + i.categoria + ' · ' + i.quantidade + ' × ' + reais(Number(i.precoUnitario)), reais(i.quantidade * Number(i.precoUnitario))); });
                 o.descontos.forEach(d => linha(d.descricao, '− ' + reais(Number(d.valor))));
+                if (o.aproximado) linha('Carrinho grande: promoções escolhidas por aproximação.', '');
                 document.getElementById('totalCarrinho').textContent = Number(o.total).toFixed(2).replace('.', ',');
                 document.getElementById('contagemItens').textContent = unidades + ' itens';
                 totalPrevia = Math.round(Number(o.total) * 100);
                 atualizarPagamento();
             } catch (e) {
-                if (atual !== versao) return;
+                if (e.name === 'AbortError' || atual !== versao) return;
                 totalPrevia = null; unidades = 0;
                 document.getElementById('carrinho').replaceChildren(); linha('Não foi possível calcular a prévia. Confira a conexão e tente novamente.', '');
             }

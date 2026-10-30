@@ -153,10 +153,13 @@ servlet à parte e não passa pelo interceptor de login.
 - Empate entre combinações: vale a que usa menos `A_PARTIR_DE` (e as de menor id);
   entre pacotes de mesma economia, o de menor id. O resultado não depende da
   ordem em que as promoções foram cadastradas.
-- Limite: a busca é exata e serve para carrinhos de evento (50 unidades em 5
-  categorias calculam em menos de 100 ms). Com mais de 12 `A_PARTIR_DE` ativas ao
-  mesmo tempo no carrinho, ou um carrinho grande demais para os pacotes, a venda
-  é recusada com o aviso "Divida a venda".
+- Carrinho grande: a busca é exata enquanto cabe no orçamento de trabalho (3
+  milhões de estados; até 12 `A_PARTIR_DE` ligadas a pacotes). `A_PARTIR_DE` que
+  não compartilha categoria com nenhum pacote é aplicada direto, e subconjuntos
+  que deixam as mesmas unidades reaproveitam a busca. Acima do orçamento a venda
+  **não é recusada**: os pacotes saem da melhor de duas heurísticas gulosas, o
+  orçamento é marcado como aproximado (a tela avisa) e o log registra um aviso.
+  Medido: 6 categorias × 10 unidades + 6 `A_PARTIR_DE` em ~40 ms; 7 × 7 em ~30 ms.
 - O orçamento inclui itens com preço unitário aplicado, economias descritas e
   total. As economias de `A_PARTIR_DE` já estão refletidas nos preços dos itens.
 - O campo **Valor ajustado** é opcional. Vazio, cobra o total calculado; se for
