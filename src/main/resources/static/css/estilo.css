@@ -982,3 +982,26 @@ table.dados th.num, table.dados td.num { text-align: right; }
 
 /* Vendas canceladas continuam visíveis para auditoria. */
 .dados tr.venda-cancelada td { text-decoration: line-through; opacity: .65; }
+
+/* Pagamento dividido no histórico: um selo por parte. */
+td.pagamento { white-space: normal; }
+td.pagamento .selo { margin: 1px 0; }
+.mais-pagamento { margin: 0 4px; color: var(--tinta-suave); font-weight: 700; }
+
+/* Pagamento dividido na tela de venda. */
+.linha-pagamento {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--borda, rgba(0, 0, 0, .08));
+}
+.linha-pagamento .campo { margin: 0; flex: 1 1 120px; }
+.linha-pagamento .campo.oculto { display: none; }
+.linha-pagamento select.forma { flex: 0 0 auto; min-height: 40px; }
+.troco { font-weight: 700; }
+.saldo-pagamento { margin: 12px 0 0; font-weight: 700; }
+.saldo-pagamento:empty { display: none; }
+.saldo-falta { color: var(--coral-texto); }
+.saldo-ok { color: var(--verde-texto); }

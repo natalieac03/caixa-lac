@@ -1,12 +1,13 @@
 package br.com.lac.caixa.pagamento;
 
+import br.com.lac.caixa.modelo.PagamentoVenda;
 import br.com.lac.caixa.util.Dinheiro;
 
-import java.math.BigDecimal;
-
+/** Com o valor recebido informado, mostra o troco. */
 public class PagamentoDinheiro implements Pagamento {
     @Override
-    public String pagar(BigDecimal valor) {
-        return "Recebido " + Dinheiro.reais(valor) + " em dinheiro.";
+    public String descrever(PagamentoVenda parte) {
+        String texto = Dinheiro.reais(parte.getValor()) + " em dinheiro";
+        return parte.getTroco() == null ? texto : texto + " (troco " + Dinheiro.reais(parte.getTroco()) + ")";
     }
 }

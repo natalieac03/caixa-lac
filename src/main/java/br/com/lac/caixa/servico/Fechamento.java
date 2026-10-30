@@ -4,8 +4,24 @@ import br.com.lac.caixa.modelo.FormaPagamento;
 import java.math.BigDecimal;
 import java.util.List;
 
-/** Ajustes são assinados: cobrado menos calculado; legados sem cálculo contam zero. */
-public record Fechamento(List<Linha> formas, long quantidade, BigDecimal total, BigDecimal descontos, BigDecimal ajustes) {
+/**
+ * Fechamento de um período, sem canceladas.
+ * - formas: por forma, a soma das partes de pagamento (venda dividida entra
+ *   em cada forma que usou, com o valor de cada parte);
+ * - quantidade e total: pela venda (total = soma dos valores cobrados);
+ * - descontos e ajustes: pela venda; ajuste = cobrado - calculado, com sinal,
+ *   e vendas antigas sem cálculo contam zero.
+ * A soma das formas tem que bater com o total cobrado (cortesia vale zero
+ * nos dois); se não bater, a tela mostra um alerta.
+ */
+public record Fechamento(List<Linha> formas, long quantidade, BigDecimal total, BigDecimal totalFormas,
+                         BigDecimal descontos, BigDecimal ajustes, long divididas, long cortesias) {
     public Fechamento { formas = List.copyOf(formas); }
-    public record Linha(FormaPagamento forma, long quantidade, BigDecimal total, BigDecimal descontos, BigDecimal ajustes) {}
+
+    /** vendas = quantas vendas tiveram alguma parte nesta forma. */
+    public record Linha(FormaPagamento forma, long vendas, BigDecimal total) {}
+
+    public boolean isConfere() { return totalFormas.compareTo(total) == 0; }
+
+    public BigDecimal getDiferenca() { return totalFormas.subtract(total); }
 }

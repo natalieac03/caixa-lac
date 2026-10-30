@@ -18,9 +18,10 @@ class HistoricoIntegracaoTest {
     @Autowired ConsultaHistorico consulta;
 
     Venda venda(Produto p, FormaPagamento forma, LocalDate dia) {
-        var v=new Venda(forma,null); v.setDataHora(dia.atTime(12,0));
+        var v=Venda.nova(); v.setDataHora(dia.atTime(12,0));
         v.adicionarItem(new ItemVenda(p,2));
         v.registrarValores(new BigDecimal("2"),BigDecimal.ZERO,new BigDecimal("2"),null);
+        v.registrarPagamentos(java.util.List.of(new PagamentoVenda(forma,new BigDecimal("2"),null,null)));
         return vendas.saveAndFlush(v);
     }
     @Test void paginaNoBancoESomaFiltroInteiro() {
@@ -42,7 +43,7 @@ class HistoricoIntegracaoTest {
         var p=produtos.save(new Produto("Buscado",BigDecimal.ONE,10));
         var outro=produtos.save(new Produto("Outro",BigDecimal.ONE,10));
         var v=venda(p,FormaPagamento.PIX,dia); v.adicionarItem(new ItemVenda(outro,3));
-        v.registrarValores(new BigDecimal("5"),BigDecimal.ZERO,new BigDecimal("5"),null); vendas.saveAndFlush(v);
+        v.registrarValores(new BigDecimal("5"),BigDecimal.ZERO,new BigDecimal("5"),null); v.registrarPagamentos(java.util.List.of(new PagamentoVenda(FormaPagamento.PIX,new BigDecimal("5"),null,null))); vendas.saveAndFlush(v);
         var r=consulta.consultar(new FiltroHistorico(null,dia,dia,"buscado"),0);
         assertEquals(1,r.resumo().getVendas()); assertEquals(5,r.resumo().getItens());
         assertEquals(0,new BigDecimal("5").compareTo(r.resumo().getTotal()));

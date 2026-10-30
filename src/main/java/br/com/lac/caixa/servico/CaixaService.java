@@ -1,11 +1,10 @@
 package br.com.lac.caixa.servico;
 
-import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.modelo.ItemVenda;
+import br.com.lac.caixa.modelo.PagamentoVenda;
 import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.modelo.Promocao;
 import br.com.lac.caixa.modelo.Venda;
-import br.com.lac.caixa.pagamento.Pagamento;
 import br.com.lac.caixa.pagamento.PagamentoFactory;
 import br.com.lac.caixa.repositorio.VendaRepository;
 import br.com.lac.caixa.servico.preco.CalculadoraDePreco;
@@ -64,15 +63,14 @@ public class CaixaService {
 
     @Transactional
     public ResultadoVenda registrarVenda(Map<Long, Integer> quantidades,
-                                         FormaPagamento forma,
-                                         String outro,
+                                         List<PagamentoInformado> pagamentos,
                                          BigDecimal totalManual, String motivoAjuste, String token) {
         if (token == null || !UUID.fromString(token).toString().equals(token)) throw new IllegalArgumentException("Token de venda inválido.");
         var existente = vendas.findByToken(token);
         if (existente.isPresent()) return new ResultadoVenda(existente.get(), "Venda já registrada.");
 
 
-        Venda venda = new Venda(forma, outro);
+        Venda venda = Venda.nova();
         venda.setToken(token);
         List<Promocao> ativas = promocoes.listarAtivas();
 
@@ -100,17 +98,38 @@ public class CaixaService {
         if (total.signum() < 0) throw new IllegalArgumentException("O valor ajustado não pode ser negativo.");
         if (total.compareTo(calculado) != 0 && (motivoAjuste == null || motivoAjuste.isBlank()))
             throw new IllegalArgumentException("Informe o motivo do ajuste de valor.");
+        venda.registrarValores(calculado, orcamento.descontos().stream().map(Orcamento.Desconto::valor)
+                .reduce(BigDecimal.ZERO, BigDecimal::add), total, motivoAjuste);
+        // O servidor confere o pagamento de novo: soma, formas, descrição do Outro, recebido.
+        venda.registrarPagamentos(partes(pagamentos, total));
+
         for (var item : orcamento.itens()) {
             Produto p = selecionados.get(item.produtoId());
             estoque.darBaixa(p, item.quantidade());
             venda.adicionarItem(new ItemVenda(p, item.quantidade(), item.precoUnitario()));
         }
-        venda.registrarValores(calculado, orcamento.descontos().stream().map(Orcamento.Desconto::valor)
-                .reduce(BigDecimal.ZERO, BigDecimal::add), total, motivoAjuste);
 
         Venda salva = vendas.save(venda);
-        Pagamento estrategia = PagamentoFactory.criar(forma, outro);
-        return new ResultadoVenda(salva, estrategia.pagar(total));
+        return new ResultadoVenda(salva, PagamentoFactory.mensagem(salva.getPagamentos()));
+    }
+
+    /**
+     * Parte única sem valor = o total (um toque). Na cortesia (total zero),
+     * essa parte some: cortesia não tem pagamento.
+     */
+    private static List<PagamentoVenda> partes(List<PagamentoInformado> informados, BigDecimal total) {
+        if (informados == null || informados.isEmpty()) return List.of();
+        if (informados.size() == 1 && informados.get(0).valor() == null) {
+            PagamentoInformado unico = informados.get(0);
+            if (total.signum() == 0) return List.of();
+            return List.of(new PagamentoVenda(unico.forma(), total, unico.descricao(), unico.recebido()));
+        }
+        List<PagamentoVenda> partes = new ArrayList<>();
+        for (PagamentoInformado p : informados) {
+            if (p.valor() == null) throw new IllegalArgumentException("Informe o valor de cada parte do pagamento.");
+            partes.add(new PagamentoVenda(p.forma(), p.valor(), p.descricao(), p.recebido()));
+        }
+        return partes;
     }
     @Transactional(readOnly = true)
     public Orcamento previa(Map<Long,Integer> quantidades) {

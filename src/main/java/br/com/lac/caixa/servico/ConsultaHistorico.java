@@ -4,6 +4,7 @@ import br.com.lac.caixa.modelo.Venda;
 import br.com.lac.caixa.repositorio.IndicadoresHistorico;
 import br.com.lac.caixa.repositorio.VendaRepository;
 import br.com.lac.caixa.repositorio.VendaSpecs;
+import org.hibernate.Hibernate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -33,12 +34,24 @@ public class ConsultaHistorico {
                 PageRequest.of(pagina, TAMANHO_PAGINA, VendaRepository.MAIS_RECENTES));
         List<Long> ids = cortada.getContent().stream().map(Venda::getId).toList();
         List<Venda> conteudo = ids.isEmpty() ? List.of() : vendas.carregarPagina(ids);
+        carregarPagamentos(conteudo);
         var resumo = vendas.indicadores(VendaSpecs.doFiltro(filtro).and(VendaSpecs.naoCancelada()));
         return new Resultado(new PageImpl<>(conteudo, cortada.getPageable(), cortada.getTotalElements()), resumo);
     }
 
     /** CSV padrão: o filtro inteiro, sem canceladas. */
     public List<Venda> exportar(FiltroHistorico filtro) {
-        return vendas.findAll(VendaSpecs.doFiltro(filtro).and(VendaSpecs.naoCancelada()), VendaRepository.MAIS_RECENTES);
+        var lista = vendas.findAll(VendaSpecs.doFiltro(filtro).and(VendaSpecs.naoCancelada()), VendaRepository.MAIS_RECENTES);
+        carregarPagamentos(lista);
+        return lista;
+    }
+
+    /**
+     * Itens e pagamentos são duas listas: buscar as duas no mesmo JOIN não dá
+     * (MultipleBagFetchException). Os pagamentos vêm em lotes (default_batch_fetch_size),
+     * dentro da transação, antes da tela (open-in-view=false).
+     */
+    private static void carregarPagamentos(List<Venda> lista) {
+        lista.forEach(v -> Hibernate.initialize(v.getPagamentos()));
     }
 }

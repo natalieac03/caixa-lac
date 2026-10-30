@@ -5,11 +5,13 @@ import br.com.lac.caixa.repositorio.VendaRepository;
 import br.com.lac.caixa.servico.CaixaService;
 import br.com.lac.caixa.servico.ConsultaHistorico;
 import br.com.lac.caixa.servico.FechamentoService;
+import br.com.lac.caixa.servico.PagamentoInformado;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,9 +58,9 @@ class PostgresBancoNovoTest {
     @BeforeEach void criarVendas() {
         if (vendasCriadas) return;
         vendasCriadas = true;
-        var a = caixa.registrarVenda(Map.of(1L, 2), FormaPagamento.PIX, null, null, null, UUID.randomUUID().toString()).venda();
+        var a = caixa.registrarVenda(Map.of(1L, 2), List.of(PagamentoInformado.total(FormaPagamento.PIX)), null, null, UUID.randomUUID().toString()).venda();
         a.setDataHora(LocalDate.of(2024, 6, 1).atTime(10, 0)); vendas.saveAndFlush(a);
-        var b = caixa.registrarVenda(Map.of(3L, 1, 2L, 1), FormaPagamento.DINHEIRO, null, null, null, UUID.randomUUID().toString()).venda();
+        var b = caixa.registrarVenda(Map.of(3L, 1, 2L, 1), List.of(PagamentoInformado.total(FormaPagamento.DINHEIRO)), null, null, UUID.randomUUID().toString()).venda();
         b.setDataHora(LocalDate.of(2024, 6, 2).atTime(23, 59)); vendas.saveAndFlush(b);
     }
 
@@ -80,7 +82,7 @@ class PostgresBancoNovoTest {
     }
 
     @Test void migraDoZeroEValidaComHibernate() throws Exception {
-        assertEquals(5, jdbc.queryForObject("select count(*) from flyway_schema_history where type = 'SQL' and success", Integer.class));
+        assertEquals(6, jdbc.queryForObject("select count(*) from flyway_schema_history where type = 'SQL' and success", Integer.class));
         assertEquals(3, jdbc.queryForObject("select count(*) from produto", Integer.class));
         mvc.perform(get("/historico").sessionAttr("autenticado", true)).andExpect(status().isOk());
     }

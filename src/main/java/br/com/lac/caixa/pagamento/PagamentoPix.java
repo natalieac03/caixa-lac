@@ -1,12 +1,11 @@
 package br.com.lac.caixa.pagamento;
 
+import br.com.lac.caixa.modelo.PagamentoVenda;
 import br.com.lac.caixa.util.Dinheiro;
-
-import java.math.BigDecimal;
 
 public class PagamentoPix implements Pagamento {
     @Override
-    public String pagar(BigDecimal valor) {
-        return "Recebido " + Dinheiro.reais(valor) + " via Pix.";
+    public String descrever(PagamentoVenda parte) {
+        return Dinheiro.reais(parte.getValor()) + " via Pix";
     }
 }

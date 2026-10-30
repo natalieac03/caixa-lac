@@ -17,18 +17,18 @@ public class FechamentoService {
     @Transactional(readOnly = true)
     public Fechamento consultar(LocalDate inicio, LocalDate fim) {
         var filtro = VendaSpecs.doFiltro(FiltroHistorico.periodo(inicio, fim)).and(VendaSpecs.naoCancelada());
-        var agregados = vendas.resumoPorForma(filtro);
+        var porForma = vendas.resumoPorForma(filtro);
         var linhas = new ArrayList<Fechamento.Linha>();
-        long quantidade = 0;
-        BigDecimal total = BigDecimal.ZERO, descontos = BigDecimal.ZERO, ajustes = BigDecimal.ZERO;
+        BigDecimal totalFormas = BigDecimal.ZERO;
         for (FormaPagamento forma : FormaPagamento.values()) {
-            var resumo = agregados.stream().filter(r -> r.forma() == forma).findFirst();
-            var linha = resumo.map(r -> new Fechamento.Linha(forma, r.quantidade(), r.total(), r.descontos(), r.ajustes()))
-                    .orElseGet(() -> new Fechamento.Linha(forma, 0, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO));
+            var linha = porForma.stream().filter(r -> r.forma() == forma).findFirst()
+                    .map(r -> new Fechamento.Linha(forma, r.vendas(), r.total()))
+                    .orElseGet(() -> new Fechamento.Linha(forma, 0, BigDecimal.ZERO));
             linhas.add(linha);
-            quantidade += linha.quantidade(); total = total.add(linha.total());
-            descontos = descontos.add(linha.descontos()); ajustes = ajustes.add(linha.ajustes());
+            totalFormas = totalFormas.add(linha.total());
         }
-        return new Fechamento(linhas, quantidade, total, descontos, ajustes);
+        var totais = vendas.totais(filtro);
+        return new Fechamento(linhas, totais.vendas(), totais.cobrado(), totalFormas, totais.descontos(), totais.ajustes(),
+                vendas.count(filtro.and(VendaSpecs.pagamentoDividido())), vendas.count(filtro.and(VendaSpecs.cortesia())));
     }
 }

@@ -10,5 +10,8 @@ public interface VendaConsultas {
 
     IndicadoresHistorico indicadores(Specification<Venda> filtro);
 
+    /** Por forma, somando as partes de pagamento (pagamento_venda). */
     List<ResumoPorForma> resumoPorForma(Specification<Venda> filtro);
+
+    TotaisDasVendas totais(Specification<Venda> filtro);
 }

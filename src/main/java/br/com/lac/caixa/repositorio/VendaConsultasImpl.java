@@ -2,6 +2,7 @@ package br.com.lac.caixa.repositorio;
 
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.modelo.ItemVenda;
+import br.com.lac.caixa.modelo.PagamentoVenda;
 import br.com.lac.caixa.modelo.Venda;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
@@ -55,19 +56,31 @@ class VendaConsultasImpl implements VendaConsultas {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<Tuple> q = cb.createTupleQuery();
         Root<Venda> v = q.from(Venda.class);
+        Join<Venda, PagamentoVenda> p = v.join("pagamentos");
+        q.multiselect(p.get("forma"), cb.countDistinct(v), cb.coalesce(cb.sum(p.<BigDecimal>get("valor")), BigDecimal.ZERO))
+         .where(filtro.toPredicate(v, q, cb))
+         .groupBy(p.get("forma"))
+         .orderBy(cb.asc(p.get("forma")));
+        return em.createQuery(q).getResultList().stream()
+                .map(r -> new ResumoPorForma(r.get(0, FormaPagamento.class), r.get(1, Long.class), r.get(2, BigDecimal.class)))
+                .toList();
+    }
+
+    @Override
+    public TotaisDasVendas totais(Specification<Venda> filtro) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Tuple> q = cb.createTupleQuery();
+        Root<Venda> v = q.from(Venda.class);
         Expression<BigDecimal> cobrado = cobrado(cb, v);
         Expression<BigDecimal> calculado = cb.<BigDecimal>coalesce()
                 .value(v.get("valorCalculado")).value(v.get("valorCobrado")).value(v.get("valorTotal"));
-        q.multiselect(v.get("formaPagamento"), cb.count(v),
+        q.multiselect(cb.count(v),
                         cb.coalesce(cb.sum(cobrado), BigDecimal.ZERO),
                         cb.coalesce(cb.sum(cb.coalesce(v.<BigDecimal>get("desconto"), BigDecimal.ZERO)), BigDecimal.ZERO),
                         cb.coalesce(cb.sum(cb.diff(cobrado, calculado)), BigDecimal.ZERO))
-         .where(filtro.toPredicate(v, q, cb))
-         .groupBy(v.get("formaPagamento"))
-         .orderBy(cb.asc(v.get("formaPagamento")));
-        return em.createQuery(q).getResultList().stream()
-                .map(r -> new ResumoPorForma(r.get(0, FormaPagamento.class), r.get(1, Long.class),
-                        r.get(2, BigDecimal.class), r.get(3, BigDecimal.class), r.get(4, BigDecimal.class)))
-                .toList();
+         .where(filtro.toPredicate(v, q, cb));
+        Tuple t = em.createQuery(q).getSingleResult();
+        return new TotaisDasVendas(t.get(0, Long.class), t.get(1, BigDecimal.class),
+                t.get(2, BigDecimal.class), t.get(3, BigDecimal.class));
     }
 }

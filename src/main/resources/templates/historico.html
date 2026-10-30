@@ -134,10 +134,14 @@
                             </div>
                         </form>
                     </td>
-                    <td>
-                        <span class="selo"
-                              th:classappend="${v.formaPagamento.name() == 'PIX' ? 'selo-pix' : (v.formaPagamento.name() == 'DEBITO' ? 'selo-debito' : (v.formaPagamento.name() == 'CREDITO' ? 'selo-credito' : (v.formaPagamento.name() == 'DINHEIRO' ? 'selo-dinheiro' : '')))}"
-                              th:text="${v.formaPagamentoTexto}">Pix</span>
+                    <td class="pagamento" th:attr="data-pagamento=${v.pagamentoTexto}">
+                        <span th:if="${v.cortesia}" class="selo">Cortesia</span>
+                        <th:block th:each="p, st : ${v.pagamentos}">
+                            <span th:unless="${st.first}" class="mais-pagamento" aria-hidden="true">+</span>
+                            <span class="selo"
+                                  th:classappend="${p.forma.name() == 'PIX' ? 'selo-pix' : (p.forma.name() == 'DEBITO' ? 'selo-debito' : (p.forma.name() == 'CREDITO' ? 'selo-credito' : (p.forma.name() == 'DINHEIRO' ? 'selo-dinheiro' : '')))}"
+                                  th:text="${p.texto}">Pix R$ 10,00</span>
+                        </th:block>
                     </td>
                     <td th:text="${v.resumoProdutos}">X-Burger x2</td>
                     <td class="num" th:text="${v.quantidadeTotal}">2</td>

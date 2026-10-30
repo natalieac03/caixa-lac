@@ -4,6 +4,6 @@ import br.com.lac.caixa.modelo.FormaPagamento;
 
 import java.math.BigDecimal;
 
-public record ResumoPorForma(FormaPagamento forma, long quantidade, BigDecimal total,
-                             BigDecimal descontos, BigDecimal ajustes) {
+/** Soma das partes de pagamento numa forma; vendas = vendas com alguma parte nela. */
+public record ResumoPorForma(FormaPagamento forma, long vendas, BigDecimal total) {
 }

@@ -54,16 +54,14 @@ public class CaixaController {
 
     @PostMapping("/venda")
     public String registrar(@RequestParam Map<String, String> params,
-                            @RequestParam FormaPagamento formaPagamento,
-                            @RequestParam(required = false) String formaPagamentoOutro,
                             @RequestParam(required = false) String valorTotal,
                             @RequestParam(required = false) String motivoAjuste,
                             @RequestParam String token,
                             RedirectAttributes flash) {
         if (caixa.tokenRegistrado(token)) return "redirect:/historico";
         try {
-            ResultadoVenda resultado = caixa.registrarVenda(Quantidades.porProduto(params), formaPagamento,
-                    formaPagamentoOutro, Dinheiro.parse(valorTotal), motivoAjuste, token);
+            ResultadoVenda resultado = caixa.registrarVenda(Quantidades.porProduto(params),
+                    PagamentosDoFormulario.ler(params), Dinheiro.parse(valorTotal), motivoAjuste, token);
             flash.addFlashAttribute("sucesso",
                     "Venda #" + resultado.venda().getId() + " registrada. " + resultado.mensagemPagamento());
             return "redirect:/historico";

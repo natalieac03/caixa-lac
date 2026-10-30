@@ -93,25 +93,54 @@
             </div>
 
             <div class="cartao">
-                <fieldset class="pilulas">
-                    <legend>Forma de pagamento</legend>
-                    <label class="pilula" th:each="f, st : ${formas}">
-                        <input type="radio" name="formaPagamento" th:value="${f}" th:checked="${st.first}"
-                               onchange="alternarOutro()">
-                        <span th:text="${f.rotulo}">Pix</span>
-                    </label>
-                </fieldset>
-                <div class="campo oculto" id="campoOutro" style="margin-top:14px;">
-                    <label for="formaPagamentoOutro">Qual?</label>
-                    <input type="text" id="formaPagamentoOutro" name="formaPagamentoOutro"
-                           placeholder="Ex.: parte em dinheiro, parte no Pix">
-                </div>
-                <div class="campo" style="margin-top:16px;">
+                <div class="campo">
                     <label for="valorTotal">Valor ajustado (opcional)</label>
-                    <input type="text" id="valorTotal" name="valorTotal" class="mono" inputmode="decimal">
-                    <p class="ajuda" style="margin:0;">Deixe vazio para cobrar o total calculado.</p>
+                    <input type="text" id="valorTotal" name="valorTotal" class="mono" inputmode="decimal"
+                           oninput="atualizarPagamento()">
+                    <p class="ajuda" style="margin:0;">Deixe vazio para cobrar o total calculado. Zero = cortesia (sem pagamento).</p>
                 </div>
                 <div class="campo"><label for="motivoAjuste">Motivo do ajuste</label><input id="motivoAjuste" name="motivoAjuste" type="text"></div>
+
+                <!-- Caso comum: uma forma, paga o total (o servidor preenche o valor). -->
+                <div id="pagamentoUnico" style="margin-top:16px;">
+                    <fieldset class="pilulas">
+                        <legend>Forma de pagamento</legend>
+                        <label class="pilula" th:each="f, st : ${formas}">
+                            <input type="radio" name="pag_forma_0" th:value="${f}" th:checked="${st.first}"
+                                   onchange="alternarUnico(true)">
+                            <span th:text="${f.rotulo}">Pix</span>
+                        </label>
+                    </fieldset>
+                    <div class="campo oculto" id="campoOutro" style="margin-top:14px;">
+                        <label for="pagDescricaoUnico">Qual?</label>
+                        <input type="text" id="pagDescricaoUnico" name="pag_descricao_0" maxlength="255"
+                               placeholder="Ex.: vale, permuta" oninput="atualizarPagamento()">
+                    </div>
+                    <div class="campo oculto" id="campoRecebido" style="margin-top:14px;">
+                        <label for="pagRecebidoUnico">Recebido em dinheiro (opcional)</label>
+                        <input type="text" id="pagRecebidoUnico" name="pag_recebido_0" class="mono" inputmode="decimal"
+                               oninput="atualizarPagamento()">
+                        <p class="ajuda troco" id="trocoUnico" aria-live="polite" style="margin:0;"></p>
+                    </div>
+                    <button type="button" class="botao botao-secundario botao-pequeno" style="margin-top:12px;"
+                            onclick="abrirDivisao()">Dividir pagamento</button>
+                </div>
+
+                <!-- Pagamento dividido: linhas forma + valor, montadas pelo JS. -->
+                <div id="pagamentoDividido" class="oculto" style="margin-top:16px;">
+                    <div class="cartao-cabecalho">
+                        <h2>Pagamento dividido</h2>
+                        <button type="button" class="botao botao-secundario botao-pequeno" onclick="fecharDivisao()">Uma forma só</button>
+                    </div>
+                    <div id="linhasPagamento"></div>
+                    <button type="button" class="botao botao-secundario botao-pequeno" onclick="adicionarLinha()">+ Adicionar forma</button>
+                </div>
+                <p class="saldo-pagamento" id="saldoPagamento" aria-live="polite"></p>
+
+                <!-- Modelo das opções de forma, clonado pelo JS (sem innerHTML). -->
+                <select id="modeloForma" hidden disabled aria-hidden="true">
+                    <option th:each="f : ${formas}" th:value="${f}" th:text="${f.rotulo}">Pix</option>
+                </select>
             </div>
 
             <div class="barra-inferior barra-fixa">
@@ -160,15 +189,176 @@
         recalcular();
     }
 
-    function formaEscolhida() {
-        const r = document.querySelector('input[name=formaPagamento]:checked');
+    /* ---------- Pagamento ---------- */
+    let unidades = 0, totalPrevia = null, dividido = false;
+
+    /* "12,50", "12.50" e "1.234,56" -> centavos; vazio ou inválido -> null (como o servidor). */
+    function centavos(texto) {
+        let t = (texto || '').trim();
+        if (!t) return null;
+        if (!/^(?:[0-9]+(?:[.,][0-9]{1,2})?|[0-9]{1,3}(?:\.[0-9]{3})+,[0-9]{1,2})$/.test(t)) return null;
+        if (t.indexOf(',') !== -1) t = t.replace(/\./g, '').replace(',', '.');
+        return Math.round(parseFloat(t) * 100);
+    }
+    function reaisCentavos(c) {
+        const inteiro = Math.floor(Math.abs(c) / 100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        return 'R$ ' + inteiro + ',' + String(Math.abs(c) % 100).padStart(2, '0');
+    }
+
+    /* Valor a cobrar: o ajustado, se preenchido; senão o total da prévia. */
+    function alvo() {
+        const ajuste = document.getElementById('valorTotal').value.trim();
+        if (ajuste) return centavos(ajuste);
+        return totalPrevia;
+    }
+
+    function formaUnica() {
+        const r = document.querySelector('input[name=pag_forma_0]:checked');
         return r ? r.value : '';
     }
 
-    function alternarOutro() {
-        const outro = formaEscolhida() === 'OUTRO';
-        document.getElementById('campoOutro').classList.toggle('oculto', !outro);
-        if (outro) document.getElementById('formaPagamentoOutro').focus();
+    /* Campo escondido fica desabilitado: não vai no envio. */
+    function mostrar(el, sim) {
+        el.classList.toggle('oculto', !sim);
+        el.querySelectorAll('input').forEach(i => { i.disabled = !sim; });
+    }
+
+    function alternarUnico(focar) {
+        const forma = formaUnica();
+        mostrar(document.getElementById('campoOutro'), !dividido && forma === 'OUTRO');
+        mostrar(document.getElementById('campoRecebido'), !dividido && forma === 'DINHEIRO');
+        if (focar && forma === 'OUTRO') document.getElementById('pagDescricaoUnico').focus();
+        atualizarPagamento();
+    }
+
+    function abrirDivisao() {
+        dividido = true;
+        document.querySelectorAll('#pagamentoUnico input').forEach(i => { i.disabled = true; });
+        document.getElementById('pagamentoUnico').classList.add('oculto');
+        document.getElementById('pagamentoDividido').classList.remove('oculto');
+        const primeira = formaUnica() || 'PIX';
+        adicionarLinha(primeira);
+        adicionarLinha(primeira === 'DINHEIRO' ? 'PIX' : 'DINHEIRO');
+    }
+
+    function fecharDivisao() {
+        dividido = false;
+        document.getElementById('linhasPagamento').replaceChildren();
+        document.getElementById('pagamentoDividido').classList.add('oculto');
+        document.getElementById('pagamentoUnico').classList.remove('oculto');
+        document.querySelectorAll('#pagamentoUnico input[type=radio]').forEach(i => { i.disabled = false; });
+        alternarUnico(false);
+    }
+
+    function campo(rotulo, classe) {
+        const div = document.createElement('div'); div.className = 'campo ' + classe;
+        const label = document.createElement('label'); label.textContent = rotulo;
+        const input = document.createElement('input'); input.type = 'text';
+        input.addEventListener('input', atualizarPagamento);
+        label.append(input); div.append(label);
+        return {div: div, input: input};
+    }
+
+    function adicionarLinha(forma) {
+        const lista = document.getElementById('linhasPagamento');
+        const linha = document.createElement('div'); linha.className = 'linha-pagamento';
+
+        const seletor = document.getElementById('modeloForma').cloneNode(true);
+        seletor.removeAttribute('id'); seletor.hidden = false; seletor.disabled = false;
+        seletor.removeAttribute('aria-hidden'); seletor.className = 'forma';
+        seletor.setAttribute('aria-label', 'Forma de pagamento');
+        if (typeof forma === 'string') seletor.value = forma;
+
+        const valor = campo('Valor', 'campo-valor'); valor.input.className = 'valor mono'; valor.input.inputMode = 'decimal';
+        const descricao = campo('Qual?', 'campo-descricao'); descricao.input.className = 'descricao'; descricao.input.maxLength = 255;
+        const recebido = campo('Recebido (opcional)', 'campo-recebido'); recebido.input.className = 'recebido mono'; recebido.input.inputMode = 'decimal';
+        const troco = document.createElement('p'); troco.className = 'ajuda troco'; recebido.div.append(troco);
+
+        const remover = document.createElement('button');
+        remover.type = 'button'; remover.className = 'botao botao-secundario botao-pequeno'; remover.textContent = 'Remover';
+        remover.setAttribute('aria-label', 'Remover esta forma');
+        remover.addEventListener('click', function () {
+            linha.remove();
+            if (!lista.children.length) { fecharDivisao(); return; }
+            renumerar(); atualizarPagamento();
+        });
+        seletor.addEventListener('change', function () { ajustarLinha(linha); atualizarPagamento(); });
+
+        linha.append(seletor, valor.div, descricao.div, recebido.div, remover);
+        lista.append(linha);
+        ajustarLinha(linha);
+        renumerar();
+        atualizarPagamento();
+        valor.input.focus();
+    }
+
+    function ajustarLinha(linha) {
+        const forma = linha.querySelector('select.forma').value;
+        mostrar(linha.querySelector('.campo-descricao'), forma === 'OUTRO');
+        mostrar(linha.querySelector('.campo-recebido'), forma === 'DINHEIRO');
+    }
+
+    /* Nomes pag_forma_0, pag_valor_0, ... na ordem da tela. */
+    function renumerar() {
+        document.querySelectorAll('#linhasPagamento .linha-pagamento').forEach(function (linha, n) {
+            linha.querySelector('select.forma').name = 'pag_forma_' + n;
+            linha.querySelector('input.valor').name = 'pag_valor_' + n;
+            linha.querySelector('input.descricao').name = 'pag_descricao_' + n;
+            linha.querySelector('input.recebido').name = 'pag_recebido_' + n;
+        });
+    }
+
+    /* Troco ao vivo; devolve false se o recebido for inválido ou menor que o valor. */
+    function mostrarTroco(saida, textoRecebido, valor) {
+        saida.textContent = '';
+        if (!textoRecebido.trim()) return true;
+        const recebido = centavos(textoRecebido);
+        if (recebido === null || valor === null) { saida.textContent = 'Valor recebido inválido.'; return false; }
+        if (recebido < valor) { saida.textContent = 'Recebido menor que o valor em dinheiro.'; return false; }
+        saida.textContent = 'Troco: ' + reaisCentavos(recebido - valor);
+        return true;
+    }
+
+    /* Confere o pagamento como o servidor fará; o servidor confere de novo. */
+    function pagamentoOk() {
+        const saldo = document.getElementById('saldoPagamento');
+        saldo.textContent = ''; saldo.className = 'saldo-pagamento';
+        const total = alvo();
+        if (total === null) {
+            if (document.getElementById('valorTotal').value.trim()) saldo.textContent = 'Valor ajustado inválido.';
+            return false;
+        }
+        if (!dividido) {
+            const forma = formaUnica();
+            if (forma === 'OUTRO' && total > 0 && !document.getElementById('pagDescricaoUnico').value.trim()) {
+                saldo.textContent = 'Diga qual é a outra forma de pagamento.'; return false;
+            }
+            if (forma === 'DINHEIRO') {
+                return mostrarTroco(document.getElementById('trocoUnico'), document.getElementById('pagRecebidoUnico').value, total);
+            }
+            return true;
+        }
+        if (total === 0) { saldo.textContent = 'Cortesia (valor zero) não tem pagamento: volte para uma forma só.'; return false; }
+        let soma = 0, ok = true;
+        document.querySelectorAll('#linhasPagamento .linha-pagamento').forEach(function (linha) {
+            const forma = linha.querySelector('select.forma').value;
+            const valor = centavos(linha.querySelector('input.valor').value);
+            if (valor === null || valor <= 0) ok = false; else soma += valor;
+            if (forma === 'OUTRO' && !linha.querySelector('input.descricao').value.trim()) ok = false;
+            const troco = linha.querySelector('.troco');
+            if (forma === 'DINHEIRO') { if (!mostrarTroco(troco, linha.querySelector('input.recebido').value, valor)) ok = false; }
+            else troco.textContent = '';
+        });
+        const diferenca = total - soma;
+        if (diferenca > 0) { saldo.textContent = 'Falta ' + reaisCentavos(diferenca); saldo.classList.add('saldo-falta'); }
+        else if (diferenca < 0) { saldo.textContent = 'Sobra ' + reaisCentavos(-diferenca); saldo.classList.add('saldo-falta'); }
+        else { saldo.textContent = 'Pagamento fechado: ' + reaisCentavos(total); saldo.classList.add('saldo-ok'); }
+        return ok && diferenca === 0;
+    }
+
+    function atualizarPagamento() {
+        const ok = pagamentoOk();
+        document.getElementById('botaoConfirmar').disabled = enviando || unidades === 0 || !ok;
     }
 
     let enviando = false;
@@ -195,14 +385,16 @@
                 const o = await resposta.json();
                 if (atual !== versao) return;
                 document.getElementById('carrinho').replaceChildren();
-                let unidades = 0;
+                unidades = 0;
                 o.itens.forEach(i => { unidades += i.quantidade; linha(i.nome + ' · ' + i.categoria + ' · ' + i.quantidade + ' × ' + reais(Number(i.precoUnitario)), reais(i.quantidade * Number(i.precoUnitario))); });
                 o.descontos.forEach(d => linha(d.descricao, '− ' + reais(Number(d.valor))));
                 document.getElementById('totalCarrinho').textContent = Number(o.total).toFixed(2).replace('.', ',');
                 document.getElementById('contagemItens').textContent = unidades + ' itens';
-                document.getElementById('botaoConfirmar').disabled = enviando || unidades === 0;
+                totalPrevia = Math.round(Number(o.total) * 100);
+                atualizarPagamento();
             } catch (e) {
                 if (atual !== versao) return;
+                totalPrevia = null; unidades = 0;
                 document.getElementById('carrinho').replaceChildren(); linha('Não foi possível calcular a prévia. Confira a conexão e tente novamente.', '');
             }
         }, 200);
@@ -218,10 +410,8 @@
         }
     });
 
-    alternarOutro();
+    alternarUnico(false);
     recalcular();
-    /* alternarOutro() acima não deve roubar o foco na abertura */
-    if (document.activeElement && document.activeElement.id === 'formaPagamentoOutro') document.activeElement.blur();
 </script>
 </body>
 </html>

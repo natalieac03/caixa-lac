@@ -1,6 +1,7 @@
 package br.com.lac.caixa.repositorio;
 
 import br.com.lac.caixa.modelo.ItemVenda;
+import br.com.lac.caixa.modelo.PagamentoVenda;
 import br.com.lac.caixa.modelo.Venda;
 import br.com.lac.caixa.servico.FiltroHistorico;
 import jakarta.persistence.criteria.Join;
@@ -22,7 +23,12 @@ public final class VendaSpecs {
         return (v, consulta, cb) -> {
             List<Predicate> predicados = new ArrayList<>();
             if (filtro.forma() != null) {
-                predicados.add(cb.equal(v.get("formaPagamento"), filtro.forma()));
+                // Venda dividida entra se QUALQUER parte usou a forma.
+                Subquery<Long> parte = consulta.subquery(Long.class);
+                Root<Venda> mesma = parte.correlate(v);
+                Join<Venda, PagamentoVenda> p = mesma.join("pagamentos");
+                parte.select(p.get("id")).where(cb.equal(p.get("forma"), filtro.forma()));
+                predicados.add(cb.exists(parte));
             }
             if (filtro.inicio() != null) {
                 predicados.add(cb.greaterThanOrEqualTo(v.get("dataHora"), filtro.inicioConsulta()));
@@ -41,6 +47,16 @@ public final class VendaSpecs {
             }
             return cb.and(predicados.toArray(Predicate[]::new));
         };
+    }
+
+    /** Mais de uma parte no pagamento. */
+    public static Specification<Venda> pagamentoDividido() {
+        return (v, consulta, cb) -> cb.greaterThan(cb.size(v.<java.util.Collection<PagamentoVenda>>get("pagamentos")), 1);
+    }
+
+    /** Sem parte de pagamento: valor cobrado zero. */
+    public static Specification<Venda> cortesia() {
+        return (v, consulta, cb) -> cb.isEmpty(v.<java.util.Collection<PagamentoVenda>>get("pagamentos"));
     }
 
     public static Specification<Venda> naoCancelada() {

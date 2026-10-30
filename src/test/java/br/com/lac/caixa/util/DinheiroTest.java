@@ -20,17 +20,17 @@ class DinheiroTest {
         assertEquals("R$ 1.234,56",Dinheiro.reais(new BigDecimal("1234.56")));
         assertEquals("R$ 0,50",Dinheiro.reais(new BigDecimal("0.5")));
         assertEquals("1234,56",Dinheiro.numero(new BigDecimal("1234.56")));
-        assertTrue(PagamentoFactory.criar(FormaPagamento.PIX,null).pagar(new BigDecimal("1234.56")).contains("R$ 1.234,56"));
+        assertTrue(PagamentoFactory.mensagem(List.of(new PagamentoVenda(FormaPagamento.PIX,new BigDecimal("1234.56"),null,null))).contains("R$ 1.234,56"));
     }
     @Test void todasAsMensagensUsamReais() {
         for(var forma:FormaPagamento.values())
-            assertTrue(PagamentoFactory.criar(forma,"teste").pagar(new BigDecimal("12.50")).contains("R$ 12,50"));
+            assertTrue(PagamentoFactory.mensagem(List.of(new PagamentoVenda(forma,new BigDecimal("12.50"),"teste",null))).contains("R$ 12,50"));
     }
     @Test void csvUsaVirgulaEEscapaNomes() {
         var p=new Produto("Produto \"especial\"",new BigDecimal("12.50"),2);
         assertTrue(ExportadorCSV.doEstoque(List.of(p)).contains("\"Produto \"\"especial\"\"\";\"\";12,50;2"));
-        var v=new Venda(FormaPagamento.PIX,null); v.setValorTotal(new BigDecimal("12.50"));
-        assertTrue(ExportadorCSV.doHistorico(List.of(v)).contains(";12,50\n"));
+        var v=Venda.nova(); v.setValorTotal(new BigDecimal("12.50")); v.registrarPagamentos(List.of(new PagamentoVenda(FormaPagamento.PIX,new BigDecimal("12.50"),null,null)));
+        assertTrue(ExportadorCSV.doHistorico(List.of(v)).contains(";12,50;12,50;0,00;0,00;0,00;0,00;\"\"\n"));
         var resposta=ExportadorCSV.arquivoCsv("Teste","estoque.csv");
         assertEquals("attachment; filename=\"estoque.csv\"",resposta.getHeaders().getFirst("Content-Disposition"));
         assertNotNull(resposta.getBody());

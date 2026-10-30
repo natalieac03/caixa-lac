@@ -16,24 +16,40 @@
             <div class="campo campo-acao"><button type="submit" class="botao botao-principal">Consultar</button></div>
         </form>
     </div>
+    <div th:unless="${fechamento.confere}" id="alerta-fechamento" class="aviso aviso-erro" role="alert">
+        <span>Atenção: a soma das formas de pagamento
+            (<strong th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(fechamento.totalFormas)}">R$ 0,00</strong>)
+            não bate com o total cobrado
+            (<strong th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(fechamento.total)}">R$ 0,00</strong>).
+            Não feche o caixa por este relatório; confira as vendas do período.</span>
+    </div>
     <div class="indicadores">
         <div class="indicador"><div class="indicador-rotulo">Vendas</div><div class="indicador-valor" th:text="${fechamento.quantidade}">0</div></div>
         <div class="indicador"><div class="indicador-rotulo">Total cobrado</div><div class="indicador-valor" th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(fechamento.total)}">R$ 0,00</div></div>
         <div class="indicador"><div class="indicador-rotulo">Descontos promocionais</div><div class="indicador-valor" th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(fechamento.descontos)}">R$ 0,00</div></div>
         <div class="indicador"><div class="indicador-rotulo">Ajustes manuais</div><div class="indicador-valor" th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(fechamento.ajustes)}">R$ 0,00</div></div>
     </div>
-    <p class="ajuda">Ajustes positivos aumentam a cobrança; negativos representam redução. Canceladas ficam fora do fechamento. Vendas antigas sem cálculo registrado contribuem com zero em descontos e ajustes.</p>
+    <p class="ajuda">
+        Vendas com pagamento dividido: <strong id="divididas" th:text="${fechamento.divididas}">0</strong> ·
+        Cortesias (valor zero, sem pagamento): <strong th:text="${fechamento.cortesias}">0</strong>.
+        Uma venda dividida entra em cada forma que usou, com o valor de cada parte; por isso a coluna
+        Vendas pode somar mais que o total de vendas. Ajustes positivos aumentam a cobrança; negativos
+        representam redução. Canceladas ficam fora do fechamento. Vendas antigas sem cálculo registrado
+        contribuem com zero em descontos e ajustes.
+    </p>
     <div class="cartao tabela-area">
         <table class="dados">
-            <thead><tr><th>Pagamento</th><th class="num">Vendas</th><th class="num">Total</th><th class="num">Descontos</th><th class="num">Ajustes</th></tr></thead>
+            <thead><tr><th>Pagamento</th><th class="num">Vendas</th><th class="num">Recebido</th></tr></thead>
             <tbody>
             <tr th:each="linha : ${fechamento.formas}">
-                <td th:text="${linha.forma.rotulo}">Pix</td><td class="num" th:text="${linha.quantidade}">0</td>
+                <td th:text="${linha.forma.rotulo}">Pix</td><td class="num" th:text="${linha.vendas}">0</td>
                 <td class="num" th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(linha.total)}">R$ 0,00</td>
-                <td class="num" th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(linha.descontos)}">R$ 0,00</td>
-                <td class="num" th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(linha.ajustes)}">R$ 0,00</td>
             </tr>
             </tbody>
+            <tfoot>
+            <tr><th>Soma das formas</th><td></td>
+                <td class="num"><strong th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(fechamento.totalFormas)}">R$ 0,00</strong></td></tr>
+            </tfoot>
         </table>
     </div>
 </main>
