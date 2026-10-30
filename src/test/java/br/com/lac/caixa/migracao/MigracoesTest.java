@@ -69,9 +69,9 @@ class MigracoesTest {
         // Act
         flyway(url).migrate();
 
-        // Assert: todas as migrações SQL aplicadas (V1-V8)
+        // Assert: todas as migrações SQL aplicadas (V1-V9)
         assertEquals(
-                8,
+                9,
                 numero(
                         url,
                         "select count(*) from \"flyway_schema_history\" where \"success\"=true and \"type\"='SQL'"));

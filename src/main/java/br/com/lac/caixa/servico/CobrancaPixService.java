@@ -170,6 +170,69 @@ public class CobrancaPixService {
         return c.getOrderId();
     }
 
+    /** Pix que não sai do aviso enquanto alguém pode estar confirmando a venda na tela. */
+    static final java.time.Duration CARENCIA_SEM_VENDA = java.time.Duration.ofMinutes(10);
+
+    /** Cobrança pendente mais velha que isso é cancelada pela limpeza agendada. */
+    static final java.time.Duration ABANDONADA_APOS = java.time.Duration.ofMinutes(20);
+
+    /**
+     * Aviso do webhook (já com a assinatura conferida): a order é consultada no
+     * Mercado Pago e a cobrança atualizada. Order que não é nossa ou cobrança que
+     * já saiu de PENDENTE: nada muda (o mesmo aviso duas vezes é inofensivo).
+     */
+    @Transactional
+    public boolean atualizarPorOrder(String orderId) {
+        if (orderId == null || orderId.isBlank() || !mp.ligado()) return false;
+        var cobranca = cobrancas.buscarPorOrderParaAtualizar(orderId);
+        if (cobranca.isEmpty() || cobranca.get().getStatus() != StatusCobranca.PENDENTE) return false;
+        StatusCobranca antes = cobranca.get().getStatus();
+        BigDecimal pagoAntes = cobranca.get().getValorPago();
+        atualizarPeloMercadoPago(cobranca.get());
+        return antes != cobranca.get().getStatus()
+                || !java.util.Objects.equals(pagoAntes, cobranca.get().getValorPago());
+    }
+
+    /** Pix que entrou (pago, ou pago com valor diferente) sem venda confirmada, para resolver à mão. */
+    @Transactional(readOnly = true)
+    public java.util.List<CobrancaPix> pixSemVenda() {
+        return cobrancas.pixSemVenda(agora().minus(CARENCIA_SEM_VENDA));
+    }
+
+    @Transactional
+    public void resolver(Long id, String como) {
+        CobrancaPix c = cobrancas
+                .buscarPorIdParaAtualizar(id)
+                .orElseThrow(() -> new RegraDeNegocioException("Pix não encontrado: " + id));
+        c.resolver(como, agora());
+        auditoria.registrar(
+                "pix_sem_venda_resolvido",
+                "order",
+                c.getOrderId(),
+                "valor",
+                c.getValorPago(),
+                "resolucao",
+                c.getResolucao());
+    }
+
+    /** Ids das cobranças pendentes há mais de 20 minutos (a limpeza agendada encerra uma a uma). */
+    @Transactional(readOnly = true)
+    public java.util.List<Long> abandonadas() {
+        return cobrancas.findByStatusAndCriadaEmBefore(StatusCobranca.PENDENTE, agora().minus(ABANDONADA_APOS)).stream()
+                .map(CobrancaPix::getId)
+                .toList();
+    }
+
+    /** Pergunta de novo (pode ter sido paga) e, se ainda pendente, cancela no Mercado Pago. */
+    @Transactional
+    public void encerrarSeAbandonada(Long id) {
+        var c = cobrancas.buscarPorIdParaAtualizar(id).orElse(null);
+        if (c == null || c.getStatus() != StatusCobranca.PENDENTE || !mp.ligado()) return;
+        if (!c.getCriadaEm().isBefore(agora().minus(ABANDONADA_APOS))) return;
+        atualizarPeloMercadoPago(c);
+        if (c.getStatus() == StatusCobranca.PENDENTE) cancelarNoMercadoPago(c);
+    }
+
     /** Pergunta ao Mercado Pago e aplica (só sai de PENDENTE). */
     void atualizarPeloMercadoPago(CobrancaPix c) {
         var s = mp.consultar(c.getOrderId());

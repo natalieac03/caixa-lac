@@ -154,14 +154,14 @@ class PostgresLegadoTest {
     }
 
     @Test
-    @DisplayName("Banco legado: baseline, V2-V8 aplicadas e vínculos de itens e promoções preservados")
+    @DisplayName("Banco legado: baseline, V2-V9 aplicadas e vínculos de itens e promoções preservados")
     void migracaoPreservaVendasEVinculos() {
         assertEquals(
                 1,
                 jdbc.queryForObject(
                         "select count(*) from flyway_schema_history where type = 'BASELINE'", Integer.class));
         assertEquals(
-                7,
+                8,
                 jdbc.queryForObject(
                         "select count(*) from flyway_schema_history where type = 'SQL' and success", Integer.class));
         assertEquals(2, jdbc.queryForObject("select count(*) from item_venda where venda_id = 1", Integer.class));

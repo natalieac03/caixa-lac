@@ -22,7 +22,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:seguranca;DB_CLOSE_DELAY=-1"})
 @AutoConfigureMockMvc
 class SegurancaHttpTest {
-    static final Set<String> PUBLICAS = Set.of("/login", "/logout", "/error");
+    static final Set<String> PUBLICAS = Set.of("/login", "/logout", "/error", "/webhooks/mercadopago");
 
     @Autowired
     MockMvc mvc;
@@ -60,6 +60,8 @@ class SegurancaHttpTest {
                 conferidas++;
             }
         }
+        // O webhook é público, mas sem assinatura válida responde 401.
+        mvc.perform(post("/webhooks/mercadopago")).andExpect(status().isUnauthorized());
         assertTrue(conferidas >= 15, "rotas conferidas: " + conferidas);
     }
 

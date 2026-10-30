@@ -7,6 +7,33 @@
 <main class="conteudo">
     <div th:replace="~{fragments/layout :: avisos}"></div>
 
+    <!-- Pix que entrou no Mercado Pago sem venda confirmada: alguém precisa resolver à mão. -->
+    <div class="aviso aviso-erro pix-sem-venda" role="alert" th:unless="${pixSemVenda.isEmpty()}" id="pixSemVenda">
+        <div>
+            <strong>Pix recebido sem venda</strong>
+            <p class="ajuda" style="margin:4px 0 8px;">Pagos no Mercado Pago, mas a venda não foi confirmada (tela fechada?).
+                Confira, lance a venda ou estorne no Mercado Pago, e marque como resolvido.</p>
+            <table class="dados">
+                <thead><tr><th>Hora</th><th class="num">Valor pago</th><th>Order</th><th>Situação</th><th></th></tr></thead>
+                <tbody>
+                <tr th:each="c : ${pixSemVenda}">
+                    <td th:text="${#temporals.format(c.pagaEm != null ? c.pagaEm : c.criadaEm, 'dd/MM/yyyy HH:mm')}">01/01 10:00</td>
+                    <td class="num" th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(c.valorPago)}">R$ 18,00</td>
+                    <td class="mono" th:text="${c.orderId}">ORD...</td>
+                    <td th:text="${c.valorDivergente} ? 'Pago com valor diferente da cobrança (' + ${T(br.com.lac.caixa.util.Dinheiro).reais(c.valor)} + ')' : 'Pago, sem venda'">Pago</td>
+                    <td>
+                        <form method="post" th:action="@{'/historico/pix/' + ${c.id} + '/resolver'}" class="acoes-linha">
+                            <input type="text" name="como" required maxlength="255" placeholder="Como foi resolvido"
+                                   th:attr="aria-label='Como foi resolvido o Pix ' + ${c.orderId}">
+                            <button type="submit" class="botao botao-secundario botao-pequeno">Marcar como resolvido</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <div class="cabecalho-pagina">
         <div>
             <h1>Histórico de vendas</h1>

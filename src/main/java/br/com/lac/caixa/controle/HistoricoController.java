@@ -4,6 +4,7 @@ import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.repositorio.FiltroHistorico;
 import br.com.lac.caixa.servico.CaixaService;
+import br.com.lac.caixa.servico.CobrancaPixService;
 import br.com.lac.caixa.servico.ConsultaHistorico;
 import br.com.lac.caixa.util.ExportadorCSV;
 import java.time.DateTimeException;
@@ -28,10 +29,12 @@ public class HistoricoController {
     private static final DateTimeFormatter DIA_E_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm");
     private final CaixaService caixa;
     private final ConsultaHistorico consulta;
+    private final CobrancaPixService cobrancasPix;
 
-    public HistoricoController(CaixaService caixa, ConsultaHistorico consulta) {
+    public HistoricoController(CaixaService caixa, ConsultaHistorico consulta, CobrancaPixService cobrancasPix) {
         this.caixa = caixa;
         this.consulta = consulta;
+        this.cobrancasPix = cobrancasPix;
     }
 
     @GetMapping("/historico")
@@ -46,6 +49,7 @@ public class HistoricoController {
         var filtro = FiltroHistorico.criar(forma, inicio, fim, dia, produto);
         var resultado = consulta.consultar(filtro, pagina);
         model.addAttribute("vendas", resultado.pagina().getContent());
+        model.addAttribute("pixSemVenda", cobrancasPix.pixSemVenda());
         model.addAttribute("pagina", resultado.pagina());
         model.addAttribute("resumo", resultado.resumo());
         model.addAttribute("formas", FormaPagamento.values());
@@ -91,6 +95,14 @@ public class HistoricoController {
         if (inicio != null && !inicio.isBlank()) flash.addAttribute("inicio", inicio);
         if (fim != null && !fim.isBlank()) flash.addAttribute("fim", fim);
         flash.addAttribute("pagina", pagina);
+        return "redirect:/historico";
+    }
+
+    /** Pix recebido sem venda: alguém resolveu à mão (estornou, lançou a venda...). */
+    @PostMapping("/historico/pix/{id}/resolver")
+    public String resolverPix(@PathVariable Long id, @RequestParam String como, RedirectAttributes flash) {
+        cobrancasPix.resolver(id, como);
+        flash.addFlashAttribute("sucesso", "Pix marcado como resolvido.");
         return "redirect:/historico";
     }
 

@@ -58,6 +58,11 @@ public class CobrancaPix {
 
     private LocalDateTime pagaEm;
 
+    /** Pix recebido sem venda: quando e como alguém resolveu à mão. */
+    private LocalDateTime resolvidaEm;
+
+    private String resolucao;
+
     protected CobrancaPix() {}
 
     public CobrancaPix(String token, int parte, BigDecimal valor) {
@@ -138,6 +143,24 @@ public class CobrancaPix {
     /** Cancelada do nosso lado (o Mercado Pago confirmou o cancelamento). */
     public void marcarCancelada() {
         if (status == StatusCobranca.PENDENTE) status = StatusCobranca.CANCELADA;
+    }
+
+    /** Pix recebido sem venda resolvido à mão (estorno, venda lançada, etc.). */
+    public void resolver(String como, LocalDateTime agora) {
+        if (como == null || como.isBlank() || como.trim().length() > 255) {
+            throw new RegraDeNegocioException("Diga como foi resolvido (até 255 caracteres).");
+        }
+        if (resolvidaEm != null) return;
+        resolvidaEm = agora;
+        resolucao = como.trim();
+    }
+
+    public LocalDateTime getResolvidaEm() {
+        return resolvidaEm;
+    }
+
+    public String getResolucao() {
+        return resolucao;
     }
 
     public boolean isValorDivergente() {

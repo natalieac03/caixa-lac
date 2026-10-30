@@ -142,7 +142,7 @@ class PostgresBancoNovoTest {
     @Test
     void migraDoZeroEValidaComHibernate() throws Exception {
         assertEquals(
-                8,
+                9,
                 jdbc.queryForObject(
                         "select count(*) from flyway_schema_history where type = 'SQL' and success", Integer.class));
         assertEquals(0, produtosAntes, "nada semeado fora do perfil local");
