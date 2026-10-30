@@ -469,4 +469,43 @@ public class FinancasService {
         }
         return linhas;
     }
+
+    /** Valor do estoque de agora a custo e a preço (produtos ativos do filtro de categoria). */
+    public Financas.ValorEstoque valorDoEstoque(FiltroFinancas f) {
+        var v = consultas.valorDoEstoque(f);
+        return new Financas.ValorEstoque(dinheiro(v.aCusto()), dinheiro(v.aPreco()), v.produtosSemCusto());
+    }
+
+    // ---------------------------------------------------------------- demonstrativo
+
+    /**
+     * O demonstrativo em linhas, cada uma com o valor e o % da receita líquida.
+     * Com filtro de categoria, descontos e ajustes não se separam: vira uma linha
+     * "descontos e ajustes rateados" (bruto - líquido); taxas, despesas e lucro
+     * líquido ficam sem valor.
+     */
+    public List<Financas.LinhaDemonstrativo> demonstrativo(Resumo r) {
+        BigDecimal base = r.receitaLiquida();
+        List<Financas.LinhaDemonstrativo> linhas = new ArrayList<>();
+        linhas.add(linha("Receita bruta", "", r.receitaBruta(), base, false));
+        if (r.descontosPromocionais() != null) {
+            linhas.add(linha("Descontos promocionais", "(-)", r.descontosPromocionais(), base, false));
+            linhas.add(linha("Ajustes manuais", "(+/-)", r.ajustes(), base, false));
+        } else {
+            linhas.add(linha(
+                    "Descontos e ajustes rateados", "(-)", r.receitaBruta().subtract(base), base, false));
+        }
+        linhas.add(linha("Receita líquida", "=", base, base, true));
+        linhas.add(linha("Taxas estimadas", "(-)", r.taxas(), base, false));
+        linhas.add(linha("CMV (custo da mercadoria vendida)", "(-)", r.cmv(), base, false));
+        linhas.add(linha("Margem bruta", "=", r.margemBruta(), base, true));
+        linhas.add(linha("Despesas", "(-)", r.despesas(), base, false));
+        linhas.add(linha("Lucro líquido", "=", r.lucroLiquido(), base, true));
+        return linhas;
+    }
+
+    private static Financas.LinhaDemonstrativo linha(
+            String rotulo, String operador, BigDecimal valor, BigDecimal base, boolean resultado) {
+        return new Financas.LinhaDemonstrativo(rotulo, operador, valor, percentual(valor, base), resultado);
+    }
 }

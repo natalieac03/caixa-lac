@@ -41,6 +41,12 @@ public class EventoService {
         return new PeriodoDoEvento(e.getId(), e.getNome(), e.getInicio(), e.getFim());
     }
 
+    /** "Este evento": o que está acontecendo agora ou, se nenhum, o último que já começou. */
+    @Transactional(readOnly = true)
+    public Optional<Evento> atual(LocalDateTime agora) {
+        return eventos.findFirstByInicioLessThanEqualOrderByInicioDesc(agora);
+    }
+
     @Transactional(readOnly = true)
     public Optional<Evento> doMomento(LocalDateTime quando) {
         return eventos.doMomento(quando);

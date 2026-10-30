@@ -342,4 +342,23 @@ public class ConsultasFinanceiras {
                         r.getBigDecimal("custo_unitario"),
                         0));
     }
+
+    /** Valor do estoque de agora (produtos ativos): a custo (só os com custo), a preço, e quantos sem custo. */
+    public record ValorEstoque(BigDecimal aCusto, BigDecimal aPreco, long produtosSemCusto) {}
+
+    public ValorEstoque valorDoEstoque(FiltroFinancas f) {
+        var params = new MapSqlParameterSource();
+        String categoria = "";
+        if (f.categoriaId() != null) {
+            categoria = " AND p.categoria_id = :categoria";
+            params.addValue("categoria", f.categoriaId());
+        }
+        return jdbc.queryForObject(
+                "SELECT COALESCE(SUM(CASE WHEN p.custo_unitario IS NOT NULL THEN p.custo_unitario * p.quantidade END), 0) AS a_custo,"
+                        + " COALESCE(SUM(p.preco * p.quantidade), 0) AS a_preco,"
+                        + " COALESCE(SUM(CASE WHEN p.custo_unitario IS NULL AND p.quantidade > 0 THEN 1 ELSE 0 END), 0) AS sem_custo"
+                        + " FROM produto p WHERE p.ativo = TRUE" + categoria,
+                params,
+                (r, n) -> new ValorEstoque(dec(r, "a_custo"), dec(r, "a_preco"), r.getLong("sem_custo")));
+    }
 }

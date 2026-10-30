@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Finanças')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav('financas')}"></nav>
+<main class="conteudo" id="financas" th:attr="data-consulta=${f.consulta()}, data-metrica=${metrica}">
+    <div th:replace="~{fragments/layout :: avisos}"></div>
+    <div class="cabecalho-pagina">
+        <div>
+            <h1>Finanças</h1>
+            <p>Período: <strong id="periodo" th:text="${f.periodo}">01/03/2025</strong></p>
+        </div>
+    </div>
+    <p class="aviso aviso-info" th:if="${f.aviso != null}" th:text="${f.aviso}"></p>
+
+    <div class="cartao filtros-financas">
+        <nav class="atalhos-periodo" aria-label="Atalhos de período">
+            <a th:each="a : ${ {'hoje','evento','7dias','mes','personalizado'} }"
+               th:href="@{/financas} + '?' + ${f.consultaCom(a)}"
+               th:classappend="${f.atalho == a} ? 'ativo'"
+               th:attr="aria-current=${f.atalho == a} ? 'true' : null"
+               th:text="${a == 'hoje'} ? 'Hoje' : (${a == 'evento'} ? 'Este evento' : (${a == '7dias'} ? 'Últimos 7 dias' : (${a == 'mes'} ? 'Este mês' : 'Personalizado')))">Hoje</a>
+        </nav>
+        <form th:action="@{/financas}" method="get" class="linha-campos" style="align-items:flex-end;">
+            <input type="hidden" name="atalho" value="personalizado">
+            <input type="hidden" name="metrica" th:value="${metrica}">
+            <div class="campo"><label for="filtroInicio">De</label>
+                <input type="date" id="filtroInicio" name="inicio" th:value="${f.filtro.inicio != null ? f.filtro.inicio : f.filtro.inicioConsulta().toLocalDate()}"></div>
+            <div class="campo"><label for="filtroFim">Até</label>
+                <input type="date" id="filtroFim" name="fim" th:value="${f.filtro.fim != null ? f.filtro.fim : f.filtro.fimConsulta().minusNanos(1).toLocalDate()}"></div>
+            <div class="campo" th:unless="${eventos.isEmpty()}"><label for="filtroEvento">Evento (vale como período)</label>
+                <select id="filtroEvento" name="evento">
+                    <option value="">Nenhum (usar as datas)</option>
+                    <option th:each="e : ${eventos}" th:value="${e.id}" th:text="${e.nome}"
+                            th:selected="${f.evento != null and f.evento == e.id}">Feira</option>
+                </select></div>
+            <div class="campo"><label for="filtroCategoria">Categoria</label>
+                <select id="filtroCategoria" name="categoria">
+                    <option value="">Todas</option>
+                    <option th:each="c : ${categorias}" th:value="${c.id}" th:text="${c.nome}"
+                            th:selected="${f.categoria != null and f.categoria == c.id}">Bóton</option>
+                </select></div>
+            <div class="campo"><label for="filtroForma">Forma de pagamento</label>
+                <select id="filtroForma" name="forma">
+                    <option value="">Todas</option>
+                    <option th:each="x : ${formas}" th:value="${x}" th:text="${x.rotulo}"
+                            th:selected="${f.forma != null and f.forma == x}">Pix</option>
+                </select></div>
+            <div class="campo campo-acao"><button type="submit" class="botao botao-principal">Aplicar</button></div>
+        </form>
+    </div>
+
+    <div class="cartao vazio" id="financas-vazio" th:if="${painel.vazio}">
+        <strong>Nenhuma venda neste período.</strong>
+        Escolha outro período ou evento nos filtros acima.
+    </div>
+</main>
+<script th:src="@{/js/vendor/chart-4.4.1.umd.js}"></script>
+</body>
+</html>

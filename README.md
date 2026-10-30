@@ -357,6 +357,24 @@ com os valores de antes e depois e o IP de quem fez. A linha só é escrita depo
 que a mudança foi gravada (o que foi desfeito não aparece). Senha nunca vai para
 o log. No Railway, filtre os logs do serviço por `evento=`.
 
+## Finanças
+
+A aba **Finanças** mostra receita, lucro, margem, rankings, mapa de calor e
+estoque do período escolhido (atalhos, evento, categoria e forma ficam na URL:
+dá para mandar o link). Os números vêm todos do servidor (`FinancasService`);
+os gráficos leem `/financas/dados` (mesmo filtro, exige login).
+
+### Bibliotecas de terceiros
+
+| Biblioteca | Versão | Arquivo | Licença |
+|---|---|---|---|
+| [Chart.js](https://www.chartjs.org/) | 4.4.1 (fixa) | `src/main/resources/static/js/vendor/chart-4.4.1.umd.js` | MIT (`chart-4.4.1.LICENSE.md` ao lado) |
+
+O Chart.js fica dentro do projeto (sem CDN) para a tela funcionar com internet
+ruim no evento. Baixado do registro do npm (`chart.js-4.4.1.tgz`, integridade
+sha512 conferida com a publicada pelo npm). Para atualizar, troque o arquivo e o
+nome com a versão nova, e o `<script>` em `templates/financas.html`.
+
 ## CI e Maven Wrapper
 
 O GitHub Actions executa `./mvnw -B verify` com Java 17 em pushes e pull requests

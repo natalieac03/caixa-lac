@@ -151,4 +151,11 @@ public final class Financas {
         MARGEM,
         PARTICIPACAO
     }
+
+    /** Valor do estoque de agora: a custo (só produtos com custo), a preço e quantos têm estoque sem custo. */
+    public record ValorEstoque(BigDecimal aCusto, BigDecimal aPreco, long produtosSemCusto) {}
+
+    /** Linha do demonstrativo: operador "(-)", "(+/-)", "=" ou ""; valor null = não se aplica ao filtro. */
+    public record LinhaDemonstrativo(
+            String rotulo, String operador, BigDecimal valor, BigDecimal percentualDaReceita, boolean resultado) {}
 }

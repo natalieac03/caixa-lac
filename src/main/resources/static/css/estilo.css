@@ -1013,3 +1013,12 @@ tr.linha-edicao.oculto { display: none; }
 /* Aviso informativo em texto corrido (Despesas, Taxas). */
 .aviso-info { display: block; background: var(--ceu-fundo); color: var(--ceu-texto); font-weight: 400; }
 .aviso-info a { color: inherit; font-weight: 700; }
+
+/* ---------- Finanças ---------- */
+.atalhos-periodo { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.atalhos-periodo a {
+    padding: 6px 14px; border-radius: 999px; border: 1px solid var(--linha);
+    color: var(--roxo-forte); text-decoration: none; font-weight: 600; font-size: 14px;
+}
+.atalhos-periodo a:hover { background: var(--roxo-fundo); }
+.atalhos-periodo a.ativo { background: var(--roxo); border-color: var(--roxo); color: var(--on-roxo); }

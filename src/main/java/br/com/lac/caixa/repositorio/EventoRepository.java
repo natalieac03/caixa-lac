@@ -25,6 +25,9 @@ public interface EventoRepository extends JpaRepository<Evento, Long> {
     @Query("select e from Evento e where e.inicio <= :quando and e.fim > :quando")
     Optional<Evento> doMomento(@Param("quando") LocalDateTime quando);
 
+    /** O último evento que já começou ("Este evento": o que está acontecendo ou o mais recente). */
+    Optional<Evento> findFirstByInicioLessThanEqualOrderByInicioDesc(LocalDateTime agora);
+
     /** O evento que acabou por último antes do início deste (para comparar). */
     Optional<Evento> findFirstByFimLessThanEqualOrderByFimDesc(LocalDateTime inicio);
 }
