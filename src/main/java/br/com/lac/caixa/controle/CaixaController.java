@@ -6,6 +6,8 @@ import br.com.lac.caixa.servico.EstoqueService;
 import br.com.lac.caixa.servico.ResultadoVenda;
 import br.com.lac.caixa.servico.preco.Orcamento;
 import br.com.lac.caixa.util.Dinheiro;
+import java.util.Map;
+import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Controller;
@@ -16,9 +18,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
-import java.util.Map;
-import java.util.UUID;
 
 @Controller
 public class CaixaController {
@@ -53,17 +52,24 @@ public class CaixaController {
     }
 
     @PostMapping("/venda")
-    public String registrar(@RequestParam Map<String, String> params,
-                            @RequestParam(required = false) String valorTotal,
-                            @RequestParam(required = false) String motivoAjuste,
-                            @RequestParam String token,
-                            RedirectAttributes flash) {
+    public String registrar(
+            @RequestParam Map<String, String> params,
+            @RequestParam(required = false) String valorTotal,
+            @RequestParam(required = false) String motivoAjuste,
+            @RequestParam String token,
+            RedirectAttributes flash) {
         try {
-            ResultadoVenda resultado = caixa.registrarVenda(Quantidades.porProduto(params),
-                    PagamentosDoFormulario.ler(params), Dinheiro.parse(valorTotal), motivoAjuste, token);
-            flash.addFlashAttribute("sucesso", resultado.repetida()
-                    ? "Venda #" + resultado.venda().getId() + " já estava registrada."
-                    : "Venda #" + resultado.venda().getId() + " registrada. " + resultado.mensagemPagamento());
+            ResultadoVenda resultado = caixa.registrarVenda(
+                    Quantidades.porProduto(params),
+                    PagamentosDoFormulario.ler(params),
+                    Dinheiro.parse(valorTotal),
+                    motivoAjuste,
+                    token);
+            flash.addFlashAttribute(
+                    "sucesso",
+                    resultado.repetida()
+                            ? "Venda #" + resultado.venda().getId() + " já estava registrada."
+                            : "Venda #" + resultado.venda().getId() + " registrada. " + resultado.mensagemPagamento());
             return "redirect:/historico";
         } catch (DataIntegrityViolationException ex) {
             // Corrida: dois envios do mesmo token ao mesmo tempo; o segundo bate no índice único.

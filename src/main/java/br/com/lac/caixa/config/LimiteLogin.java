@@ -1,7 +1,5 @@
 package br.com.lac.caixa.config;
 
-import org.springframework.stereotype.Component;
-
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -9,6 +7,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.stereotype.Component;
 
 /**
  * Freio de tentativas de login por IP, em memória, sem travar o caixa do
@@ -28,11 +27,18 @@ public class LimiteLogin {
     static final int ERROS_PARA_BLOQUEAR = 20;
     static final long ESPERA_MAXIMA_SEGUNDOS = 30;
 
-    public enum Situacao { ACEITA, ERRO, AGUARDE, BLOQUEADO }
+    public enum Situacao {
+        ACEITA,
+        ERRO,
+        AGUARDE,
+        BLOQUEADO
+    }
 
     /** segundos: quanto falta para poder tentar de novo (zero se ACEITA). */
     public record Tentativa(Situacao situacao, long segundos) {
-        public boolean aceita() { return situacao == Situacao.ACEITA; }
+        public boolean aceita() {
+            return situacao == Situacao.ACEITA;
+        }
     }
 
     private static class Historico {

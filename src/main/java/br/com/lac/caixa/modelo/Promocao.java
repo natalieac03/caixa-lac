@@ -10,14 +10,14 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * Combo de promoção: cada PromocaoItem define quantas unidades de qual
@@ -47,8 +47,7 @@ public class Promocao {
 
     private boolean ativo = true;
 
-    public Promocao() {
-    }
+    public Promocao() {}
 
     public Promocao(List<PromocaoItem> itens, TipoPromocao tipo, BigDecimal preco) {
         if (preco == null || preco.signum() <= 0) throw new RegraDeNegocioException("Preço deve ser maior que zero.");
@@ -59,7 +58,8 @@ public class Promocao {
 
     /** Edição: troca preço e quantidades por categoria; o tipo continua o mesmo. */
     public void alterar(List<PromocaoItem> novosItens, BigDecimal novoPreco) {
-        if (novoPreco == null || novoPreco.signum() <= 0) throw new RegraDeNegocioException("Preço deve ser maior que zero.");
+        if (novoPreco == null || novoPreco.signum() <= 0)
+            throw new RegraDeNegocioException("Preço deve ser maior que zero.");
         if (novosItens == null || novosItens.isEmpty()) {
             throw new RegraDeNegocioException("Selecione ao menos uma categoria com quantidade.");
         }
@@ -96,10 +96,27 @@ public class Promocao {
         return min == Integer.MAX_VALUE ? 0 : min;
     }
 
-    public Long getId() { return id; }
-    public List<PromocaoItem> getItens() { return itens; }
-    public TipoPromocao getTipo() { return tipo; }
-    public BigDecimal getPreco() { return preco; }
-    public boolean isAtivo() { return ativo; }
-    public void setAtivo(boolean ativo) { this.ativo = ativo; }
+    public Long getId() {
+        return id;
+    }
+
+    public List<PromocaoItem> getItens() {
+        return itens;
+    }
+
+    public TipoPromocao getTipo() {
+        return tipo;
+    }
+
+    public BigDecimal getPreco() {
+        return preco;
+    }
+
+    public boolean isAtivo() {
+        return ativo;
+    }
+
+    public void setAtivo(boolean ativo) {
+        this.ativo = ativo;
+    }
 }

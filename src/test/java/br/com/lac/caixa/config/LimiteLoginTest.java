@@ -1,9 +1,10 @@
 package br.com.lac.caixa.config;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import br.com.lac.caixa.RelogioDeTeste;
 import br.com.lac.caixa.config.LimiteLogin.Situacao;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
 
 class LimiteLoginTest {
     final RelogioDeTeste relogio = new RelogioDeTeste();
@@ -16,12 +17,14 @@ class LimiteLoginTest {
         return t.segundos();
     }
 
-    @Test void esperaDobraAteTrintaSegundos() {
+    @Test
+    void esperaDobraAteTrintaSegundos() {
         long[] esperado = {1, 2, 4, 8, 16, 30, 30, 30};
         for (long segundos : esperado) assertEquals(segundos, errarEEsperar("ip"));
     }
 
-    @Test void tentativaDuranteEsperaERecusadaSemContarErro() {
+    @Test
+    void tentativaDuranteEsperaERecusadaSemContarErro() {
         assertEquals(new LimiteLogin.Tentativa(Situacao.ERRO, 1), limite.tentar("ip", false));
         assertEquals(new LimiteLogin.Tentativa(Situacao.AGUARDE, 1), limite.tentar("ip", true));
         assertEquals(Situacao.AGUARDE, limite.tentar("ip", false).situacao());
@@ -30,17 +33,22 @@ class LimiteLoginTest {
         assertEquals(new LimiteLogin.Tentativa(Situacao.ERRO, 2), limite.tentar("ip", false));
     }
 
-    @Test void acertoZeraOContadorDaqueleIp() {
+    @Test
+    void acertoZeraOContadorDaqueleIp() {
         for (int i = 0; i < 5; i++) errarEEsperar("ip");
         assertTrue(limite.tentar("ip", true).aceita());
         assertEquals(1, limite.tentar("ip", false).segundos());
     }
 
-
-    @Test void bloqueioDepoisDoVigesimoErro() {
+    @Test
+    void bloqueioDepoisDoVigesimoErro() {
         var r = limite.tentar("ip", false);
         int erros = 1;
-        while (r.situacao() == Situacao.ERRO) { relogio.avancar(r.segundos()); r = limite.tentar("ip", false); erros++; }
+        while (r.situacao() == Situacao.ERRO) {
+            relogio.avancar(r.segundos());
+            r = limite.tentar("ip", false);
+            erros++;
+        }
         assertEquals(20, erros);
         assertEquals(new LimiteLogin.Tentativa(Situacao.BLOQUEADO, 600), r);
         assertEquals(Situacao.BLOQUEADO, limite.tentar("ip", true).situacao());
@@ -51,7 +59,8 @@ class LimiteLoginTest {
         assertTrue(limite.tentar("ip", true).aceita());
     }
 
-    @Test void errosEspalhadosEmMaisDeDezMinutosNaoBloqueiam() {
+    @Test
+    void errosEspalhadosEmMaisDeDezMinutosNaoBloqueiam() {
         for (int i = 0; i < 40; i++) {
             var r = limite.tentar("ip", false);
             assertEquals(Situacao.ERRO, r.situacao(), "erro " + (i + 1));
@@ -59,7 +68,8 @@ class LimiteLoginTest {
         }
     }
 
-    @Test void errosAntigosDeixamDeContar() {
+    @Test
+    void errosAntigosDeixamDeContar() {
         for (int i = 0; i < 5; i++) errarEEsperar("ip");
         relogio.avancar(600);
         assertEquals(1, limite.tentar("ip", false).segundos());

@@ -9,7 +9,10 @@ import java.util.List;
  * (o total pode ficar um pouco acima do menor possível; nunca abaixo).
  */
 public record Orcamento(List<Item> itens, List<Desconto> descontos, BigDecimal total, boolean aproximado) {
-    public Orcamento { itens = List.copyOf(itens); descontos = List.copyOf(descontos); }
+    public Orcamento {
+        itens = List.copyOf(itens);
+        descontos = List.copyOf(descontos);
+    }
 
     public record Item(Long produtoId, String nome, String categoria, int quantidade, BigDecimal precoUnitario) {}
 

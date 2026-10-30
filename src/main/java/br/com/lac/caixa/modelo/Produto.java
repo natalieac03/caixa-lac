@@ -1,7 +1,7 @@
 package br.com.lac.caixa.modelo;
 
-import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.dominio.EstoqueInsuficienteException;
+import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -43,8 +43,7 @@ public class Produto {
      */
     private boolean ativo = true;
 
-    public Produto() {
-    }
+    public Produto() {}
 
     public Produto(String nome, BigDecimal preco, int quantidade) {
         setNome(nome);
@@ -62,7 +61,8 @@ public class Produto {
     }
 
     public void setNome(String nome) {
-        if (nome == null || nome.isBlank()) throw new RegraDeNegocioException("O nome do produto não pode ficar vazio.");
+        if (nome == null || nome.isBlank())
+            throw new RegraDeNegocioException("O nome do produto não pode ficar vazio.");
         if (nome.trim().length() > 255) throw new RegraDeNegocioException("Nome do produto com até 255 caracteres.");
         this.nome = nome.trim();
     }

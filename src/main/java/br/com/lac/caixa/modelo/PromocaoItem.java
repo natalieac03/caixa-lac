@@ -23,8 +23,7 @@ public class PromocaoItem {
 
     private int quantidade;
 
-    public PromocaoItem() {
-    }
+    public PromocaoItem() {}
 
     public PromocaoItem(Categoria categoria, int quantidade) {
         if (quantidade < 1) throw new RegraDeNegocioException("Quantidade deve ser maior que zero.");

@@ -18,8 +18,7 @@ public final class Dinheiro {
     private static final String FORMATO_VALIDO =
             "-?(?:[0-9]+(?:[.,][0-9]{1,2})?|[0-9]{1,3}(?:\\.[0-9]{3})+,[0-9]{1,2})";
 
-    private Dinheiro() {
-    }
+    private Dinheiro() {}
 
     public static BigDecimal parse(String texto) {
         if (texto == null || texto.isBlank()) return null;

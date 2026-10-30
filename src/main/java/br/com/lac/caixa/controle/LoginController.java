@@ -1,7 +1,7 @@
 package br.com.lac.caixa.controle;
 
-import br.com.lac.caixa.config.SenhaDeAcesso;
 import br.com.lac.caixa.config.LimiteLogin;
+import br.com.lac.caixa.config.SenhaDeAcesso;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
@@ -34,8 +34,8 @@ public class LoginController {
      * ?bloqueado; os segundos que faltam vão no flash "segundos".
      */
     @PostMapping("/login")
-    public String entrar(@RequestParam("senha") String informada, HttpServletRequest request,
-                         RedirectAttributes flash) {
+    public String entrar(
+            @RequestParam("senha") String informada, HttpServletRequest request, RedirectAttributes flash) {
         LimiteLogin.Tentativa tentativa = limite.tentar(request.getRemoteAddr(), senha.confere(informada));
         if (tentativa.aceita()) {
             HttpSession session = request.getSession(true);

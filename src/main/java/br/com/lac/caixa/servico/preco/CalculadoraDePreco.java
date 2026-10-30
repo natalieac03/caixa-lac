@@ -5,9 +5,6 @@ import br.com.lac.caixa.modelo.Promocao;
 import br.com.lac.caixa.modelo.PromocaoItem;
 import br.com.lac.caixa.modelo.TipoPromocao;
 import br.com.lac.caixa.util.Dinheiro;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -18,6 +15,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Calcula o preço de um carrinho com as promoções ativas. Classe pura: não
@@ -82,7 +81,8 @@ public class CalculadoraDePreco {
                 .sorted(POR_ID)
                 .toList();
         Set<Long> categoriasDePacote = new HashSet<>();
-        pacotes.forEach(p -> p.getItens().forEach(i -> categoriasDePacote.add(i.getCategoria().getId())));
+        pacotes.forEach(p -> p.getItens()
+                .forEach(i -> categoriasDePacote.add(i.getCategoria().getId())));
 
         // A_PARTIR_DE que o carrinho ativa e que baixam o preço de algum produto.
         List<Promocao> aPartirDe = ativas.stream()
@@ -92,13 +92,17 @@ public class CalculadoraDePreco {
                 .sorted(POR_ID)
                 .toList();
         List<Promocao> diretas = aPartirDe.stream()
-                .filter(p -> p.getItens().stream().noneMatch(i -> categoriasDePacote.contains(i.getCategoria().getId())))
+                .filter(p -> p.getItens().stream()
+                        .noneMatch(i ->
+                                categoriasDePacote.contains(i.getCategoria().getId())))
                 .toList();
-        List<Promocao> enumeradas = aPartirDe.stream().filter(p -> !diretas.contains(p)).toList();
+        List<Promocao> enumeradas =
+                aPartirDe.stream().filter(p -> !diretas.contains(p)).toList();
 
         // Subconjuntos a tentar: todos, ou só alguns se houver A_PARTIR_DE demais.
         boolean aproximado = enumeradas.size() > MAXIMO_A_PARTIR_DE_ENUMERADAS;
-        List<BitSet> subconjuntos = aproximado ? algunsSubconjuntos(enumeradas.size()) : todosSubconjuntos(enumeradas.size());
+        List<BitSet> subconjuntos =
+                aproximado ? algunsSubconjuntos(enumeradas.size()) : todosSubconjuntos(enumeradas.size());
 
         Map<TreeMap<Long, List<Long>>, BuscaDePacotes> buscas = new HashMap<>();
         List<Preparo> preparos = new ArrayList<>();
@@ -111,16 +115,21 @@ public class CalculadoraDePreco {
         for (BuscaDePacotes b : buscas.values()) trabalho = Math.min(Long.MAX_VALUE / 2, trabalho + b.estados());
         if (trabalho > ORCAMENTO_DE_ESTADOS) aproximado = true;
         if (aproximado) {
-            LOG.warn("Carrinho grande para a busca exata ({} unidades, {} A_PARTIR_DE enumeráveis, {} estados): "
-                    + "pacotes escolhidos por heurística; orçamento marcado como aproximado.",
-                    qtdPorCat.values().stream().mapToInt(Integer::intValue).sum(), enumeradas.size(), trabalho);
+            LOG.warn(
+                    "Carrinho grande para a busca exata ({} unidades, {} A_PARTIR_DE enumeráveis, {} estados): "
+                            + "pacotes escolhidos por heurística; orçamento marcado como aproximado.",
+                    qtdPorCat.values().stream().mapToInt(Integer::intValue).sum(),
+                    enumeradas.size(),
+                    trabalho);
         }
 
         Map<TreeMap<Long, List<Long>>, BuscaDePacotes.Resultado> resolvidas = new HashMap<>();
         Cenario melhor = null;
         for (Preparo preparo : preparos) {
             final boolean heuristica = aproximado;
-            var pac = resolvidas.computeIfAbsent(preparo.restantes(), r -> heuristica ? buscas.get(r).gulosa() : buscas.get(r).exata());
+            var pac = resolvidas.computeIfAbsent(
+                    preparo.restantes(),
+                    r -> heuristica ? buscas.get(r).gulosa() : buscas.get(r).exata());
             long total = preparo.total() - pac.economia();
             if (melhor == null || total < melhor.total()) melhor = new Cenario(total, preparo.precoUnitario(), pac);
         }
@@ -139,7 +148,7 @@ public class CalculadoraDePreco {
 
     private static List<BitSet> todosSubconjuntos(int n) {
         List<BitSet> todos = new ArrayList<>();
-        for (int mascara = 0; mascara < (1 << n); mascara++) todos.add(BitSet.valueOf(new long[]{mascara}));
+        for (int mascara = 0; mascara < (1 << n); mascara++) todos.add(BitSet.valueOf(new long[] {mascara}));
         return todos;
     }
 
@@ -158,12 +167,17 @@ public class CalculadoraDePreco {
         return alguns;
     }
 
-    private Preparo preparar(List<Linha> linhas, List<Promocao> diretas, List<Promocao> enumeradas, BitSet subconjunto,
-                             Set<Long> categoriasDePacote) {
+    private Preparo preparar(
+            List<Linha> linhas,
+            List<Promocao> diretas,
+            List<Promocao> enumeradas,
+            BitSet subconjunto,
+            Set<Long> categoriasDePacote) {
         // Menor preço A_PARTIR_DE em cada categoria (diretas + as do subconjunto).
         Map<Long, Long> precoPromo = new HashMap<>();
         for (Promocao p : diretas) aplicar(p, precoPromo);
-        for (int b = subconjunto.nextSetBit(0); b >= 0; b = subconjunto.nextSetBit(b + 1)) aplicar(enumeradas.get(b), precoPromo);
+        for (int b = subconjunto.nextSetBit(0); b >= 0; b = subconjunto.nextSetBit(b + 1))
+            aplicar(enumeradas.get(b), precoPromo);
 
         long total = 0;
         long[] precoUnitario = new long[linhas.size()];
@@ -195,14 +209,23 @@ public class CalculadoraDePreco {
         List<Orcamento.Desconto> descontos = new ArrayList<>();
         for (int i = 0; i < linhas.size(); i++) {
             Linha l = linhas.get(i);
-            itens.add(new Orcamento.Item(l.produto().getId(), l.produto().getNome(), l.produto().getNomeCategoria(),
-                    l.quantidade(), reais(c.precoUnitario()[i])));
+            itens.add(new Orcamento.Item(
+                    l.produto().getId(),
+                    l.produto().getNome(),
+                    l.produto().getNomeCategoria(),
+                    l.quantidade(),
+                    reais(c.precoUnitario()[i])));
             long economia = (l.normal() - c.precoUnitario()[i]) * l.quantidade();
-            if (economia != 0) descontos.add(new Orcamento.Desconto("A partir de: " + l.produto().getNome(), reais(economia)));
+            if (economia != 0)
+                descontos.add(
+                        new Orcamento.Desconto("A partir de: " + l.produto().getNome(), reais(economia)));
         }
-        c.pacotes().usados().forEach((p, vezes) -> descontos.add(new Orcamento.Desconto(
-                "Pacote " + p.getNomesCategorias() + " por " + Dinheiro.reais(p.getPreco()) + (vezes > 1 ? " (" + vezes + "x)" : ""),
-                reais(c.pacotes().economiaPorPacote().get(p)))));
+        c.pacotes()
+                .usados()
+                .forEach((p, vezes) -> descontos.add(new Orcamento.Desconto(
+                        "Pacote " + p.getNomesCategorias() + " por " + Dinheiro.reais(p.getPreco())
+                                + (vezes > 1 ? " (" + vezes + "x)" : ""),
+                        reais(c.pacotes().economiaPorPacote().get(p)))));
         return new Orcamento(itens, descontos, reais(c.total()), aproximado);
     }
 

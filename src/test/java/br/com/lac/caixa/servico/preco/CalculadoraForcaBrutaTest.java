@@ -1,21 +1,20 @@
 package br.com.lac.caixa.servico.preco;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+
 import br.com.lac.caixa.modelo.Categoria;
 import br.com.lac.caixa.modelo.Promocao;
 import br.com.lac.caixa.modelo.PromocaoItem;
 import br.com.lac.caixa.modelo.TipoPromocao;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 /**
  * Teste de propriedade: em carrinhos pequenos e aleatórios (semente fixa), a
@@ -80,8 +79,12 @@ class CalculadoraForcaBrutaTest {
                 Categoria c = cats[r.nextInt(quantasCategorias)];
                 if (!usadas.contains(c)) usadas.add(c);
             }
-            for (Categoria c : usadas) { args.add(c); args.add(1 + r.nextInt(3)); }
-            long precoCentavos = tipo == TipoPromocao.A_PARTIR_DE ? 100 + 50L * r.nextInt(10) : 150 + 50L * r.nextInt(20);
+            for (Categoria c : usadas) {
+                args.add(c);
+                args.add(1 + r.nextInt(3));
+            }
+            long precoCentavos =
+                    tipo == TipoPromocao.A_PARTIR_DE ? 100 + 50L * r.nextInt(10) : 150 + 50L * r.nextInt(20);
             String preco = BigDecimal.valueOf(precoCentavos, 2).toPlainString();
             promocoes.add(CenariosDeDesempenho.promocao(id, tipo, preco, args.toArray()));
         }
@@ -96,9 +99,11 @@ class CalculadoraForcaBrutaTest {
             porCategoria.merge(l.produto().getCategoria().getId(), l.quantidade(), Integer::sum);
         }
         List<Promocao> aPartirDe = caso.promocoes().stream()
-                .filter(p -> p.getTipo() == TipoPromocao.A_PARTIR_DE).toList();
+                .filter(p -> p.getTipo() == TipoPromocao.A_PARTIR_DE)
+                .toList();
         List<Promocao> pacotes = caso.promocoes().stream()
-                .filter(p -> p.getTipo() == TipoPromocao.PACOTE).toList();
+                .filter(p -> p.getTipo() == TipoPromocao.PACOTE)
+                .toList();
 
         long melhor = Long.MAX_VALUE;
         for (int mascara = 0; mascara < (1 << aPartirDe.size()); mascara++) {
@@ -107,8 +112,12 @@ class CalculadoraForcaBrutaTest {
             for (int b = 0; b < aPartirDe.size(); b++) {
                 if ((mascara & (1 << b)) == 0) continue;
                 Promocao p = aPartirDe.get(b);
-                if (p.combosDisponiveis(porCategoria) == 0) { valido = false; break; }
-                for (PromocaoItem i : p.getItens()) precoPromo.merge(i.getCategoria().getId(), centavos(p.getPreco()), Math::min);
+                if (p.combosDisponiveis(porCategoria) == 0) {
+                    valido = false;
+                    break;
+                }
+                for (PromocaoItem i : p.getItens())
+                    precoPromo.merge(i.getCategoria().getId(), centavos(p.getPreco()), Math::min);
             }
             if (!valido) continue;
 
@@ -120,7 +129,10 @@ class CalculadoraForcaBrutaTest {
                 Long promo = precoPromo.get(cat);
                 for (int k = 0; k < l.quantidade(); k++) {
                     if (promo != null && promo < normal) total += promo;
-                    else { total += normal; restantes.add(new Unidade(cat, normal)); }
+                    else {
+                        total += normal;
+                        restantes.add(new Unidade(cat, normal));
+                    }
                 }
             }
             melhor = Math.min(melhor, total - economiaMaxima(restantes, pacotes, new HashMap<>()));
@@ -130,8 +142,11 @@ class CalculadoraForcaBrutaTest {
 
     /** Maior economia com pacotes, tentando toda escolha de unidades (memo pelo multiconjunto restante). */
     static long economiaMaxima(List<Unidade> restantes, List<Promocao> pacotes, Map<List<Unidade>, Long> memo) {
-        var chave = restantes.stream().sorted((a, b) -> a.categoria() != b.categoria()
-                ? Long.compare(a.categoria(), b.categoria()) : Long.compare(a.preco(), b.preco())).toList();
+        var chave = restantes.stream()
+                .sorted((a, b) -> a.categoria() != b.categoria()
+                        ? Long.compare(a.categoria(), b.categoria())
+                        : Long.compare(a.preco(), b.preco()))
+                .toList();
         Long conhecido = memo.get(chave);
         if (conhecido != null) return conhecido;
         long melhor = 0;
@@ -175,7 +190,10 @@ class CalculadoraForcaBrutaTest {
     }
 
     static void combinar(List<Integer> indices, int k, int inicio, List<Integer> atual, List<List<Integer>> saida) {
-        if (atual.size() == k) { saida.add(new ArrayList<>(atual)); return; }
+        if (atual.size() == k) {
+            saida.add(new ArrayList<>(atual));
+            return;
+        }
         for (int i = inicio; i < indices.size(); i++) {
             atual.add(indices.get(i));
             combinar(indices, k, i + 1, atual, saida);

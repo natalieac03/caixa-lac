@@ -7,8 +7,7 @@ import java.util.Map;
 /** Lê as quantidades digitadas nos formulários (campos vazios valem zero). */
 final class Quantidades {
 
-    private Quantidades() {
-    }
+    private Quantidades() {}
 
     static int inteiro(String texto) {
         if (texto == null || texto.isBlank()) return 0;

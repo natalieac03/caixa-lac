@@ -5,19 +5,17 @@ import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.modelo.Promocao;
 import br.com.lac.caixa.modelo.PromocaoItem;
 import br.com.lac.caixa.modelo.TipoPromocao;
-import org.springframework.test.util.ReflectionTestUtils;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.test.util.ReflectionTestUtils;
 
 /** Carrinhos grandes usados nos testes de desempenho da calculadora. */
 final class CenariosDeDesempenho {
 
     record Cenario(Carrinho carrinho, List<Promocao> promocoes) {}
 
-    private CenariosDeDesempenho() {
-    }
+    private CenariosDeDesempenho() {}
 
     static Categoria categoria(long id) {
         var c = new Categoria("Categoria " + id);
@@ -47,8 +45,8 @@ final class CenariosDeDesempenho {
      * {@code unidades}, um pacote "3 por" na categoria e combos ligando as duas primeiras
      * e a terceira com a quarta.
      */
-    private static void categoriasComPacote(int quantas, int unidades, List<Carrinho.Linha> linhas,
-                                            List<Promocao> promocoes, long[] ids) {
+    private static void categoriasComPacote(
+            int quantas, int unidades, List<Carrinho.Linha> linhas, List<Promocao> promocoes, long[] ids) {
         Categoria[] cats = new Categoria[quantas];
         for (int c = 0; c < quantas; c++) {
             cats[c] = categoria(c + 1);

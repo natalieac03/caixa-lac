@@ -10,10 +10,9 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import java.math.BigDecimal;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
-
-import java.math.BigDecimal;
 
 /**
  * Uma parte do pagamento de uma venda: forma + valor. Venda paga com Pix e
@@ -40,8 +39,7 @@ public class PagamentoVenda {
     /** Só para DINHEIRO: quanto a pessoa entregou. */
     private BigDecimal valorRecebido;
 
-    protected PagamentoVenda() {
-    }
+    protected PagamentoVenda() {}
 
     public PagamentoVenda(FormaPagamento forma, BigDecimal valor, String descricao, BigDecimal valorRecebido) {
         if (forma == null) throw new RegraDeNegocioException("Escolha a forma de pagamento.");
@@ -83,9 +81,23 @@ public class PagamentoVenda {
         return PagamentoFactory.criar(forma).resumir(this);
     }
 
-    public Long getId() { return id; }
-    public FormaPagamento getForma() { return forma; }
-    public BigDecimal getValor() { return valor; }
-    public String getDescricao() { return descricao; }
-    public BigDecimal getValorRecebido() { return valorRecebido; }
+    public Long getId() {
+        return id;
+    }
+
+    public FormaPagamento getForma() {
+        return forma;
+    }
+
+    public BigDecimal getValor() {
+        return valor;
+    }
+
+    public String getDescricao() {
+        return descricao;
+    }
+
+    public BigDecimal getValorRecebido() {
+        return valorRecebido;
+    }
 }

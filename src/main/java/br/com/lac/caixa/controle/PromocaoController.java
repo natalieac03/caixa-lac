@@ -4,6 +4,8 @@ import br.com.lac.caixa.modelo.TipoPromocao;
 import br.com.lac.caixa.servico.CategoriaService;
 import br.com.lac.caixa.servico.PromocaoService;
 import br.com.lac.caixa.util.Dinheiro;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,9 +13,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 @Controller
 public class PromocaoController {
@@ -39,10 +38,11 @@ public class PromocaoController {
      * Categorias desmarcadas ficam disabled e não chegam no params.
      */
     @PostMapping("/descontos/novo")
-    public String novo(@RequestParam Map<String, String> params,
-                       @RequestParam TipoPromocao tipo,
-                       @RequestParam String preco,
-                       RedirectAttributes flash) {
+    public String novo(
+            @RequestParam Map<String, String> params,
+            @RequestParam TipoPromocao tipo,
+            @RequestParam String preco,
+            RedirectAttributes flash) {
         promocoes.criar(qtdPorCategoria(params), tipo, Dinheiro.parse(preco));
         flash.addFlashAttribute("sucesso", "Promoção criada.");
         return "redirect:/descontos";
@@ -57,10 +57,11 @@ public class PromocaoController {
     }
 
     @PostMapping("/descontos/{id}/editar")
-    public String salvarEdicao(@PathVariable Long id,
-                               @RequestParam Map<String, String> params,
-                               @RequestParam String preco,
-                               RedirectAttributes flash) {
+    public String salvarEdicao(
+            @PathVariable Long id,
+            @RequestParam Map<String, String> params,
+            @RequestParam String preco,
+            RedirectAttributes flash) {
         var p = promocoes.editar(id, qtdPorCategoria(params), Dinheiro.parse(preco));
         flash.addFlashAttribute("sucesso", "Promoção " + p.getNomesCategorias() + " atualizada.");
         return "redirect:/descontos";

@@ -1,10 +1,9 @@
 package br.com.lac.caixa.config;
 
-import org.springframework.core.env.Environment;
-import org.springframework.stereotype.Component;
-
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import org.springframework.core.env.Environment;
+import org.springframework.stereotype.Component;
 
 /**
  * A senha da interface (app.senha = ${APP_SENHA}). Só existe em variável de

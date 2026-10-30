@@ -5,11 +5,10 @@ import br.com.lac.caixa.modelo.Categoria;
 import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.repositorio.ItemVendaRepository;
 import br.com.lac.caixa.repositorio.ProdutoRepository;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.util.List;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Regras do estoque. Por ser um @Service, o Spring mantem uma unica
@@ -39,8 +38,7 @@ public class EstoqueService {
     }
 
     public Produto buscar(Long id) {
-        return produtos.findById(id)
-                .orElseThrow(() -> new RegraDeNegocioException("Produto não encontrado: " + id));
+        return produtos.findById(id).orElseThrow(() -> new RegraDeNegocioException("Produto não encontrado: " + id));
     }
 
     @Transactional
@@ -48,7 +46,8 @@ public class EstoqueService {
         Produto p = new Produto(nome.trim(), preco, quantidade);
         p.setCategoria(categoria);
         Produto salvo = produtos.save(p);
-        auditoria.registrar("produto_criado", "id", salvo.getId(), "depois", descrever(salvo), "quantidade", quantidade);
+        auditoria.registrar(
+                "produto_criado", "id", salvo.getId(), "depois", descrever(salvo), "quantidade", quantidade);
         return salvo;
     }
 

@@ -11,9 +11,6 @@ import br.com.lac.caixa.repositorio.VendaRepository;
 import br.com.lac.caixa.servico.preco.CalculadoraDePreco;
 import br.com.lac.caixa.servico.preco.Carrinho;
 import br.com.lac.caixa.servico.preco.Orcamento;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -22,6 +19,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CaixaService {
@@ -33,13 +32,13 @@ public class CaixaService {
 
     private final Auditoria auditoria;
 
-    public CaixaService(VendaRepository vendas, EstoqueService estoque, PromocaoService promocoes, Auditoria auditoria) {
+    public CaixaService(
+            VendaRepository vendas, EstoqueService estoque, PromocaoService promocoes, Auditoria auditoria) {
         this.vendas = vendas;
         this.estoque = estoque;
         this.promocoes = promocoes;
         this.auditoria = auditoria;
     }
-
 
     /**
      * Corrige o dia e a hora de uma venda já registrada (ex.: venda anotada
@@ -65,14 +64,16 @@ public class CaixaService {
     }
 
     @Transactional
-    public ResultadoVenda registrarVenda(Map<Long, Integer> quantidades,
-                                         List<PagamentoInformado> pagamentos,
-                                         BigDecimal totalManual, String motivoAjuste, String token) {
+    public ResultadoVenda registrarVenda(
+            Map<Long, Integer> quantidades,
+            List<PagamentoInformado> pagamentos,
+            BigDecimal totalManual,
+            String motivoAjuste,
+            String token) {
         if (!tokenValido(token)) throw new RegraDeNegocioException("Token de venda inválido.");
         var existente = vendas.findByToken(token);
         // Idempotência: o mesmo formulário (token) enviado de novo devolve a venda que já existe.
         if (existente.isPresent()) return new ResultadoVenda(existente.get(), "Venda já registrada.", true);
-
 
         Venda venda = Venda.nova();
         venda.setToken(token);
@@ -95,15 +96,19 @@ public class CaixaService {
         }
 
         var carrinho = new Carrinho(selecionados.values().stream()
-                .map(p -> new Carrinho.Linha(p, quantidades.get(p.getId()))).toList());
+                .map(p -> new Carrinho.Linha(p, quantidades.get(p.getId())))
+                .toList());
         var orcamento = calculadora.calcular(carrinho, ativas);
         BigDecimal calculado = orcamento.total();
         BigDecimal total = totalManual != null ? totalManual : calculado;
         if (total.signum() < 0) throw new RegraDeNegocioException("O valor ajustado não pode ser negativo.");
         if (total.compareTo(calculado) != 0 && (motivoAjuste == null || motivoAjuste.isBlank()))
             throw new RegraDeNegocioException("Informe o motivo do ajuste de valor.");
-        venda.registrarValores(calculado, orcamento.descontos().stream().map(Orcamento.Desconto::valor)
-                .reduce(BigDecimal.ZERO, BigDecimal::add), total, motivoAjuste);
+        venda.registrarValores(
+                calculado,
+                orcamento.descontos().stream().map(Orcamento.Desconto::valor).reduce(BigDecimal.ZERO, BigDecimal::add),
+                total,
+                motivoAjuste);
         // O servidor confere o pagamento de novo: soma, formas, descrição do Outro, recebido.
         venda.registrarPagamentos(partes(pagamentos, total));
 
@@ -114,11 +119,23 @@ public class CaixaService {
         }
 
         Venda salva = vendas.save(venda);
-        auditoria.registrar("venda", "id", salva.getId(), "itens", salva.getResumoProdutos(),
-                "calculado", calculado, "desconto", salva.getDesconto(), "cobrado", total,
-                "pagamento", salva.getPagamentoTexto());
+        auditoria.registrar(
+                "venda",
+                "id",
+                salva.getId(),
+                "itens",
+                salva.getResumoProdutos(),
+                "calculado",
+                calculado,
+                "desconto",
+                salva.getDesconto(),
+                "cobrado",
+                total,
+                "pagamento",
+                salva.getPagamentoTexto());
         if (total.compareTo(calculado) != 0) {
-            auditoria.registrar("ajuste_valor", "id", salva.getId(), "antes", calculado, "depois", total, "motivo", motivoAjuste);
+            auditoria.registrar(
+                    "ajuste_valor", "id", salva.getId(), "antes", calculado, "depois", total, "motivo", motivoAjuste);
         }
         return new ResultadoVenda(salva, PagamentoFactory.mensagem(salva.getPagamentos()), false);
     }
@@ -150,17 +167,21 @@ public class CaixaService {
         }
         return partes;
     }
+
     @Transactional(readOnly = true)
-    public Orcamento previa(Map<Long,Integer> quantidades) {
+    public Orcamento previa(Map<Long, Integer> quantidades) {
         var linhas = new ArrayList<Carrinho.Linha>();
-        quantidades.forEach((id,qtd) -> {
+        quantidades.forEach((id, qtd) -> {
             if (qtd < 0) throw new RegraDeNegocioException("Quantidade inválida.");
             if (qtd > 0) linhas.add(new Carrinho.Linha(estoque.buscar(id), qtd));
         });
         return calculadora.calcular(new Carrinho(linhas), promocoes.listarAtivas());
     }
+
     @Transactional(readOnly = true)
-    public boolean tokenRegistrado(String token) { return token != null && vendas.existsByToken(token); }
+    public boolean tokenRegistrado(String token) {
+        return token != null && vendas.existsByToken(token);
+    }
     /** O bloqueio da venda serializa cancelamentos; a versão protege o estoque. */
     @Transactional
     public void cancelarVenda(Long id, String motivo) {
@@ -168,9 +189,18 @@ public class CaixaService {
                 .orElseThrow(() -> new RegraDeNegocioException("Venda não encontrada: " + id));
         if (venda.isCancelada()) return;
         venda.cancelar(motivo, LocalDateTime.now());
-        for (ItemVenda item : venda.getItens()) estoque.adicionarUnidades(item.getProduto().getId(), item.getQuantidade());
+        for (ItemVenda item : venda.getItens())
+            estoque.adicionarUnidades(item.getProduto().getId(), item.getQuantidade());
         vendas.save(venda);
-        auditoria.registrar("cancelamento", "id", id, "cobrado", venda.getValorCobrado(),
-                "motivo", venda.getMotivoCancelamento(), "itens", venda.getResumoProdutos());
+        auditoria.registrar(
+                "cancelamento",
+                "id",
+                id,
+                "cobrado",
+                venda.getValorCobrado(),
+                "motivo",
+                venda.getMotivoCancelamento(),
+                "itens",
+                venda.getResumoProdutos());
     }
 }

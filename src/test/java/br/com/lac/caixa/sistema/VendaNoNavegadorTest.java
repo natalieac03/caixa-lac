@@ -1,10 +1,14 @@
 package br.com.lac.caixa.sistema;
 
+import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+
 import br.com.lac.caixa.SenhaDeTeste;
 import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.repositorio.ProdutoRepository;
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Page;
+import java.math.BigDecimal;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -14,18 +18,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 
-import java.math.BigDecimal;
-import java.util.regex.Pattern;
-
-import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
-
 /** Testes de sistema: a tela de venda de verdade, num Chromium, contra o app rodando. */
 @ExtendWith(Navegador.class)
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:sistema;DB_CLOSE_DELAY=-1"})
 class VendaNoNavegadorTest {
-    @LocalServerPort int porta;
-    @Autowired ProdutoRepository produtos;
+    @LocalServerPort
+    int porta;
+
+    @Autowired
+    ProdutoRepository produtos;
 
     BrowserContext contexto;
     Page pagina;
@@ -50,8 +53,9 @@ class VendaNoNavegadorTest {
     void entrarEAbrirVenda() {
         pagina.navigate(url("/login"));
         pagina.locator("#senha").fill(SenhaDeTeste.VALOR);
-        pagina.getByRole(com.microsoft.playwright.options.AriaRole.BUTTON,
-                new Page.GetByRoleOptions().setName("Entrar")).click();
+        pagina.getByRole(
+                        com.microsoft.playwright.options.AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Entrar"))
+                .click();
         pagina.waitForURL(url("/"));
         pagina.navigate(url("/venda/nova"));
     }
@@ -92,7 +96,8 @@ class VendaNoNavegadorTest {
     }
 
     @Test
-    @DisplayName("Sessão expirada na tela de venda: a prévia mostra \"Sessão expirou. Entre de novo.\" com link para o login")
+    @DisplayName(
+            "Sessão expirada na tela de venda: a prévia mostra \"Sessão expirou. Entre de novo.\" com link para o login")
     void sessaoExpirada() {
         entrarEAbrirVenda();
         pagina.getByLabel("Quantidade de " + boton.getNome()).fill("1");
@@ -105,7 +110,8 @@ class VendaNoNavegadorTest {
         // Assert
         var aviso = pagina.locator("#sessaoExpirada");
         assertThat(aviso).containsText("Sessão expirou. Entre de novo.");
-        assertThat(aviso.getByRole(com.microsoft.playwright.options.AriaRole.LINK)).hasAttribute("href", "/login");
+        assertThat(aviso.getByRole(com.microsoft.playwright.options.AriaRole.LINK))
+                .hasAttribute("href", "/login");
         assertThat(pagina.locator("#botaoConfirmar")).isDisabled();
     }
 }

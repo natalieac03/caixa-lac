@@ -2,6 +2,8 @@ package br.com.lac.caixa.repositorio;
 
 import br.com.lac.caixa.modelo.Venda;
 import jakarta.persistence.LockModeType;
+import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -10,9 +12,6 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
-import java.util.List;
-import java.util.Optional;
 
 /** Filtros do histórico via Specification (VendaSpecs); agregações em VendaConsultas. */
 public interface VendaRepository extends JpaRepository<Venda, Long>, JpaSpecificationExecutor<Venda>, VendaConsultas {

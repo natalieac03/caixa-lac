@@ -3,12 +3,11 @@ package br.com.lac.caixa.sistema;
 import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Playwright;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Abre um Chromium do Playwright para os testes de sistema. Tenta o navegador
@@ -35,7 +34,7 @@ public class Navegador implements BeforeAllCallback {
             Map<String, String> ambiente = new HashMap<>(System.getenv());
             ambiente.put("PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD", "1");
             playwright = Playwright.create(new Playwright.CreateOptions().setEnv(ambiente));
-            for (String canal : new String[]{null, "chrome"}) {
+            for (String canal : new String[] {null, "chrome"}) {
                 try {
                     var opcoes = new BrowserType.LaunchOptions().setHeadless(true);
                     if (canal != null) opcoes.setChannel(canal);
@@ -55,7 +54,9 @@ public class Navegador implements BeforeAllCallback {
     /** Com navegador segue; sem: erro no CI, pulado fora dele. */
     static void conferir(boolean temNavegador, boolean ci, RuntimeException falha) {
         if (temNavegador) return;
-        if (ci) throw new IllegalStateException("CI=true sem navegador: os testes de sistema não podem ser pulados.", falha);
+        if (ci)
+            throw new IllegalStateException(
+                    "CI=true sem navegador: os testes de sistema não podem ser pulados.", falha);
         Assumptions.abort("Sem navegador para o Playwright: testes de sistema pulados (no CI isso é erro).");
     }
 

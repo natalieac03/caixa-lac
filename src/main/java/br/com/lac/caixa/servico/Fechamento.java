@@ -14,14 +14,27 @@ import java.util.List;
  * A soma das formas tem que bater com o total cobrado (cortesia vale zero
  * nos dois); se não bater, a tela mostra um alerta.
  */
-public record Fechamento(List<Linha> formas, long quantidade, BigDecimal total, BigDecimal totalFormas,
-                         BigDecimal descontos, BigDecimal ajustes, long divididas, long cortesias) {
-    public Fechamento { formas = List.copyOf(formas); }
+public record Fechamento(
+        List<Linha> formas,
+        long quantidade,
+        BigDecimal total,
+        BigDecimal totalFormas,
+        BigDecimal descontos,
+        BigDecimal ajustes,
+        long divididas,
+        long cortesias) {
+    public Fechamento {
+        formas = List.copyOf(formas);
+    }
 
     /** vendas = quantas vendas tiveram alguma parte nesta forma. */
     public record Linha(FormaPagamento forma, long vendas, BigDecimal total) {}
 
-    public boolean isConfere() { return totalFormas.compareTo(total) == 0; }
+    public boolean isConfere() {
+        return totalFormas.compareTo(total) == 0;
+    }
 
-    public BigDecimal getDiferenca() { return totalFormas.subtract(total); }
+    public BigDecimal getDiferenca() {
+        return totalFormas.subtract(total);
+    }
 }

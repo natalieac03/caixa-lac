@@ -9,8 +9,22 @@ import java.time.ZoneOffset;
 public class RelogioDeTeste extends Clock {
     private Instant agora = Instant.parse("2026-01-01T00:00:00Z");
 
-    public synchronized void avancar(long segundos) { agora = agora.plusSeconds(segundos); }
-    @Override public ZoneId getZone() { return ZoneOffset.UTC; }
-    @Override public Clock withZone(ZoneId zona) { return this; }
-    @Override public synchronized Instant instant() { return agora; }
+    public synchronized void avancar(long segundos) {
+        agora = agora.plusSeconds(segundos);
+    }
+
+    @Override
+    public ZoneId getZone() {
+        return ZoneOffset.UTC;
+    }
+
+    @Override
+    public Clock withZone(ZoneId zona) {
+        return this;
+    }
+
+    @Override
+    public synchronized Instant instant() {
+        return agora;
+    }
 }

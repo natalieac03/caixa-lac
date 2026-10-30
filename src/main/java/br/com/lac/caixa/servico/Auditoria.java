@@ -1,6 +1,10 @@
 package br.com.lac.caixa.servico;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -8,11 +12,6 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 /**
  * Log de auditoria (logger "auditoria"): uma linha por venda, ajuste de valor,
@@ -62,7 +61,8 @@ public class Auditoria {
     private static String valor(Object valor) {
         if (valor == null) return "-";
         // Valores em reais sempre com 2 casas: 15 e 15.00 são o mesmo dinheiro.
-        if (valor instanceof BigDecimal dinheiro) return dinheiro.setScale(2, RoundingMode.HALF_UP).toPlainString();
+        if (valor instanceof BigDecimal dinheiro)
+            return dinheiro.setScale(2, RoundingMode.HALF_UP).toPlainString();
         String texto = valor.toString().replace('\r', ' ').replace('\n', ' ').replace("\"", "'");
         return texto.isEmpty() || texto.contains(" ") || texto.contains("=") ? "\"" + texto + "\"" : texto;
     }

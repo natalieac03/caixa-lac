@@ -6,14 +6,13 @@ import br.com.lac.caixa.modelo.Promocao;
 import br.com.lac.caixa.modelo.PromocaoItem;
 import br.com.lac.caixa.modelo.TipoPromocao;
 import br.com.lac.caixa.repositorio.PromocaoRepository;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PromocaoService {
@@ -30,7 +29,8 @@ public class PromocaoService {
     }
 
     private static String descrever(Promocao p) {
-        return p.getTipo() + " | " + p.getNomesCategorias() + " | " + p.getPreco().toPlainString() + (p.isAtivo() ? "" : " | desligada");
+        return p.getTipo() + " | " + p.getNomesCategorias() + " | "
+                + p.getPreco().toPlainString() + (p.isAtivo() ? "" : " | desligada");
     }
 
     public List<Promocao> listar() {
@@ -68,8 +68,7 @@ public class PromocaoService {
 
     @Transactional(readOnly = true)
     public Promocao buscar(Long id) {
-        Promocao p = promocoes.findById(id)
-                .orElseThrow(() -> new RegraDeNegocioException("Promoção não encontrada."));
+        Promocao p = promocoes.findById(id).orElseThrow(() -> new RegraDeNegocioException("Promoção não encontrada."));
         // O formulário de edição lê as categorias fora da transação.
         p.getItens().forEach(i -> i.getCategoria().getNome());
         return p;

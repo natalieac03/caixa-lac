@@ -8,16 +8,14 @@ import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
-import org.springframework.data.jpa.domain.Specification;
-
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.data.jpa.domain.Specification;
 
 /** Predicados do filtro do histórico: só entra o que foi preenchido. */
 public final class VendaSpecs {
 
-    private VendaSpecs() {
-    }
+    private VendaSpecs() {}
 
     public static Specification<Venda> doFiltro(FiltroHistorico filtro) {
         return (v, consulta, cb) -> {
@@ -41,8 +39,12 @@ public final class VendaSpecs {
                 Subquery<Long> item = consulta.subquery(Long.class);
                 Root<Venda> mesma = item.correlate(v);
                 Join<Venda, ItemVenda> i = mesma.join("itens");
-                Expression<String> nome = cb.lower(cb.function("translate", String.class, i.get("produto").get("nome"),
-                        cb.literal(FiltroHistorico.COM_ACENTO), cb.literal(FiltroHistorico.SEM_ACENTO)));
+                Expression<String> nome = cb.lower(cb.function(
+                        "translate",
+                        String.class,
+                        i.get("produto").get("nome"),
+                        cb.literal(FiltroHistorico.COM_ACENTO),
+                        cb.literal(FiltroHistorico.SEM_ACENTO)));
                 item.select(i.get("id")).where(cb.greaterThan(cb.locate(nome, filtro.produto()), 0));
                 predicados.add(cb.exists(item));
             }
@@ -52,7 +54,8 @@ public final class VendaSpecs {
 
     /** Mais de uma parte no pagamento. */
     public static Specification<Venda> pagamentoDividido() {
-        return (v, consulta, cb) -> cb.greaterThan(cb.size(v.<java.util.Collection<PagamentoVenda>>get("pagamentos")), 1);
+        return (v, consulta, cb) ->
+                cb.greaterThan(cb.size(v.<java.util.Collection<PagamentoVenda>>get("pagamentos")), 1);
     }
 
     /** Sem parte de pagamento: valor cobrado zero. */

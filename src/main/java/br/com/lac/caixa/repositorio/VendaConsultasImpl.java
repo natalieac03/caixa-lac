@@ -11,10 +11,9 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Root;
-import org.springframework.data.jpa.domain.Specification;
-
 import java.math.BigDecimal;
 import java.util.List;
+import org.springframework.data.jpa.domain.Specification;
 
 /** Implementação de VendaConsultas, encontrada pelo Spring Data pelo sufixo Impl. */
 class VendaConsultasImpl implements VendaConsultas {
@@ -38,17 +37,16 @@ class VendaConsultasImpl implements VendaConsultas {
         CriteriaQuery<Tuple> vendas = cb.createTupleQuery();
         Root<Venda> v = vendas.from(Venda.class);
         vendas.multiselect(cb.count(v), cb.coalesce(cb.sum(cobrado(cb, v)), BigDecimal.ZERO))
-              .where(filtro.toPredicate(v, vendas, cb));
+                .where(filtro.toPredicate(v, vendas, cb));
         Tuple t = em.createQuery(vendas).getSingleResult();
 
         CriteriaQuery<Long> itens = cb.createQuery(Long.class);
         Root<Venda> vi = itens.from(Venda.class);
         Join<Venda, ItemVenda> i = vi.join("itens");
-        itens.select(cb.coalesce(cb.sumAsLong(i.get("quantidade")), 0L))
-             .where(filtro.toPredicate(vi, itens, cb));
+        itens.select(cb.coalesce(cb.sumAsLong(i.get("quantidade")), 0L)).where(filtro.toPredicate(vi, itens, cb));
 
-        return new IndicadoresHistorico(t.get(0, Long.class), em.createQuery(itens).getSingleResult(),
-                t.get(1, BigDecimal.class));
+        return new IndicadoresHistorico(
+                t.get(0, Long.class), em.createQuery(itens).getSingleResult(), t.get(1, BigDecimal.class));
     }
 
     @Override
@@ -57,12 +55,16 @@ class VendaConsultasImpl implements VendaConsultas {
         CriteriaQuery<Tuple> q = cb.createTupleQuery();
         Root<Venda> v = q.from(Venda.class);
         Join<Venda, PagamentoVenda> p = v.join("pagamentos");
-        q.multiselect(p.get("forma"), cb.countDistinct(v), cb.coalesce(cb.sum(p.<BigDecimal>get("valor")), BigDecimal.ZERO))
-         .where(filtro.toPredicate(v, q, cb))
-         .groupBy(p.get("forma"))
-         .orderBy(cb.asc(p.get("forma")));
+        q.multiselect(
+                        p.get("forma"),
+                        cb.countDistinct(v),
+                        cb.coalesce(cb.sum(p.<BigDecimal>get("valor")), BigDecimal.ZERO))
+                .where(filtro.toPredicate(v, q, cb))
+                .groupBy(p.get("forma"))
+                .orderBy(cb.asc(p.get("forma")));
         return em.createQuery(q).getResultList().stream()
-                .map(r -> new ResumoPorForma(r.get(0, FormaPagamento.class), r.get(1, Long.class), r.get(2, BigDecimal.class)))
+                .map(r -> new ResumoPorForma(
+                        r.get(0, FormaPagamento.class), r.get(1, Long.class), r.get(2, BigDecimal.class)))
                 .toList();
     }
 
@@ -73,14 +75,21 @@ class VendaConsultasImpl implements VendaConsultas {
         Root<Venda> v = q.from(Venda.class);
         Expression<BigDecimal> cobrado = cobrado(cb, v);
         Expression<BigDecimal> calculado = cb.<BigDecimal>coalesce()
-                .value(v.get("valorCalculado")).value(v.get("valorCobrado")).value(v.get("valorTotal"));
-        q.multiselect(cb.count(v),
+                .value(v.get("valorCalculado"))
+                .value(v.get("valorCobrado"))
+                .value(v.get("valorTotal"));
+        q.multiselect(
+                        cb.count(v),
                         cb.coalesce(cb.sum(cobrado), BigDecimal.ZERO),
-                        cb.coalesce(cb.sum(cb.coalesce(v.<BigDecimal>get("desconto"), BigDecimal.ZERO)), BigDecimal.ZERO),
+                        cb.coalesce(
+                                cb.sum(cb.coalesce(v.<BigDecimal>get("desconto"), BigDecimal.ZERO)), BigDecimal.ZERO),
                         cb.coalesce(cb.sum(cb.diff(cobrado, calculado)), BigDecimal.ZERO))
-         .where(filtro.toPredicate(v, q, cb));
+                .where(filtro.toPredicate(v, q, cb));
         Tuple t = em.createQuery(q).getSingleResult();
-        return new TotaisDasVendas(t.get(0, Long.class), t.get(1, BigDecimal.class),
-                t.get(2, BigDecimal.class), t.get(3, BigDecimal.class));
+        return new TotaisDasVendas(
+                t.get(0, Long.class),
+                t.get(1, BigDecimal.class),
+                t.get(2, BigDecimal.class),
+                t.get(3, BigDecimal.class));
     }
 }

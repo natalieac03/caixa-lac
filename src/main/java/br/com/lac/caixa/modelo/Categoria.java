@@ -27,8 +27,7 @@ public class Categoria {
     @Column(unique = true)
     private String nomeNormalizado;
 
-    public Categoria() {
-    }
+    public Categoria() {}
 
     public Categoria(String nomeDigitado) {
         renomear(nomeDigitado);

@@ -1,17 +1,16 @@
 package br.com.lac.caixa.servico.preco;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import br.com.lac.caixa.modelo.Categoria;
 import br.com.lac.caixa.modelo.Promocao;
 import br.com.lac.caixa.modelo.TipoPromocao;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 class BuscaDePacotesTest {
     final Categoria a = CenariosDeDesempenho.categoria(1);
@@ -79,8 +78,10 @@ class BuscaDePacotesTest {
         for (int caso = 0; caso < 300; caso++) {
             var precosA = List.of(100L + r.nextInt(5) * 100, 100L + r.nextInt(5) * 100, 100L + r.nextInt(5) * 100);
             var precosB = List.of(100L + r.nextInt(5) * 100, 100L + r.nextInt(5) * 100);
-            var pacotes = List.of(pacote(1, (1 + r.nextInt(6)) + ".00", a, 1 + r.nextInt(2)),
-                    pacote(2, (1 + r.nextInt(8)) + ".00", a, 1, b, 1), pacote(3, (1 + r.nextInt(6)) + ".00", b, 2));
+            var pacotes = List.of(
+                    pacote(1, (1 + r.nextInt(6)) + ".00", a, 1 + r.nextInt(2)),
+                    pacote(2, (1 + r.nextInt(8)) + ".00", a, 1, b, 1),
+                    pacote(3, (1 + r.nextInt(6)) + ".00", b, 2));
             var busca = new BuscaDePacotes(Map.of(1L, precosA, 2L, precosB), pacotes);
 
             assertTrue(busca.gulosa().economia() <= busca.exata().economia(), "caso " + caso);

@@ -58,16 +58,17 @@ public class Venda {
 
     @Column(nullable = false)
     private boolean cancelada;
+
     private LocalDateTime dataCancelamento;
     private String motivoCancelamento;
+
     @Version
     private long versao;
 
     @Column(unique = true)
     private String token;
 
-    public Venda() {
-    }
+    public Venda() {}
 
     /** Venda nova, com a hora de agora. */
     public static Venda nova() {
@@ -76,9 +77,17 @@ public class Venda {
         return v;
     }
 
-    public boolean isCancelada() { return cancelada; }
-    public LocalDateTime getDataCancelamento() { return dataCancelamento; }
-    public String getMotivoCancelamento() { return motivoCancelamento; }
+    public boolean isCancelada() {
+        return cancelada;
+    }
+
+    public LocalDateTime getDataCancelamento() {
+        return dataCancelamento;
+    }
+
+    public String getMotivoCancelamento() {
+        return motivoCancelamento;
+    }
 
     /** Cancela uma vez; os valores e o token originais continuam no histórico. */
     public void cancelar(String motivo, LocalDateTime quando) {
@@ -86,20 +95,41 @@ public class Venda {
         if (motivo == null || motivo.isBlank() || motivo.trim().length() > 255)
             throw new RegraDeNegocioException("Informe um motivo de cancelamento com até 255 caracteres.");
         if (quando == null) throw new RegraDeNegocioException("Informe a data do cancelamento.");
-        cancelada = true; dataCancelamento = quando; motivoCancelamento = motivo.trim();
+        cancelada = true;
+        dataCancelamento = quando;
+        motivoCancelamento = motivo.trim();
     }
 
-    public String getToken() { return token; }
-    public void setToken(String token) { this.token = token; }
+    public String getToken() {
+        return token;
+    }
 
-    public BigDecimal getValorCalculado() { return valorCalculado; }
-    public BigDecimal getDesconto() { return desconto; }
-    public BigDecimal getValorCobrado() { return valorCobrado != null ? valorCobrado : valorTotal; }
-    public String getMotivoAjuste() { return motivoAjuste; }
+    public void setToken(String token) {
+        this.token = token;
+    }
+
+    public BigDecimal getValorCalculado() {
+        return valorCalculado;
+    }
+
+    public BigDecimal getDesconto() {
+        return desconto;
+    }
+
+    public BigDecimal getValorCobrado() {
+        return valorCobrado != null ? valorCobrado : valorTotal;
+    }
+
+    public String getMotivoAjuste() {
+        return motivoAjuste;
+    }
 
     public void registrarValores(BigDecimal calculado, BigDecimal desconto, BigDecimal cobrado, String motivo) {
-        this.valorCalculado = calculado; this.desconto = desconto; this.valorCobrado = cobrado;
-        this.valorTotal = cobrado; this.motivoAjuste = motivo;
+        this.valorCalculado = calculado;
+        this.desconto = desconto;
+        this.valorCobrado = cobrado;
+        this.valorTotal = cobrado;
+        this.motivoAjuste = motivo;
     }
 
     /**
@@ -133,11 +163,17 @@ public class Venda {
         pagamentos.addAll(partes);
     }
 
-    public List<PagamentoVenda> getPagamentos() { return pagamentos; }
+    public List<PagamentoVenda> getPagamentos() {
+        return pagamentos;
+    }
 
-    public boolean isCortesia() { return pagamentos.isEmpty(); }
+    public boolean isCortesia() {
+        return pagamentos.isEmpty();
+    }
 
-    public boolean isPagamentoDividido() { return pagamentos.size() > 1; }
+    public boolean isPagamentoDividido() {
+        return pagamentos.size() > 1;
+    }
 
     /** "Pix R$ 10,00 + Dinheiro R$ 8,00 (troco R$ 2,00)", ou "Cortesia". */
     public String getPagamentoTexto() {
@@ -147,8 +183,10 @@ public class Venda {
 
     /** Soma das partes pagas numa forma (zero se não usou). */
     public BigDecimal valorPago(FormaPagamento forma) {
-        return pagamentos.stream().filter(p -> p.getForma() == forma)
-                .map(PagamentoVenda::getValor).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return pagamentos.stream()
+                .filter(p -> p.getForma() == forma)
+                .map(PagamentoVenda::getValor)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     public void adicionarItem(ItemVenda item) {
@@ -157,9 +195,7 @@ public class Venda {
 
     /** Soma os subtotais de todos os itens. */
     public BigDecimal calcularTotal() {
-        return itens.stream()
-                .map(ItemVenda::getSubtotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return itens.stream().map(ItemVenda::getSubtotal).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     public int getQuantidadeTotal() {

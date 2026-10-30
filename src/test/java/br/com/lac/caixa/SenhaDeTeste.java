@@ -4,6 +4,5 @@ package br.com.lac.caixa;
 public final class SenhaDeTeste {
     public static final String VALOR = "senha-de-teste-lac";
 
-    private SenhaDeTeste() {
-    }
+    private SenhaDeTeste() {}
 }

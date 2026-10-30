@@ -6,14 +6,16 @@ import br.com.lac.caixa.util.Dinheiro;
 public class PagamentoOutro implements Pagamento {
     @Override
     public String descrever(PagamentoVenda parte) {
-        String descricao = parte.getDescricao() == null || parte.getDescricao().isBlank()
-                ? "outro meio" : parte.getDescricao();
+        String descricao =
+                parte.getDescricao() == null || parte.getDescricao().isBlank() ? "outro meio" : parte.getDescricao();
         return Dinheiro.reais(parte.getValor()) + " via " + descricao;
     }
 
     /** No historico aparece a descricao ("Vale"), nao "Outro". */
     @Override
     public String nome(PagamentoVenda parte) {
-        return parte.getDescricao() == null || parte.getDescricao().isBlank() ? parte.getForma().getRotulo() : parte.getDescricao();
+        return parte.getDescricao() == null || parte.getDescricao().isBlank()
+                ? parte.getForma().getRotulo()
+                : parte.getDescricao();
     }
 }

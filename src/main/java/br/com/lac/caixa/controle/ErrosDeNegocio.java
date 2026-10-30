@@ -2,6 +2,9 @@ package br.com.lac.caixa.controle;
 
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import jakarta.servlet.http.HttpServletRequest;
+import java.net.URI;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSourceResolvable;
@@ -11,10 +14,6 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
-import java.net.URI;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Erros viram mensagem na tela de origem, em vez de página de erro. A prévia
@@ -43,8 +42,8 @@ public class ErrosDeNegocio {
 
     /** Parâmetros anotados nos controllers (ex.: @Min na quantidade). */
     @ExceptionHandler(HandlerMethodValidationException.class)
-    public Object parametroInvalido(HandlerMethodValidationException ex, HttpServletRequest request,
-                                    RedirectAttributes flash) {
+    public Object parametroInvalido(
+            HandlerMethodValidationException ex, HttpServletRequest request, RedirectAttributes flash) {
         String mensagem = ex.getAllErrors().stream()
                 .map(MessageSourceResolvable::getDefaultMessage)
                 .collect(Collectors.joining(" "));
@@ -77,9 +76,12 @@ public class ErrosDeNegocio {
                 URI uri = URI.create(referer);
                 int porta = uri.getPort() != -1 ? uri.getPort() : "https".equalsIgnoreCase(uri.getScheme()) ? 443 : 80;
                 String caminho = uri.getRawPath();
-                if (uri.getHost() != null && uri.getHost().equalsIgnoreCase(request.getServerName())
+                if (uri.getHost() != null
+                        && uri.getHost().equalsIgnoreCase(request.getServerName())
                         && porta == request.getServerPort()
-                        && caminho != null && caminho.startsWith("/") && !caminho.startsWith("//")) {
+                        && caminho != null
+                        && caminho.startsWith("/")
+                        && !caminho.startsWith("//")) {
                     return caminho + (uri.getRawQuery() == null ? "" : "?" + uri.getRawQuery());
                 }
             } catch (IllegalArgumentException refererMalFormado) {
@@ -87,7 +89,7 @@ public class ErrosDeNegocio {
             }
         }
         String uri = request.getRequestURI();
-        for (String tela : new String[]{"/estoque", "/descontos", "/historico", "/fechamento"}) {
+        for (String tela : new String[] {"/estoque", "/descontos", "/historico", "/fechamento"}) {
             if (uri.startsWith(tela)) return tela;
         }
         return "/venda/nova";

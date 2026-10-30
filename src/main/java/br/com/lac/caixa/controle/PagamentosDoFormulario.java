@@ -4,7 +4,6 @@ import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.servico.PagamentoInformado;
 import br.com.lac.caixa.util.Dinheiro;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -19,8 +18,7 @@ final class PagamentosDoFormulario {
 
     private static final String FORMA = "pag_forma_";
 
-    private PagamentosDoFormulario() {
-    }
+    private PagamentosDoFormulario() {}
 
     static List<PagamentoInformado> ler(Map<String, String> params) {
         TreeMap<Integer, String> formas = new TreeMap<>();

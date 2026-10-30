@@ -21,13 +21,6 @@ public class SegurancaConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(interceptor)
                 .excludePathPatterns(
-                        "/login",
-                        "/logout",
-                        "/error",
-                        "/actuator/health",
-                        "/css/**",
-                        "/img/**",
-                        "/favicon.ico"
-                );
+                        "/login", "/logout", "/error", "/actuator/health", "/css/**", "/img/**", "/favicon.ico");
     }
 }

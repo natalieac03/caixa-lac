@@ -28,8 +28,7 @@ public class ItemVenda {
 
     private BigDecimal precoUnitario;
 
-    public ItemVenda() {
-    }
+    public ItemVenda() {}
 
     public ItemVenda(Produto produto, int quantidade) {
         this.produto = produto;

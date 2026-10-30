@@ -26,8 +26,8 @@ public class ExigeDocker implements BeforeAllCallback {
     static void conferir(boolean dockerDisponivel, boolean ci, String teste) {
         if (dockerDisponivel) return;
         if (ci) {
-            throw new IllegalStateException("CI=true sem Docker: os testes com PostgreSQL real ("
-                    + teste + ") não podem ser pulados.");
+            throw new IllegalStateException(
+                    "CI=true sem Docker: os testes com PostgreSQL real (" + teste + ") não podem ser pulados.");
         }
         Assumptions.abort("Sem Docker: testes com PostgreSQL real pulados (no CI isso é erro).");
     }

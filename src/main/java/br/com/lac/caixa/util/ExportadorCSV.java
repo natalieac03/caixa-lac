@@ -5,7 +5,6 @@ import br.com.lac.caixa.modelo.PagamentoVenda;
 import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.modelo.Venda;
 import br.com.lac.caixa.servico.Fechamento;
-
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -21,17 +20,20 @@ public final class ExportadorCSV {
     private static final DateTimeFormatter DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm");
 
-    private ExportadorCSV() {
-    }
+    private ExportadorCSV() {}
 
     public static String doEstoque(List<Produto> produtos) {
         StringBuilder sb = new StringBuilder();
         sb.append("Nome;Categoria;Preço;Quantidade\n");
         for (Produto p : produtos) {
-            sb.append(campo(p.getNome())).append(';')
-              .append(campo(p.getNomeCategoria())).append(';')
-              .append(Dinheiro.numero(p.getPreco())).append(';')
-              .append(p.getQuantidade()).append('\n');
+            sb.append(campo(p.getNome()))
+                    .append(';')
+                    .append(campo(p.getNomeCategoria()))
+                    .append(';')
+                    .append(Dinheiro.numero(p.getPreco()))
+                    .append(';')
+                    .append(p.getQuantidade())
+                    .append('\n');
         }
         return sb.toString();
     }
@@ -46,12 +48,17 @@ public final class ExportadorCSV {
         sb.append(";Descrição do Outro\n");
         for (Venda v : vendas) {
             if (v.isCancelada()) continue;
-            sb.append(v.getId()).append(';')
-              .append(v.getDataHora().format(DATA)).append(';')
-              .append(v.getDataHora().format(HORA)).append(';')
-              .append(campo(v.getResumoProdutos())).append(';')
-              .append(v.getQuantidadeTotal()).append(';')
-              .append(Dinheiro.numero(v.getValorTotal()));
+            sb.append(v.getId())
+                    .append(';')
+                    .append(v.getDataHora().format(DATA))
+                    .append(';')
+                    .append(v.getDataHora().format(HORA))
+                    .append(';')
+                    .append(campo(v.getResumoProdutos()))
+                    .append(';')
+                    .append(v.getQuantidadeTotal())
+                    .append(';')
+                    .append(Dinheiro.numero(v.getValorTotal()));
             for (FormaPagamento forma : FormaPagamento.values()) {
                 sb.append(';').append(Dinheiro.numero(v.valorPago(forma)));
             }
@@ -66,18 +73,43 @@ public final class ExportadorCSV {
 
     public static String doFechamento(Fechamento fechamento, LocalDate inicio, LocalDate fim) {
         StringBuilder csv = new StringBuilder("Início;Fim;Item;Quantidade de vendas;Valor\n");
-        String intervalo = campo(inicio == null ? "" : inicio.format(DATA)) + ";" + campo(fim == null ? "" : fim.format(DATA)) + ";";
+        String intervalo = campo(inicio == null ? "" : inicio.format(DATA)) + ";"
+                + campo(fim == null ? "" : fim.format(DATA)) + ";";
         for (var linha : fechamento.formas()) {
-            csv.append(intervalo).append(campo(linha.forma().getRotulo())).append(';').append(linha.vendas()).append(';')
-               .append(Dinheiro.numero(linha.total())).append('\n');
+            csv.append(intervalo)
+                    .append(campo(linha.forma().getRotulo()))
+                    .append(';')
+                    .append(linha.vendas())
+                    .append(';')
+                    .append(Dinheiro.numero(linha.total()))
+                    .append('\n');
         }
-        csv.append(intervalo).append("\"Soma das formas\";;").append(Dinheiro.numero(fechamento.totalFormas())).append('\n');
-        csv.append(intervalo).append("TOTAL;").append(fechamento.quantidade()).append(';')
-           .append(Dinheiro.numero(fechamento.total())).append('\n');
-        csv.append(intervalo).append("\"Descontos promocionais\";;").append(Dinheiro.numero(fechamento.descontos())).append('\n');
-        csv.append(intervalo).append("\"Ajustes manuais\";;").append(Dinheiro.numero(fechamento.ajustes())).append('\n');
-        csv.append(intervalo).append("\"Vendas com pagamento dividido\";").append(fechamento.divididas()).append(";\n");
-        csv.append(intervalo).append("\"Cortesias\";").append(fechamento.cortesias()).append(";\n");
+        csv.append(intervalo)
+                .append("\"Soma das formas\";;")
+                .append(Dinheiro.numero(fechamento.totalFormas()))
+                .append('\n');
+        csv.append(intervalo)
+                .append("TOTAL;")
+                .append(fechamento.quantidade())
+                .append(';')
+                .append(Dinheiro.numero(fechamento.total()))
+                .append('\n');
+        csv.append(intervalo)
+                .append("\"Descontos promocionais\";;")
+                .append(Dinheiro.numero(fechamento.descontos()))
+                .append('\n');
+        csv.append(intervalo)
+                .append("\"Ajustes manuais\";;")
+                .append(Dinheiro.numero(fechamento.ajustes()))
+                .append('\n');
+        csv.append(intervalo)
+                .append("\"Vendas com pagamento dividido\";")
+                .append(fechamento.divididas())
+                .append(";\n");
+        csv.append(intervalo)
+                .append("\"Cortesias\";")
+                .append(fechamento.cortesias())
+                .append(";\n");
         return csv.toString();
     }
 

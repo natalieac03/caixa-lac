@@ -2,7 +2,6 @@ package br.com.lac.caixa.servico.preco;
 
 import br.com.lac.caixa.modelo.Promocao;
 import br.com.lac.caixa.modelo.PromocaoItem;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -32,7 +31,7 @@ public final class BuscaDePacotes {
 
     private final List<Promocao> pacotes;
     private final List<Long> categorias = new ArrayList<>();
-    private final long[][] acumulado;   // acumulado[c][k] = soma das k unidades mais caras
+    private final long[][] acumulado; // acumulado[c][k] = soma das k unidades mais caras
     private final int[] total;
     private final long[] base;
     private final int[][] usoPorPacote;
@@ -44,12 +43,17 @@ public final class BuscaDePacotes {
      * @param todos     pacotes ativos, na ordem de desempate (por id)
      */
     public BuscaDePacotes(Map<Long, List<Long>> restantes, List<Promocao> todos) {
-        this.pacotes = todos.stream().filter(p -> p.getItens().stream()
-                .allMatch(i -> restantes.getOrDefault(i.getCategoria().getId(), List.of()).size() >= i.getQuantidade()))
+        this.pacotes = todos.stream()
+                .filter(p -> p.getItens().stream()
+                        .allMatch(i -> restantes
+                                        .getOrDefault(i.getCategoria().getId(), List.of())
+                                        .size()
+                                >= i.getQuantidade()))
                 .toList();
         for (Promocao p : pacotes) {
             for (PromocaoItem i : p.getItens()) {
-                if (!categorias.contains(i.getCategoria().getId())) categorias.add(i.getCategoria().getId());
+                if (!categorias.contains(i.getCategoria().getId()))
+                    categorias.add(i.getCategoria().getId());
             }
         }
         int n = categorias.size();
@@ -86,7 +90,8 @@ public final class BuscaDePacotes {
 
     public Resultado exata() {
         if (pacotes.isEmpty()) return Resultado.NENHUM;
-        if (estados > Integer.MAX_VALUE) throw new IllegalStateException("Estados demais para a busca exata: " + estados);
+        if (estados > Integer.MAX_VALUE)
+            throw new IllegalStateException("Estados demais para a busca exata: " + estados);
         long[] memo = new long[(int) estados];
         int[] escolha = new int[(int) estados];
         Arrays.fill(memo, -1);
@@ -125,7 +130,10 @@ public final class BuscaDePacotes {
                 int q = usoPorPacote[p][c];
                 if (q == 0) continue;
                 int resta = (int) ((estado / base[c]) % (total[c] + 1));
-                if (resta < q) { cabe = false; break; }
+                if (resta < q) {
+                    cabe = false;
+                    break;
+                }
                 int inicio = total[c] - resta;
                 normal += acumulado[c][inicio + q] - acumulado[c][inicio];
                 proximo -= q * (int) base[c];
@@ -134,7 +142,10 @@ public final class BuscaDePacotes {
             long ganho = normal - precoPacote[p];
             if (ganho <= 0) continue;
             long candidato = ganho + economia(proximo, memo, escolha);
-            if (candidato > melhor) { melhor = candidato; melhorPacote = p; }
+            if (candidato > melhor) {
+                melhor = candidato;
+                melhorPacote = p;
+            }
         }
         memo[estado] = melhor;
         escolha[estado] = melhorPacote;
@@ -167,7 +178,10 @@ public final class BuscaDePacotes {
                 for (int c = 0; c < total.length; c++) {
                     int q = usoPorPacote[p][c];
                     if (q == 0) continue;
-                    if (resta[c] < q) { cabe = false; break; }
+                    if (resta[c] < q) {
+                        cabe = false;
+                        break;
+                    }
                     int inicio = total[c] - resta[c];
                     normal += acumulado[c][inicio + q] - acumulado[c][inicio];
                     unidades += q;
@@ -176,7 +190,11 @@ public final class BuscaDePacotes {
                 long ganho = normal - precoPacote[p];
                 if (ganho <= 0) continue;
                 double n = nota.applyAsDouble(ganho, unidades);
-                if (melhor < 0 || n > melhorNota) { melhor = p; melhorNota = n; melhorGanho = ganho; }
+                if (melhor < 0 || n > melhorNota) {
+                    melhor = p;
+                    melhorNota = n;
+                    melhorGanho = ganho;
+                }
             }
             if (melhor < 0) break;
             for (int c = 0; c < total.length; c++) resta[c] -= usoPorPacote[melhor][c];

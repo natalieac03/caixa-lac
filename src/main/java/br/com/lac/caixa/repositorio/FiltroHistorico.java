@@ -2,7 +2,6 @@ package br.com.lac.caixa.repositorio;
 
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.FormaPagamento;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
@@ -28,6 +27,7 @@ public record FiltroHistorico(FormaPagamento forma, LocalDate inicio, LocalDate 
      * o termo buscado passa pelo mesmo caminho aqui.
      */
     public static final String COM_ACENTO = "áàâãäéèêëíìîïóòôõöúùûüçÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ";
+
     public static final String SEM_ACENTO = "aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC";
 
     /** "Bóton" -> "boton". */
@@ -46,14 +46,19 @@ public record FiltroHistorico(FormaPagamento forma, LocalDate inicio, LocalDate 
     }
 
     /** Início do primeiro dia, ou null sem data inicial. */
-    public LocalDateTime inicioConsulta() { return inicio == null ? null : inicio.atStartOfDay(); }
+    public LocalDateTime inicioConsulta() {
+        return inicio == null ? null : inicio.atStartOfDay();
+    }
 
     /** Início do dia seguinte ao último (exclusivo), ou null sem data final. */
-    public LocalDateTime fimConsulta() { return fim == null ? null : fim.plusDays(1).atStartOfDay(); }
+    public LocalDateTime fimConsulta() {
+        return fim == null ? null : fim.plusDays(1).atStartOfDay();
+    }
 
     public static FiltroHistorico criar(FormaPagamento forma, String inicio, String fim, String dia, String produto) {
         if ((inicio == null || inicio.isBlank()) && (fim == null || fim.isBlank()) && dia != null && !dia.isBlank()) {
-            inicio = dia; fim = dia;
+            inicio = dia;
+            fim = dia;
         }
         return new FiltroHistorico(forma, data(inicio), data(fim), produto);
     }

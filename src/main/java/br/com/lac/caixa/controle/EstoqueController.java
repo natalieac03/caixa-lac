@@ -8,6 +8,7 @@ import br.com.lac.caixa.util.Dinheiro;
 import br.com.lac.caixa.util.ExportadorCSV;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.PositiveOrZero;
+import java.math.BigDecimal;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -17,8 +18,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
-import java.math.BigDecimal;
 
 @Controller
 public class EstoqueController {
@@ -45,33 +44,36 @@ public class EstoqueController {
      * "BÓTON" e "bóton" caem na mesma categoria (nome padronizado).
      */
     @PostMapping("/estoque/novo")
-    public String novo(@RequestParam String nome,
-                       @RequestParam String preco,
-                       @RequestParam @PositiveOrZero(message = "Quantidade não pode ser negativa.") int quantidade,
-                       @RequestParam(required = false) Long categoriaId,
-                       @RequestParam(required = false) String novaCategoria,
-                       RedirectAttributes flash) {
+    public String novo(
+            @RequestParam String nome,
+            @RequestParam String preco,
+            @RequestParam @PositiveOrZero(message = "Quantidade não pode ser negativa.") int quantidade,
+            @RequestParam(required = false) Long categoriaId,
+            @RequestParam(required = false) String novaCategoria,
+            RedirectAttributes flash) {
         BigDecimal valor = Dinheiro.parse(preco);
         Categoria categoria = categoriaEscolhida(categoriaId, novaCategoria);
         estoque.criarNovo(nome, valor, quantidade, categoria);
-        flash.addFlashAttribute("sucesso",
-                "Produto \"" + nome + "\" cadastrado na categoria " + categoria.getNome() + ".");
+        flash.addFlashAttribute(
+                "sucesso", "Produto \"" + nome + "\" cadastrado na categoria " + categoria.getNome() + ".");
         return "redirect:/estoque";
     }
 
     /** Edição inline: nome, preço e categoria. O preço novo só vale para vendas novas. */
     @PostMapping("/estoque/{id}/editar")
-    public String editar(@PathVariable Long id,
-                         @RequestParam String nome,
-                         @RequestParam String preco,
-                         @RequestParam(required = false) Long categoriaId,
-                         @RequestParam(required = false) String novaCategoria,
-                         RedirectAttributes flash) {
+    public String editar(
+            @PathVariable Long id,
+            @RequestParam String nome,
+            @RequestParam String preco,
+            @RequestParam(required = false) Long categoriaId,
+            @RequestParam(required = false) String novaCategoria,
+            RedirectAttributes flash) {
         BigDecimal valor = Dinheiro.parse(preco);
         if (valor == null) throw new RegraDeNegocioException("Informe o preço.");
         Categoria categoria = categoriaEscolhida(categoriaId, novaCategoria);
         var p = estoque.editar(id, nome, valor, categoria);
-        flash.addFlashAttribute("sucesso", "Produto \"" + p.getNome() + "\" atualizado. O preço novo vale só para vendas novas.");
+        flash.addFlashAttribute(
+                "sucesso", "Produto \"" + p.getNome() + "\" atualizado. O preço novo vale só para vendas novas.");
         return "redirect:/estoque";
     }
 
@@ -91,9 +93,10 @@ public class EstoqueController {
 
     /** Soma unidades a um produto existente. */
     @PostMapping("/estoque/{id}/adicionar")
-    public String adicionar(@PathVariable Long id,
-                            @RequestParam @Min(value = 1, message = "Quantidade deve ser maior que zero.") int quantidade,
-                            RedirectAttributes flash) {
+    public String adicionar(
+            @PathVariable Long id,
+            @RequestParam @Min(value = 1, message = "Quantidade deve ser maior que zero.") int quantidade,
+            RedirectAttributes flash) {
         estoque.adicionarUnidades(id, quantidade);
         flash.addFlashAttribute("sucesso", "Estoque atualizado.");
         return "redirect:/estoque";
@@ -101,9 +104,10 @@ public class EstoqueController {
 
     /** Tira unidades de um produto existente (sem apagar o produto). */
     @PostMapping("/estoque/{id}/remover-unidades")
-    public String removerUnidades(@PathVariable Long id,
-                                  @RequestParam @Min(value = 1, message = "Quantidade deve ser maior que zero.") int quantidade,
-                                  RedirectAttributes flash) {
+    public String removerUnidades(
+            @PathVariable Long id,
+            @RequestParam @Min(value = 1, message = "Quantidade deve ser maior que zero.") int quantidade,
+            RedirectAttributes flash) {
         estoque.removerUnidades(id, quantidade);
         flash.addFlashAttribute("sucesso", "Estoque atualizado.");
         return "redirect:/estoque";
@@ -112,9 +116,11 @@ public class EstoqueController {
     @PostMapping("/estoque/{id}/remover")
     public String remover(@PathVariable Long id, RedirectAttributes flash) {
         boolean arquivado = estoque.remover(id);
-        flash.addFlashAttribute("sucesso", arquivado
-                ? "Produto arquivado: ele já aparece em vendas antigas, então saiu do estoque mas continua no histórico."
-                : "Produto removido.");
+        flash.addFlashAttribute(
+                "sucesso",
+                arquivado
+                        ? "Produto arquivado: ele já aparece em vendas antigas, então saiu do estoque mas continua no histórico."
+                        : "Produto removido.");
         return "redirect:/estoque";
     }
 

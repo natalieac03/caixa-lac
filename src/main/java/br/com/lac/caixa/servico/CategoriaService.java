@@ -3,10 +3,9 @@ package br.com.lac.caixa.servico;
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.Categoria;
 import br.com.lac.caixa.repositorio.CategoriaRepository;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 public class CategoriaService {
@@ -25,7 +24,8 @@ public class CategoriaService {
     }
 
     public Categoria buscar(Long id) {
-        return categorias.findById(id)
+        return categorias
+                .findById(id)
                 .orElseThrow(() -> new RegraDeNegocioException("Categoria não encontrada: " + id));
     }
 
@@ -37,11 +37,12 @@ public class CategoriaService {
     public Categoria renomear(Long id, String nomeDigitado) {
         Categoria categoria = buscar(id);
         String normalizado = Categoria.normalizar(nomeDigitado);
-        categorias.findByNomeNormalizado(normalizado)
+        categorias
+                .findByNomeNormalizado(normalizado)
                 .filter(outra -> !outra.getId().equals(id))
                 .ifPresent(outra -> {
-                    throw new RegraDeNegocioException("Já existe a categoria \"" + outra.getNome()
-                            + "\". Escolha outro nome.");
+                    throw new RegraDeNegocioException(
+                            "Já existe a categoria \"" + outra.getNome() + "\". Escolha outro nome.");
                 });
         String antes = categoria.getNome();
         categoria.renomear(nomeDigitado);
@@ -60,7 +61,8 @@ public class CategoriaService {
         if (normalizado.isEmpty()) {
             throw new RegraDeNegocioException("Nome de categoria vazio.");
         }
-        return categorias.findByNomeNormalizado(normalizado)
+        return categorias
+                .findByNomeNormalizado(normalizado)
                 .orElseGet(() -> categorias.save(new Categoria(nomeDigitado)));
     }
 }
