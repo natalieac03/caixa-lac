@@ -138,8 +138,9 @@ class AuditoriaHttpTest {
                 .param("nome", "Outro Nome " + p.getId()));
 
         assertEquals(
-                List.of("evento=produto_editado id=" + p.getId() + " ip=" + IP + " antes=\"Auditado | 6.00 | \""
-                        + " depois=\"Auditado Novo | 7.50 | Auditoria " + p.getId() + "\""),
+                List.of("evento=produto_editado id=" + p.getId() + " ip=" + IP
+                        + " antes=\"Auditado | 6.00 |  | custo -\"" + " depois=\"Auditado Novo | 7.50 | Auditoria "
+                        + p.getId() + " | custo -\""),
                 eventos("produto_editado"));
         assertEquals(1, eventos("categoria_renomeada").size());
     }

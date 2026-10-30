@@ -9,6 +9,7 @@ import br.com.lac.caixa.util.ExportadorCSV;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.PositiveOrZero;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -34,6 +35,7 @@ public class EstoqueController {
     public String listar(Model model) {
         model.addAttribute("produtos", estoque.listar());
         model.addAttribute("categorias", categorias.listar());
+        model.addAttribute("hoje", LocalDate.now());
         return "estoque";
     }
 
@@ -50,10 +52,11 @@ public class EstoqueController {
             @RequestParam @PositiveOrZero(message = "Quantidade não pode ser negativa.") int quantidade,
             @RequestParam(required = false) Long categoriaId,
             @RequestParam(required = false) String novaCategoria,
+            @RequestParam(required = false) String custo,
             RedirectAttributes flash) {
         BigDecimal valor = Dinheiro.parse(preco);
         Categoria categoria = categoriaEscolhida(categoriaId, novaCategoria);
-        estoque.criarNovo(nome, valor, quantidade, categoria);
+        estoque.criarNovo(nome, valor, quantidade, categoria, Dinheiro.parse(custo));
         flash.addFlashAttribute(
                 "sucesso", "Produto \"" + nome + "\" cadastrado na categoria " + categoria.getNome() + ".");
         return "redirect:/estoque";
@@ -67,11 +70,18 @@ public class EstoqueController {
             @RequestParam String preco,
             @RequestParam(required = false) Long categoriaId,
             @RequestParam(required = false) String novaCategoria,
+            @RequestParam(required = false) String custo,
+            @RequestParam(defaultValue = "false") boolean removerCusto,
             RedirectAttributes flash) {
         BigDecimal valor = Dinheiro.parse(preco);
         if (valor == null) throw new RegraDeNegocioException("Informe o preço.");
         Categoria categoria = categoriaEscolhida(categoriaId, novaCategoria);
-        var p = estoque.editar(id, nome, valor, categoria);
+        // Custo vazio = mantém o atual (que pode ter 4 casas, do custo médio);
+        // "sem custo" marcado = apaga.
+        BigDecimal novoCusto = removerCusto
+                ? null
+                : custo == null || custo.isBlank() ? estoque.buscar(id).getCustoUnitario() : Dinheiro.parse(custo);
+        var p = estoque.editar(id, nome, valor, categoria, novoCusto);
         flash.addFlashAttribute(
                 "sucesso", "Produto \"" + p.getNome() + "\" atualizado. O preço novo vale só para vendas novas.");
         return "redirect:/estoque";
@@ -92,6 +102,34 @@ public class EstoqueController {
     }
 
     /** Soma unidades a um produto existente. */
+    /**
+     * Entrada de estoque por compra: soma ao estoque e recalcula o custo médio.
+     * Data vazia = hoje. O "+ Adicionar" de cada linha continua, sem custo.
+     */
+    @PostMapping("/estoque/compra")
+    public String registrarCompra(
+            @RequestParam Long produtoId,
+            @RequestParam @Min(value = 1, message = "Quantidade deve ser maior que zero.") int quantidade,
+            @RequestParam String custoTotal,
+            @RequestParam(required = false) String data,
+            @RequestParam(required = false) String observacao,
+            RedirectAttributes flash) {
+        BigDecimal custo = Dinheiro.parse(custoTotal);
+        if (custo == null) throw new RegraDeNegocioException("Informe o custo total da compra.");
+        LocalDate dia;
+        try {
+            dia = data == null || data.isBlank() ? LocalDate.now() : LocalDate.parse(data.trim());
+        } catch (java.time.format.DateTimeParseException e) {
+            throw new RegraDeNegocioException("Data da compra inválida.");
+        }
+        var compra = estoque.registrarCompra(produtoId, quantidade, custo, dia, observacao);
+        flash.addFlashAttribute(
+                "sucesso",
+                "Entrada de " + quantidade + " un. de \"" + compra.getProduto().getNome()
+                        + "\" registrada. Custo médio: " + Dinheiro.reais(compra.getCustoNovo()) + ".");
+        return "redirect:/estoque";
+    }
+
     @PostMapping("/estoque/{id}/adicionar")
     public String adicionar(
             @PathVariable Long id,

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import br.com.lac.caixa.migracao.Migracoes;
 import br.com.lac.caixa.modelo.Categoria;
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.modelo.Produto;
@@ -142,7 +143,7 @@ class PostgresBancoNovoTest {
     @Test
     void migraDoZeroEValidaComHibernate() throws Exception {
         assertEquals(
-                9,
+                Migracoes.quantidade(),
                 jdbc.queryForObject(
                         "select count(*) from flyway_schema_history where type = 'SQL' and success", Integer.class));
         assertEquals(0, produtosAntes, "nada semeado fora do perfil local");

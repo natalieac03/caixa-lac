@@ -74,6 +74,7 @@
                         <th>Categoria</th>
                         <th>Produto</th>
                         <th class="num">Preço</th>
+                        <th class="num">Custo</th>
                         <th class="num">Quantidade</th>
                         <th>Ajustar unidades</th>
                         <th></th>
@@ -86,6 +87,11 @@
                         <td class="celula-categoria" th:text="${p.nomeCategoria}">BÓTON</td>
                         <td class="nome-produto" th:text="${p.nome}">Produto</td>
                         <td class="num">R$ <span th:text="${#numbers.formatDecimal(p.preco,1,2,'COMMA')}">0,00</span></td>
+                        <td class="num">
+                            <span th:if="${p.semCusto}" class="selo selo-sem-custo">sem custo</span>
+                            <span th:unless="${p.semCusto}" th:title="'Custo médio: ' + ${p.custoUnitario}"
+                                  th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(p.custoUnitario)}">R$ 2,00</span>
+                        </td>
                         <td class="num">
                             <span th:if="${p.quantidade > 0}" th:text="${p.quantidade}">0</span>
                             <span th:if="${p.quantidade > 0 and p.quantidade < 5}" class="selo selo-baixo">baixo</span>
@@ -121,7 +127,7 @@
                     </tr>
                     <!-- Edição inline: nome, preço e categoria. -->
                     <tr class="linha-edicao oculto" th:id="'edicao_' + ${p.id}">
-                        <td colspan="6">
+                        <td colspan="7">
                             <form th:action="@{'/estoque/' + ${p.id} + '/editar'}" method="post" class="form-edicao">
                                 <div class="linha-campos">
                                     <div class="campo" style="flex:2;">
@@ -132,6 +138,14 @@
                                         <label th:for="'preco_' + ${p.id}">Preço (R$)</label>
                                         <input type="text" th:id="'preco_' + ${p.id}" name="preco" class="mono" inputmode="decimal" required
                                                th:value="${#numbers.formatDecimal(p.preco,1,2,'COMMA')}">
+                                    </div>
+                                    <div class="campo">
+                                        <label th:for="'custo_' + ${p.id}">Custo unitário (R$)</label>
+                                        <input type="text" th:id="'custo_' + ${p.id}" name="custo" class="mono" inputmode="decimal"
+                                               th:placeholder="${p.semCusto} ? 'sem custo' : 'atual: ' + ${p.custoUnitario}">
+                                        <label class="check-inline">
+                                            <input type="checkbox" name="removerCusto" value="true"> sem custo
+                                        </label>
                                     </div>
                                     <div class="campo">
                                         <label th:for="'categoria_' + ${p.id}">Categoria</label>
@@ -180,6 +194,47 @@
         </form>
     </div>
 
+    <div class="cartao cartao-lac" id="entrada-estoque" th:unless="${produtos.isEmpty()}">
+        <h2>Entrada de estoque (compra)</h2>
+        <div class="corpo">
+        <form th:action="@{/estoque/compra}" method="post">
+            <div class="linha-campos">
+                <div class="campo" style="flex:2;">
+                    <label for="compraProduto">Produto</label>
+                    <select id="compraProduto" name="produtoId" required>
+                        <option th:each="p : ${produtos}" th:value="${p.id}"
+                                th:text="${p.nome} + ' (' + ${p.quantidade} + ' un.' + (${p.semCusto} ? ', sem custo' : '') + ')'">Bóton</option>
+                    </select>
+                </div>
+                <div class="campo">
+                    <label for="compraQuantidade">Quantidade</label>
+                    <input type="number" id="compraQuantidade" name="quantidade" min="1" value="1" required class="mono">
+                </div>
+                <div class="campo">
+                    <label for="compraCusto">Custo total da compra (R$)</label>
+                    <input type="text" id="compraCusto" name="custoTotal" required placeholder="0,00" inputmode="decimal" class="mono">
+                </div>
+            </div>
+            <div class="linha-campos" style="margin-top:14px;">
+                <div class="campo">
+                    <label for="compraData">Data da compra</label>
+                    <input type="date" id="compraData" name="data" th:value="${hoje}">
+                </div>
+                <div class="campo" style="flex:2;">
+                    <label for="compraObservacao">Observação</label>
+                    <input type="text" id="compraObservacao" name="observacao" maxlength="255" placeholder="Ex.: nota 123, fornecedor X">
+                </div>
+            </div>
+            <p class="ajuda">Soma ao estoque e recalcula o custo médio do produto:
+                (estoque × custo atual + custo da compra) ÷ (estoque + quantidade). Produto sem custo assume o custo da compra.
+                O "+ Adicionar" de cada linha continua valendo para ajustes sem custo.</p>
+            <div style="margin-top:16px;">
+                <button type="submit" class="botao botao-principal">Registrar entrada</button>
+            </div>
+        </form>
+        </div>
+    </div>
+
     <div class="cartao cartao-lac" id="produto-novo">
         <h2>Produto novo</h2>
         <div class="corpo">
@@ -196,6 +251,10 @@
                 <div class="campo">
                     <label for="quantidade">Quantidade</label>
                     <input type="number" id="quantidade" name="quantidade" min="0" value="0" required class="mono">
+                </div>
+                <div class="campo">
+                    <label for="custo">Custo unitário (R$, opcional)</label>
+                    <input type="text" id="custo" name="custo" placeholder="sem custo" inputmode="decimal" class="mono">
                 </div>
             </div>
             <div class="linha-campos" style="margin-top:14px;">

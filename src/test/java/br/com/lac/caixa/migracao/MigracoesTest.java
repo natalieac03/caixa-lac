@@ -71,7 +71,7 @@ class MigracoesTest {
 
         // Assert: todas as migrações SQL aplicadas (V1-V9)
         assertEquals(
-                9,
+                Migracoes.quantidade(),
                 numero(
                         url,
                         "select count(*) from \"flyway_schema_history\" where \"success\"=true and \"type\"='SQL'"));

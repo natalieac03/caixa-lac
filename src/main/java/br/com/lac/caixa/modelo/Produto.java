@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Version;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 /**
  * Um item do estoque da LAC: tem nome, preco, quantidade disponivel
@@ -43,6 +44,14 @@ public class Produto {
      */
     private boolean ativo = true;
 
+    /**
+     * Custo unitário atual (custo médio ponderado das compras), 4 casas.
+     * Opcional: null = ainda não informado ("sem custo"). Só para as finanças;
+     * não muda o preço cobrado.
+     */
+    @Column(precision = 38, scale = 4)
+    private BigDecimal custoUnitario;
+
     public Produto() {}
 
     public Produto(String nome, BigDecimal preco, int quantidade) {
@@ -75,6 +84,51 @@ public class Produto {
         setNome(nome);
         setPreco(preco);
         setCategoria(categoria);
+    }
+
+    /** Edição com custo: custo vazio (null) = sem custo. */
+    public void editar(String nome, BigDecimal preco, Categoria categoria, BigDecimal custo) {
+        editar(nome, preco, categoria);
+        setCustoUnitario(custo);
+    }
+
+    public BigDecimal getCustoUnitario() {
+        return custoUnitario;
+    }
+
+    public void setCustoUnitario(BigDecimal custo) {
+        if (custo != null && custo.signum() < 0) throw new RegraDeNegocioException("O custo não pode ser negativo.");
+        this.custoUnitario = custo == null ? null : custo.setScale(ESCALA_CUSTO, RoundingMode.HALF_EVEN);
+    }
+
+    public boolean isSemCusto() {
+        return custoUnitario == null;
+    }
+
+    /** Casas decimais do custo (o custo médio é uma divisão). */
+    public static final int ESCALA_CUSTO = 4;
+
+    /**
+     * Entrada por compra: soma ao estoque e recalcula o custo médio ponderado,
+     * novo = (estoque x custo atual + custo da compra) / (estoque + quantidade).
+     * Sem custo atual, assume o custo unitário da compra.
+     */
+    public void registrarCompra(int qtd, BigDecimal custoTotal) {
+        if (qtd < 1) throw new RegraDeNegocioException("Quantidade deve ser maior que zero.");
+        if (custoTotal == null || custoTotal.signum() < 0) {
+            throw new RegraDeNegocioException("Informe o custo total da compra (zero ou mais).");
+        }
+        BigDecimal novoCusto;
+        if (custoUnitario == null) {
+            novoCusto = custoTotal.divide(BigDecimal.valueOf(qtd), ESCALA_CUSTO, RoundingMode.HALF_EVEN);
+        } else {
+            BigDecimal valorEmEstoque = custoUnitario.multiply(BigDecimal.valueOf(quantidade));
+            novoCusto = valorEmEstoque
+                    .add(custoTotal)
+                    .divide(BigDecimal.valueOf((long) quantidade + qtd), ESCALA_CUSTO, RoundingMode.HALF_EVEN);
+        }
+        repor(qtd);
+        custoUnitario = novoCusto;
     }
 
     public BigDecimal getPreco() {

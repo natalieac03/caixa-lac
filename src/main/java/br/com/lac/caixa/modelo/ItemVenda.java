@@ -1,5 +1,6 @@
 package br.com.lac.caixa.modelo;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -28,12 +29,17 @@ public class ItemVenda {
 
     private BigDecimal precoUnitario;
 
+    /**
+     * Custo unitário do produto no momento da venda, congelado como o preço
+     * (mudar o custo depois não altera vendas feitas). null = produto sem custo.
+     */
+    @Column(precision = 38, scale = 4)
+    private BigDecimal custoUnitario;
+
     public ItemVenda() {}
 
     public ItemVenda(Produto produto, int quantidade) {
-        this.produto = produto;
-        this.quantidade = quantidade;
-        this.precoUnitario = produto.getPreco();
+        this(produto, quantidade, produto.getPreco());
     }
 
     /** Permite informar o preço unitário (por exemplo, já com promoção aplicada). */
@@ -41,6 +47,11 @@ public class ItemVenda {
         this.produto = produto;
         this.quantidade = quantidade;
         this.precoUnitario = precoUnitario;
+        this.custoUnitario = produto.getCustoUnitario();
+    }
+
+    public BigDecimal getCustoUnitario() {
+        return custoUnitario;
     }
 
     public Long getId() {

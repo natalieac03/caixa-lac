@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import br.com.lac.caixa.migracao.Migracoes;
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.servico.ConsultaHistorico;
 import br.com.lac.caixa.servico.FechamentoService;
@@ -161,7 +162,7 @@ class PostgresLegadoTest {
                 jdbc.queryForObject(
                         "select count(*) from flyway_schema_history where type = 'BASELINE'", Integer.class));
         assertEquals(
-                8,
+                Migracoes.quantidade() - 1,
                 jdbc.queryForObject(
                         "select count(*) from flyway_schema_history where type = 'SQL' and success", Integer.class));
         assertEquals(2, jdbc.queryForObject("select count(*) from item_venda where venda_id = 1", Integer.class));
@@ -172,6 +173,12 @@ class PostgresLegadoTest {
                 0,
                 jdbc.queryForObject(
                         "select count(*) from information_schema.tables where table_name in ('venda_itens', 'promocao_itens')",
+                        Integer.class));
+        // V10: vendas antigas ficam sem custo (não se inventa custo).
+        assertEquals(
+                0,
+                jdbc.queryForObject(
+                        "select count(*) from item_venda where venda_id <= 4 and custo_unitario is not null",
                         Integer.class));
         // V7: a venda antiga (só valor_total) passa a ter cobrado e calculado iguais ao total.
         assertEquals(
