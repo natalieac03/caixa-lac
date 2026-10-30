@@ -285,4 +285,61 @@ public class ConsultasFinanceiras {
                 (r, n) -> new SomaPromocao(
                         idOuNull(r, "promocao_id"), r.getLong("vendas"), dec(r, "desconto"), dec(r, "receita")));
     }
+
+    // ---------------------------------------------------------------- estoque
+
+    /** Produto ativo com o estoque de agora e as unidades vendidas no filtro. */
+    public record Estoque(
+            Long produtoId,
+            String nome,
+            String categoria,
+            int quantidade,
+            BigDecimal preco,
+            BigDecimal custoUnitario,
+            long vendidas) {}
+
+    public List<Estoque> estoque(FiltroFinancas f) {
+        Onde o = onde(f);
+        String categoria = f.categoriaId() == null ? "" : " AND p.categoria_id = :categoria";
+        return jdbc.query(
+                "SELECT p.id, p.nome, c.nome AS categoria, p.quantidade, p.preco, p.custo_unitario,"
+                        + " COALESCE(s.unidades, 0) AS vendidas"
+                        + " FROM produto p LEFT JOIN categoria c ON c.id = p.categoria_id"
+                        + " LEFT JOIN (SELECT i.produto_id, SUM(i.quantidade) AS unidades"
+                        + "  FROM item_venda i JOIN venda v ON v.id = i.venda_id WHERE " + o.vendas()
+                        + "  GROUP BY i.produto_id) s ON s.produto_id = p.id"
+                        + " WHERE p.ativo = TRUE" + categoria
+                        + " ORDER BY p.nome, p.id",
+                o.parametros(),
+                (r, n) -> new Estoque(
+                        r.getLong("id"),
+                        r.getString("nome"),
+                        r.getString("categoria"),
+                        r.getInt("quantidade"),
+                        r.getBigDecimal("preco"),
+                        r.getBigDecimal("custo_unitario"),
+                        r.getLong("vendidas")));
+    }
+
+    /** Produtos ativos com estoque e sem nenhuma venda no filtro. */
+    public List<Estoque> parados(FiltroFinancas f) {
+        Onde o = onde(f);
+        String categoria = f.categoriaId() == null ? "" : " AND p.categoria_id = :categoria";
+        return jdbc.query(
+                "SELECT p.id, p.nome, c.nome AS categoria, p.quantidade, p.preco, p.custo_unitario, 0 AS vendidas"
+                        + " FROM produto p LEFT JOIN categoria c ON c.id = p.categoria_id"
+                        + " WHERE p.ativo = TRUE AND p.quantidade > 0" + categoria
+                        + " AND NOT EXISTS (SELECT 1 FROM item_venda i JOIN venda v ON v.id = i.venda_id"
+                        + "  WHERE i.produto_id = p.id AND " + o.vendas() + ")"
+                        + " ORDER BY p.nome, p.id",
+                o.parametros(),
+                (r, n) -> new Estoque(
+                        r.getLong("id"),
+                        r.getString("nome"),
+                        r.getString("categoria"),
+                        r.getInt("quantidade"),
+                        r.getBigDecimal("preco"),
+                        r.getBigDecimal("custo_unitario"),
+                        0));
+    }
 }

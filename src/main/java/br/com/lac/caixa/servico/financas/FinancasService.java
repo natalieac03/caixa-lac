@@ -16,6 +16,7 @@ import br.com.lac.caixa.servico.financas.Financas.Comparacao;
 import br.com.lac.caixa.servico.financas.Financas.LinhaAbc;
 import br.com.lac.caixa.servico.financas.Financas.LinhaCategoria;
 import br.com.lac.caixa.servico.financas.Financas.LinhaForma;
+import br.com.lac.caixa.servico.financas.Financas.LinhaGiro;
 import br.com.lac.caixa.servico.financas.Financas.LinhaProduto;
 import br.com.lac.caixa.servico.financas.Financas.LinhaPromocao;
 import br.com.lac.caixa.servico.financas.Financas.Metrica;
@@ -414,5 +415,58 @@ public class FinancasService {
                     case PACOTE -> "Pacote: ";
                 };
         return tipo + p.getNomesCategorias() + " por " + Dinheiro.reais(p.getPreco());
+    }
+
+    // ---------------------------------------------------------------- D: estoque
+
+    /** Giro e cobertura de cada produto ativo (do filtro de categoria, se houver). */
+    public List<LinhaGiro> giro(FiltroFinancas f) {
+        long dias = f.dias();
+        List<LinhaGiro> linhas = new ArrayList<>();
+        for (var e : consultas.estoque(f)) {
+            BigDecimal media =
+                    BigDecimal.valueOf(e.vendidas()).divide(BigDecimal.valueOf(dias), 2, RoundingMode.HALF_EVEN);
+            boolean semGiro = e.vendidas() == 0;
+            BigDecimal diasAteAcabar = semGiro
+                    ? null
+                    : BigDecimal.valueOf(e.quantidade())
+                            .multiply(BigDecimal.valueOf(dias))
+                            .divide(BigDecimal.valueOf(e.vendidas()), 1, RoundingMode.HALF_EVEN);
+            linhas.add(new LinhaGiro(
+                    e.produtoId(),
+                    e.nome(),
+                    e.categoria(),
+                    e.vendidas(),
+                    media,
+                    e.quantidade(),
+                    diasAteAcabar,
+                    semGiro,
+                    e.custoUnitario() == null
+                            ? null
+                            : dinheiro(e.custoUnitario().multiply(BigDecimal.valueOf(e.quantidade()))),
+                    dinheiro(e.preco().multiply(BigDecimal.valueOf(e.quantidade())))));
+        }
+        return linhas;
+    }
+
+    /** Produtos ativos com estoque e sem venda no período. */
+    public List<LinhaGiro> parados(FiltroFinancas f) {
+        List<LinhaGiro> linhas = new ArrayList<>();
+        for (var e : consultas.parados(f)) {
+            linhas.add(new LinhaGiro(
+                    e.produtoId(),
+                    e.nome(),
+                    e.categoria(),
+                    0,
+                    BigDecimal.ZERO.setScale(2),
+                    e.quantidade(),
+                    null,
+                    true,
+                    e.custoUnitario() == null
+                            ? null
+                            : dinheiro(e.custoUnitario().multiply(BigDecimal.valueOf(e.quantidade()))),
+                    dinheiro(e.preco().multiply(BigDecimal.valueOf(e.quantidade())))));
+        }
+        return linhas;
     }
 }
