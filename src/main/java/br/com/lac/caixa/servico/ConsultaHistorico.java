@@ -16,12 +16,12 @@ public class ConsultaHistorico {
 
     public Resultado consultar(FiltroHistorico filtro, int pagina) {
         if (pagina < 0) throw new IllegalArgumentException("Página inválida.");
-        var ids = vendas.paginarIds(filtro.forma(), filtro.inicioConsulta(), filtro.fimConsulta(), filtro.produto(), PageRequest.of(pagina, 50));
+        var ids = vendas.paginarIds(filtro.formas(), filtro.inicioConsulta(), filtro.fimConsulta(), filtro.produto(), PageRequest.of(pagina, 50));
         List<Venda> conteudo = ids.isEmpty() ? List.of() : vendas.carregarPagina(ids.getContent());
-        var resumo = vendas.indicadores(filtro.formaConsulta(), filtro.inicioConsulta(), filtro.fimConsulta(), filtro.produto());
+        var resumo = vendas.indicadores(filtro.formasConsulta(), filtro.inicioConsulta(), filtro.fimConsulta(), filtro.produto());
         return new Resultado(new PageImpl<>(conteudo, ids.getPageable(), ids.getTotalElements()), resumo);
     }
     public List<Venda> exportar(FiltroHistorico filtro) {
-        return vendas.exportar(filtro.forma(), filtro.inicioConsulta(), filtro.fimConsulta(), filtro.produto());
+        return vendas.exportar(filtro.formas(), filtro.inicioConsulta(), filtro.fimConsulta(), filtro.produto());
     }
 }

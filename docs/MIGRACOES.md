@@ -45,6 +45,25 @@ não são transportados ao PostgreSQL. Após a reconciliação, não ficou difer
 funcional conhecida no H2. O esquema real de produção não foi acessado nem
 comparado: uma restauração de produção é a validação que ainda precisa ser feita.
 
+## Ensaio no PostgreSQL
+
+Num PostgreSQL 16 local e descartável (nunca no Railway), a versão original do
+app criou o esquema com `ddl-auto=update` e registrou duas vendas e duas
+promoções pelas telas. A versão nova subiu sobre esse banco com o perfil `prod`:
+baseline na versão 1, V2 a V5 aplicadas, `validate` aprovado, vínculos e valores
+antigos preservados. O ensaio achou um erro que o H2 não mostra: com algum filtro
+vazio, o histórico dava 500 (`cannot cast type bytea to timestamp`), porque o
+Hibernate envia `null` sem tipo. As consultas passaram a receber sempre valores
+(limites de data fixos e lista de formas de pagamento).
+
+Esse banco virou `src/test/resources/db/postgres-legado.sql`. `PostgresLegadoTest`
+e `PostgresBancoNovoTest` sobem um PostgreSQL 16 com Testcontainers e repetem o
+caminho da produção e o de um banco vazio a cada `mvn verify`. Sem Docker, esses
+testes aparecem como pulados. Diferenças do banco legado que ficam, sem efeito no
+`validate`: CHECKs de enum gerados pelo Hibernate (`venda_forma_pagamento_check`,
+`promocao_tipo_check`) convivem com os explícitos da V5, e as sequences de
+identidade mantêm o nome gerado pelo Postgres.
+
 Os testes e os perfis local/prod usam Flyway e `ddl-auto=validate`. Flyway está
 fixado em 10.20.1 e o BOM Jackson em 2.18.2 para manter também o módulo TOML
 alinhado; essas dependências estão disponíveis no cache do ambiente de trabalho.

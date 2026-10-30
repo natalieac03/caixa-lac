@@ -22,6 +22,8 @@
         <flyway.version>10.20.1</flyway.version>
         <!-- Mantém os módulos Jackson alinhados, incluindo TOML usado pelo Flyway. -->
         <jackson-bom.version>2.18.2</jackson-bom.version>
+        <!-- 1.19.x (padrão do Boot 3.3) não conversa com o Docker 29+. -->
+        <testcontainers.version>1.21.3</testcontainers.version>
     </properties>
 
     <dependencies>
@@ -58,6 +60,17 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Testes contra PostgreSQL real; pulados quando não há Docker. -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
