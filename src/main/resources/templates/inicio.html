@@ -15,6 +15,39 @@
         <p>Registre vendas, controle o estoque e acompanhe o histórico.</p>
     </div>
 
+    <section class="cartao cartao-atencao" id="atencao" th:if="${alertas.temAlgo}" aria-labelledby="titulo-atencao"
+             th:with="R=${T(br.com.lac.caixa.util.Dinheiro)}">
+        <h2 id="titulo-atencao">Atenção</h2>
+        <div id="alerta-estoque" th:unless="${alertas.estoqueAcabando.isEmpty()}">
+            <h3>Estoque acabando</h3>
+            <ul>
+                <li th:each="a : ${alertas.estoqueAcabando}"><strong th:text="${a.nome}">Bóton</strong>:
+                    <span th:text="${a.estoque} + ' un. (' + ${a.motivo} + ')'">2 un.</span></li>
+            </ul>
+            <a th:href="@{/estoque} + '#entrada-estoque'">Registrar entrada de estoque</a>
+        </div>
+        <div id="alerta-sem-custo" th:unless="${alertas.semCusto.isEmpty()}">
+            <h3>Produtos sem custo</h3>
+            <p><span th:text="${alertas.semCusto.size()}">2</span> produto(s) ativo(s) sem custo, então o lucro sai parcial:
+                <span th:text="${#strings.listJoin(alertas.semCusto, ', ')}">Bóton</span>.
+                <a th:href="@{/estoque(semCusto=true)}">Informar o custo</a></p>
+        </div>
+        <div id="alerta-ajustes" th:unless="${alertas.ajustesHoje.isEmpty()}">
+            <h3>Vendas de hoje com ajuste manual</h3>
+            <ul>
+                <li th:each="a : ${alertas.ajustesHoje}">
+                    <span th:text="'#' + ${a.vendaId} + ' às ' + ${#temporals.format(a.dataHora, 'HH:mm')} + ': ' + ${R.reais(a.calculado)} + ' → ' + ${R.reais(a.cobrado)}">#1</span>
+                    <span class="suave" th:text="'(' + ${a.motivo} + ')'"></span></li>
+            </ul>
+        </div>
+        <div id="alerta-fechamento" th:if="${alertas.fechamentoNaoBate}">
+            <h3>Fechamento de hoje não bate</h3>
+            <p>A soma das formas de pagamento (<strong th:text="${R.reais(alertas.formasHoje)}">R$ 0,00</strong>) é diferente
+                do total cobrado (<strong th:text="${R.reais(alertas.totalHoje)}">R$ 0,00</strong>).
+                <a th:href="@{/fechamento}">Conferir o fechamento</a></p>
+        </div>
+    </section>
+
     <div class="atalhos">
         <a class="atalho atalho-destaque" th:href="@{/venda/nova}">
             <span class="atalho-icone"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>

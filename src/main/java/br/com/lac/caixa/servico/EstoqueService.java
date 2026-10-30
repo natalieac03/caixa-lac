@@ -244,4 +244,17 @@ public class EstoqueService {
                     "cancelamento da venda #" + venda.getId());
         }
     }
+
+    /** Limite de estoque baixo do produto (null = sem limite). */
+    @Transactional
+    public Produto definirLimite(Long id, Integer limite) {
+        Produto p = buscar(id);
+        Integer antes = p.getEstoqueMinimo();
+        p.setEstoqueMinimo(limite);
+        Produto salvo = produtos.save(p);
+        if (!java.util.Objects.equals(antes, limite)) {
+            auditoria.registrar("estoque_minimo", "id", id, "antes", antes, "depois", limite);
+        }
+        return salvo;
+    }
 }

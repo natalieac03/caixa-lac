@@ -1092,3 +1092,9 @@ table.ordenavel th[aria-sort="descending"] button::after { content: " ▼"; }
     .tabela-area { overflow: visible; }
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* Cartão "Atenção" da tela inicial */
+.cartao-atencao { border-left: 6px solid var(--laranja); margin-bottom: 20px; }
+.cartao-atencao h2 { margin-top: 0; }
+.cartao-atencao h3 { font-size: 16px; margin: 12px 0 4px; }
+.cartao-atencao ul { margin: 0 0 4px; padding-left: 20px; }

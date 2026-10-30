@@ -94,6 +94,7 @@
                         <td class="num">R$ <span th:text="${#numbers.formatDecimal(p.preco,1,2,'COMMA')}">0,00</span></td>
                         <td class="num">
                             <span th:if="${p.semCusto}" class="selo selo-sem-custo">sem custo</span>
+                            <span th:if="${p.abaixoDoLimite}" class="selo selo-sem-custo" th:title="'Limite: ' + ${p.estoqueMinimo}">estoque baixo</span>
                             <span th:unless="${p.semCusto}" th:title="'Custo médio: ' + ${p.custoUnitario}"
                                   th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(p.custoUnitario)}">R$ 2,00</span>
                         </td>
@@ -151,6 +152,11 @@
                                         <label class="check-inline">
                                             <input type="checkbox" name="removerCusto" value="true"> sem custo
                                         </label>
+                                    </div>
+                                    <div class="campo">
+                                        <label th:for="'minimo_' + ${p.id}">Avisar com estoque até (opcional)</label>
+                                        <input type="number" min="0" th:id="'minimo_' + ${p.id}" name="estoqueMinimo" class="mono"
+                                               th:value="${p.estoqueMinimo}" placeholder="pela média">
                                     </div>
                                     <div class="campo">
                                         <label th:for="'categoria_' + ${p.id}">Categoria</label>
@@ -260,6 +266,10 @@
                 <div class="campo">
                     <label for="custo">Custo unitário (R$, opcional)</label>
                     <input type="text" id="custo" name="custo" placeholder="sem custo" inputmode="decimal" class="mono">
+                </div>
+                <div class="campo">
+                    <label for="estoqueMinimo">Avisar com estoque até (opcional)</label>
+                    <input type="number" id="estoqueMinimo" name="estoqueMinimo" min="0" placeholder="pela média" class="mono">
                 </div>
             </div>
             <div class="linha-campos" style="margin-top:14px;">

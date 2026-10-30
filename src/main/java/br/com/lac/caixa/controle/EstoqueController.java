@@ -58,10 +58,13 @@ public class EstoqueController {
             @RequestParam(required = false) Long categoriaId,
             @RequestParam(required = false) String novaCategoria,
             @RequestParam(required = false) String custo,
+            @RequestParam(required = false) String estoqueMinimo,
             RedirectAttributes flash) {
         BigDecimal valor = Dinheiro.parse(preco);
         Categoria categoria = categoriaEscolhida(categoriaId, novaCategoria);
-        estoque.criarNovo(nome, valor, quantidade, categoria, Dinheiro.parse(custo));
+        var criado = estoque.criarNovo(nome, valor, quantidade, categoria, Dinheiro.parse(custo));
+        if (estoqueMinimo != null && !estoqueMinimo.isBlank())
+            estoque.definirLimite(criado.getId(), limite(estoqueMinimo));
         flash.addFlashAttribute(
                 "sucesso", "Produto \"" + nome + "\" cadastrado na categoria " + categoria.getNome() + ".");
         return "redirect:/estoque";
@@ -77,6 +80,7 @@ public class EstoqueController {
             @RequestParam(required = false) String novaCategoria,
             @RequestParam(required = false) String custo,
             @RequestParam(defaultValue = "false") boolean removerCusto,
+            @RequestParam(required = false) String estoqueMinimo,
             RedirectAttributes flash) {
         BigDecimal valor = Dinheiro.parse(preco);
         if (valor == null) throw new RegraDeNegocioException("Informe o preço.");
@@ -87,6 +91,8 @@ public class EstoqueController {
                 ? null
                 : custo == null || custo.isBlank() ? estoque.buscar(id).getCustoUnitario() : Dinheiro.parse(custo);
         var p = estoque.editar(id, nome, valor, categoria, novoCusto);
+        // Campo ausente = mantém; presente e vazio = sem limite.
+        if (estoqueMinimo != null) estoque.definirLimite(id, estoqueMinimo.isBlank() ? null : limite(estoqueMinimo));
         flash.addFlashAttribute(
                 "sucesso", "Produto \"" + p.getNome() + "\" atualizado. O preço novo vale só para vendas novas.");
         return "redirect:/estoque";
@@ -172,5 +178,13 @@ public class EstoqueController {
     public ResponseEntity<Resource> exportar() {
         String csv = ExportadorCSV.doEstoque(estoque.listar());
         return RespostaCsv.arquivo(csv, "estoque.csv");
+    }
+
+    private static Integer limite(String texto) {
+        try {
+            return Integer.valueOf(texto.trim());
+        } catch (NumberFormatException e) {
+            throw new RegraDeNegocioException("Limite de estoque baixo inválido.");
+        }
     }
 }

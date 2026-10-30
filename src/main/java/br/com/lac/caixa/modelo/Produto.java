@@ -49,6 +49,9 @@ public class Produto {
      * Opcional: null = ainda não informado ("sem custo"). Só para as finanças;
      * não muda o preço cobrado.
      */
+    /** Limite de estoque baixo (opcional): o alerta avisa quando a quantidade chega a ele. */
+    private Integer estoqueMinimo;
+
     @Column(precision = 38, scale = 4)
     private BigDecimal custoUnitario;
 
@@ -179,5 +182,21 @@ public class Produto {
 
     public void setAtivo(boolean ativo) {
         this.ativo = ativo;
+    }
+
+    public Integer getEstoqueMinimo() {
+        return estoqueMinimo;
+    }
+
+    /** null = sem limite (o alerta usa a média de vendas do último evento). */
+    public void setEstoqueMinimo(Integer limite) {
+        if (limite != null && limite < 0)
+            throw new RegraDeNegocioException("O limite de estoque baixo não pode ser negativo.");
+        this.estoqueMinimo = limite;
+    }
+
+    /** Com limite: a quantidade chegou a ele (menor ou igual). */
+    public boolean isAbaixoDoLimite() {
+        return estoqueMinimo != null && quantidade <= estoqueMinimo;
     }
 }
