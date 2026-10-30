@@ -90,8 +90,13 @@ public class Venda {
 
     /** Venda nova, com a hora de agora. */
     public static Venda nova() {
+        return nova(LocalDateTime.now());
+    }
+
+    /** Venda nova na data e hora dada (o caixa passa a hora do relógio da aplicação). */
+    public static Venda nova(LocalDateTime quando) {
         Venda v = new Venda();
-        v.dataHora = LocalDateTime.now();
+        v.dataHora = quando;
         return v;
     }
 

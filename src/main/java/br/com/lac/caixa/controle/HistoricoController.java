@@ -3,9 +3,11 @@ package br.com.lac.caixa.controle;
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.repositorio.FiltroHistorico;
+import br.com.lac.caixa.repositorio.PeriodoDoEvento;
 import br.com.lac.caixa.servico.CaixaService;
 import br.com.lac.caixa.servico.CobrancaPixService;
 import br.com.lac.caixa.servico.ConsultaHistorico;
+import br.com.lac.caixa.servico.EventoService;
 import br.com.lac.caixa.util.ExportadorCSV;
 import java.time.DateTimeException;
 import java.time.LocalDate;
@@ -30,11 +32,18 @@ public class HistoricoController {
     private final CaixaService caixa;
     private final ConsultaHistorico consulta;
     private final CobrancaPixService cobrancasPix;
+    private final EventoService eventos;
 
-    public HistoricoController(CaixaService caixa, ConsultaHistorico consulta, CobrancaPixService cobrancasPix) {
+    public HistoricoController(
+            CaixaService caixa, ConsultaHistorico consulta, CobrancaPixService cobrancasPix, EventoService eventos) {
         this.caixa = caixa;
         this.consulta = consulta;
         this.cobrancasPix = cobrancasPix;
+        this.eventos = eventos;
+    }
+
+    private PeriodoDoEvento periodo(Long evento) {
+        return evento == null ? null : eventos.periodo(evento);
     }
 
     @GetMapping("/historico")
@@ -44,9 +53,10 @@ public class HistoricoController {
             @RequestParam(required = false) String inicio,
             @RequestParam(required = false) String fim,
             @RequestParam(required = false) String dia,
+            @RequestParam(required = false) Long evento,
             @RequestParam(defaultValue = "0") int pagina,
             Model model) {
-        var filtro = FiltroHistorico.criar(forma, inicio, fim, dia, produto);
+        var filtro = FiltroHistorico.criar(forma, inicio, fim, dia, produto, periodo(evento));
         var resultado = consulta.consultar(filtro, pagina);
         model.addAttribute("vendas", resultado.pagina().getContent());
         model.addAttribute("pixSemVenda", cobrancasPix.pixSemVenda());
@@ -57,6 +67,11 @@ public class HistoricoController {
         model.addAttribute("produto", filtro.produto());
         model.addAttribute("inicio", filtro.inicio());
         model.addAttribute("fim", filtro.fim());
+        model.addAttribute("evento", evento);
+        var todos = eventos.listar();
+        model.addAttribute("eventos", todos);
+        // Evento de cada venda, calculado pela data e hora (não há vínculo gravado).
+        model.addAttribute("eventoDaVenda", new EventosDaVenda(todos));
         return "historico";
     }
 
@@ -66,8 +81,9 @@ public class HistoricoController {
             @RequestParam(required = false) String produto,
             @RequestParam(required = false) String inicio,
             @RequestParam(required = false) String fim,
-            @RequestParam(required = false) String dia) {
-        var vendas = consulta.exportar(FiltroHistorico.criar(forma, inicio, fim, dia, produto));
+            @RequestParam(required = false) String dia,
+            @RequestParam(required = false) Long evento) {
+        var vendas = consulta.exportar(FiltroHistorico.criar(forma, inicio, fim, dia, produto, periodo(evento)));
         return RespostaCsv.arquivo(ExportadorCSV.doHistorico(vendas), "historico.csv");
     }
 
@@ -80,6 +96,7 @@ public class HistoricoController {
             @RequestParam(required = false) String produto,
             @RequestParam(required = false) String inicio,
             @RequestParam(required = false) String fim,
+            @RequestParam(required = false) Long evento,
             @RequestParam(defaultValue = "0") int pagina,
             RedirectAttributes flash) {
         LocalDateTime nova;
@@ -94,6 +111,7 @@ public class HistoricoController {
         if (produto != null && !produto.isBlank()) flash.addAttribute("produto", produto);
         if (inicio != null && !inicio.isBlank()) flash.addAttribute("inicio", inicio);
         if (fim != null && !fim.isBlank()) flash.addAttribute("fim", fim);
+        if (evento != null) flash.addAttribute("evento", evento);
         flash.addAttribute("pagina", pagina);
         return "redirect:/historico";
     }

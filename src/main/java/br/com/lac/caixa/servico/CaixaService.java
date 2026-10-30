@@ -15,6 +15,7 @@ import br.com.lac.caixa.servico.preco.CalculadoraDePreco;
 import br.com.lac.caixa.servico.preco.Carrinho;
 import br.com.lac.caixa.servico.preco.Orcamento;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -37,17 +38,21 @@ public class CaixaService {
 
     private final CobrancaPixService cobrancasPix;
 
+    private final Clock relogio;
+
     public CaixaService(
             VendaRepository vendas,
             EstoqueService estoque,
             PromocaoService promocoes,
             Auditoria auditoria,
-            CobrancaPixService cobrancasPix) {
+            CobrancaPixService cobrancasPix,
+            Clock relogio) {
         this.vendas = vendas;
         this.estoque = estoque;
         this.promocoes = promocoes;
         this.auditoria = auditoria;
         this.cobrancasPix = cobrancasPix;
+        this.relogio = relogio;
     }
 
     /**
@@ -85,7 +90,7 @@ public class CaixaService {
         // Idempotência: o mesmo formulário (token) enviado de novo devolve a venda que já existe.
         if (existente.isPresent()) return new ResultadoVenda(existente.get(), "Venda já registrada.", true);
 
-        Venda venda = Venda.nova();
+        Venda venda = Venda.nova(LocalDateTime.now(relogio));
         venda.setToken(token);
         List<Promocao> ativas = promocoes.listarAtivas();
 
@@ -219,7 +224,7 @@ public class CaixaService {
         Venda venda = vendas.buscarParaCancelar(id)
                 .orElseThrow(() -> new RegraDeNegocioException("Venda não encontrada: " + id));
         if (venda.isCancelada()) return;
-        venda.cancelar(motivo, LocalDateTime.now());
+        venda.cancelar(motivo, LocalDateTime.now(relogio));
         estoque.devolverItensDaVenda(venda);
         vendas.save(venda);
         auditoria.registrar(

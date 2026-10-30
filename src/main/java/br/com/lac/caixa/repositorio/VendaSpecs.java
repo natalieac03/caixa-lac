@@ -28,10 +28,10 @@ public final class VendaSpecs {
                 parte.select(p.get("id")).where(cb.equal(p.get("forma"), filtro.forma()));
                 predicados.add(cb.exists(parte));
             }
-            if (filtro.inicio() != null) {
+            if (filtro.inicioConsulta() != null) {
                 predicados.add(cb.greaterThanOrEqualTo(v.get("dataHora"), filtro.inicioConsulta()));
             }
-            if (filtro.fim() != null) {
+            if (filtro.fimConsulta() != null) {
                 predicados.add(cb.lessThan(v.get("dataHora"), filtro.fimConsulta()));
             }
             if (!filtro.produto().isEmpty()) {

@@ -6,11 +6,17 @@
 <main class="conteudo">
     <div th:replace="~{fragments/layout :: avisos}"></div>
     <div class="cabecalho-pagina">
-        <div><h1>Fechamento de caixa</h1><p>Vendas válidas no intervalo, incluindo o primeiro e o último dia.</p></div>
-        <a class="botao botao-secundario" th:href="@{/fechamento/exportar.csv(inicio=${inicio},fim=${fim})}">Exportar CSV</a>
+        <div><h1>Fechamento de caixa</h1><p>Vendas válidas no intervalo, incluindo o primeiro e o último dia. Escolhendo um evento, vale o horário dele.</p></div>
+        <a class="botao botao-secundario" th:href="@{/fechamento/exportar.csv(inicio=${inicio},fim=${fim},evento=${evento})}">Exportar CSV</a>
     </div>
     <div class="cartao">
         <form th:action="@{/fechamento}" method="get" class="linha-campos">
+            <div class="campo" th:unless="${eventos.isEmpty()}"><label for="evento">Evento</label>
+                <select id="evento" name="evento">
+                    <option value="">Nenhum (usar datas)</option>
+                    <option th:each="e : ${eventos}" th:value="${e.id}" th:text="${e.nome}"
+                            th:selected="${evento != null and evento == e.id}">Feira</option>
+                </select></div>
             <div class="campo"><label for="inicio">De</label><input type="date" id="inicio" name="inicio" th:value="${inicio}"></div>
             <div class="campo"><label for="fim">Até</label><input type="date" id="fim" name="fim" th:value="${fim}"></div>
             <div class="campo campo-acao"><button type="submit" class="botao botao-principal">Consultar</button></div>

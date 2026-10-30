@@ -21,7 +21,13 @@ public class FechamentoService {
 
     @Transactional(readOnly = true)
     public Fechamento consultar(LocalDate inicio, LocalDate fim) {
-        var filtro = VendaSpecs.doFiltro(FiltroHistorico.periodo(inicio, fim)).and(VendaSpecs.naoCancelada());
+        return consultar(FiltroHistorico.periodo(inicio, fim));
+    }
+
+    /** Pelo período do filtro (datas ou evento); só o período conta. */
+    @Transactional(readOnly = true)
+    public Fechamento consultar(FiltroHistorico periodo) {
+        var filtro = VendaSpecs.doFiltro(periodo).and(VendaSpecs.naoCancelada());
         var porForma = vendas.resumoPorForma(filtro);
         var linhas = new ArrayList<Fechamento.Linha>();
         BigDecimal totalFormas = BigDecimal.ZERO;

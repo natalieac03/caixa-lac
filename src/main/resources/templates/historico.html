@@ -40,7 +40,7 @@
             <p>Clique no dia ou na hora de uma venda para corrigir.</p>
         </div>
         <a class="botao botao-secundario botao-pequeno"
-           th:href="@{/historico/exportar.csv(forma=${forma}, produto=${produto}, inicio=${inicio}, fim=${fim})}">
+           th:href="@{/historico/exportar.csv(forma=${forma}, produto=${produto}, inicio=${inicio}, fim=${fim}, evento=${evento})}">
             <svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
             Exportar CSV
         </a>
@@ -61,6 +61,14 @@
                     <label for="produto">Produto contém</label>
                     <input type="text" id="produto" name="produto" th:value="${produto}" placeholder="Ex.: capivara">
                 </div>
+                <div class="campo" th:unless="${eventos.isEmpty()}">
+                    <label for="evento">Evento</label>
+                    <select id="evento" name="evento">
+                        <option value="">Nenhum (usar datas)</option>
+                        <option th:each="e : ${eventos}" th:value="${e.id}" th:text="${e.nome}"
+                                th:selected="${evento != null and evento == e.id}">Feira</option>
+                    </select>
+                </div>
                 <div class="campo">
                     <label for="inicio">De</label>
                     <input type="date" id="inicio" name="inicio" th:value="${inicio}">
@@ -72,7 +80,7 @@
                 <div class="campo campo-acao">
                     <button type="submit" class="botao botao-principal">Filtrar</button>
                 </div>
-                <div class="campo campo-acao" th:if="${forma != null or !#strings.isEmpty(produto) or inicio != null or fim != null}">
+                <div class="campo campo-acao" th:if="${forma != null or !#strings.isEmpty(produto) or inicio != null or fim != null or evento != null}">
                     <a class="botao botao-fantasma" th:href="@{/historico}">Limpar filtros</a>
                 </div>
             </div>
@@ -132,6 +140,10 @@
                             <button type="button" class="editavel" title="Editar dia e hora"
                                     onclick="abrirEdicaoData(this, 'date')"
                                     th:text="${#temporals.format(v.dataHora, 'dd/MM/yyyy')}">26/06/2026</button>
+                            <th:block th:with="nomeEvento=${eventoDaVenda.nome(v.dataHora)}">
+                                <span class="evento-da-venda" th:unless="${#strings.isEmpty(nomeEvento)}"
+                                      th:text="${nomeEvento}">Feira</span>
+                            </th:block>
                         </span>
                         <span class="edicao oculto">
                             <input type="date" name="data" required aria-label="Novo dia"
@@ -154,6 +166,7 @@
                                 <input type="hidden" name="produto" th:value="${produto}">
                                 <input type="hidden" name="inicio" th:value="${inicio}">
                                 <input type="hidden" name="fim" th:value="${fim}">
+                                <input type="hidden" name="evento" th:value="${evento}">
                                 <input type="hidden" name="pagina" th:value="${pagina.number}">
                                 <button type="submit" class="botao botao-principal botao-pequeno">Salvar</button>
                                 <button type="button" class="botao botao-secundario botao-pequeno"

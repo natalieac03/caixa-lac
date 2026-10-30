@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Eventos')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: nav('eventos')}"></nav>
+<main class="conteudo">
+    <div th:replace="~{fragments/layout :: avisos}"></div>
+    <div class="cabecalho-pagina">
+        <div>
+            <h1>Eventos</h1>
+            <p>Feiras e encontros. Uma venda é do evento quando a data e a hora dela estão dentro do horário do evento.</p>
+        </div>
+    </div>
+
+    <div class="cartao tabela-area">
+        <div class="vazio" th:if="${eventos.isEmpty()}">Nenhum evento cadastrado.</div>
+        <table class="dados" th:unless="${eventos.isEmpty()}">
+            <thead><tr><th>Evento</th><th>Início</th><th>Fim</th><th>Observação</th><th></th></tr></thead>
+            <tbody>
+            <tr th:each="e : ${eventos}">
+                <td th:text="${e.nome}">Feira</td>
+                <td th:text="${#temporals.format(e.inicio, 'dd/MM/yyyy HH:mm')}">01/06/2024 10:00</td>
+                <td th:text="${#temporals.format(e.fim, 'dd/MM/yyyy HH:mm')}">01/06/2024 18:00</td>
+                <td th:text="${e.observacao}"></td>
+                <td class="acoes-linha">
+                    <a class="botao botao-secundario botao-pequeno" th:href="@{/eventos(editar=${e.id})} + '#evento-form'">Editar</a>
+                    <a class="botao botao-fantasma botao-pequeno" th:href="@{/historico(evento=${e.id})}">Vendas</a>
+                    <a class="botao botao-fantasma botao-pequeno" th:href="@{/fechamento(evento=${e.id})}">Fechamento</a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="cartao cartao-lac" id="evento-form">
+        <h2 th:text="${editando == null} ? 'Novo evento' : 'Editar evento'">Novo evento</h2>
+        <div class="corpo">
+        <form method="post" th:action="${editando == null} ? @{/eventos} : @{'/eventos/' + ${editando.id} + '/editar'}">
+            <div class="linha-campos">
+                <div class="campo" style="flex:2;">
+                    <label for="eventoNome">Nome</label>
+                    <input type="text" id="eventoNome" name="nome" required maxlength="120"
+                           th:value="${editando?.nome}" placeholder="Ex.: Feira de junho">
+                </div>
+                <div class="campo">
+                    <label for="eventoInicio">Início</label>
+                    <input type="datetime-local" id="eventoInicio" name="inicio" required
+                           th:value="${editando == null} ? '' : ${#temporals.format(editando.inicio, 'yyyy-MM-dd''T''HH:mm')}">
+                </div>
+                <div class="campo">
+                    <label for="eventoFim">Fim</label>
+                    <input type="datetime-local" id="eventoFim" name="fim" required
+                           th:value="${editando == null} ? '' : ${#temporals.format(editando.fim, 'yyyy-MM-dd''T''HH:mm')}">
+                </div>
+            </div>
+            <div class="linha-campos" style="margin-top:14px;">
+                <div class="campo" style="flex:2;">
+                    <label for="eventoObservacao">Observação</label>
+                    <input type="text" id="eventoObservacao" name="observacao" maxlength="255" th:value="${editando?.observacao}">
+                </div>
+            </div>
+            <p class="ajuda">O início entra no evento e o fim não: num evento até 18:00, uma venda às 18:00 já fica de fora.
+                Eventos não podem se sobrepor, mas um pode começar na hora em que o outro termina.</p>
+            <div style="margin-top:16px;">
+                <button type="submit" class="botao botao-principal" th:text="${editando == null} ? 'Criar evento' : 'Salvar evento'">Criar evento</button>
+                <a th:if="${editando != null}" class="botao botao-fantasma" th:href="@{/eventos}">Cancelar</a>
+            </div>
+        </form>
+        </div>
+    </div>
+</main>
+</body>
+</html>

@@ -1006,3 +1006,6 @@ tr.linha-edicao.oculto { display: none; }
 .selo-sem-custo { background: var(--coral-fundo); color: var(--coral-texto); }
 .selo-retroativo { background: var(--coral-fundo); color: var(--coral-texto); margin-left: 4px; }
 .check-inline { display: flex; align-items: center; gap: 6px; font-weight: 400; margin-top: 4px; }
+
+/* Eventos: nome do evento sob a data da venda no histórico. */
+.evento-da-venda { display: block; font-size: .8rem; color: var(--tinta-suave); }
