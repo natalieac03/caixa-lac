@@ -4,6 +4,7 @@ import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.servico.*;
 import br.com.lac.caixa.util.ExportadorCSV;
 import org.springframework.core.io.Resource;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -69,7 +70,7 @@ public class HistoricoController {
         flash.addFlashAttribute("sucesso", "Venda #" + id + " cancelada. Estoque devolvido.");
         return "redirect:/historico";
     }
-    @ExceptionHandler(org.springframework.orm.ObjectOptimisticLockingFailureException.class)
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
     public String conflito(RedirectAttributes flash) {
         flash.addFlashAttribute("erro", "Os dados mudaram durante a operação. Confira o histórico e tente novamente.");
         return "redirect:/historico";

@@ -2,6 +2,7 @@ package br.com.lac.caixa.util;
 
 import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.modelo.Venda;
+import br.com.lac.caixa.servico.Fechamento;
 
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -9,11 +10,12 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
- * Gera o conteudo dos arquivos .csv do estoque e do historico.
+ * Gera o conteudo dos arquivos .csv do estoque, do historico e do fechamento.
  * Usa ';' como separador (o Excel em pt-br abre direto) e escapa aspas.
  */
 public final class ExportadorCSV {
@@ -52,7 +54,7 @@ public final class ExportadorCSV {
         return sb.toString();
     }
 
-    public static String doFechamento(br.com.lac.caixa.servico.Fechamento fechamento, java.time.LocalDate inicio, java.time.LocalDate fim) {
+    public static String doFechamento(Fechamento fechamento, LocalDate inicio, LocalDate fim) {
         StringBuilder csv = new StringBuilder("Início;Fim;Forma de pagamento;Quantidade de vendas;Total;Descontos;Ajustes\n");
         String intervalo = campo(inicio == null ? "" : inicio.format(DATA)) + ";" + campo(fim == null ? "" : fim.format(DATA)) + ";";
         for (var linha : fechamento.formas()) {

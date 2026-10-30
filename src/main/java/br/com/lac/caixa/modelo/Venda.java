@@ -1,13 +1,18 @@
 package br.com.lac.caixa.modelo;
 
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.Version;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -26,19 +31,19 @@ public class Venda {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @jakarta.persistence.Column(nullable = false)
+    @Column(nullable = false)
     private LocalDateTime dataHora;
 
-    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.VARCHAR)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
-    @jakarta.persistence.Column(nullable = false)
+    @Column(nullable = false)
     private FormaPagamento formaPagamento;
 
     /** Preenchido apenas quando a forma de pagamento e OUTRO. */
     private String formaPagamentoOutro;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @jakarta.persistence.JoinColumn(name = "venda_id", nullable = false)
+    @JoinColumn(name = "venda_id", nullable = false)
     private List<ItemVenda> itens = new ArrayList<>();
 
     private BigDecimal valorTotal;
@@ -47,11 +52,11 @@ public class Venda {
     private BigDecimal valorCobrado;
     private String motivoAjuste;
 
-    @jakarta.persistence.Column(nullable = false)
+    @Column(nullable = false)
     private boolean cancelada;
     private LocalDateTime dataCancelamento;
     private String motivoCancelamento;
-    @jakarta.persistence.Version
+    @Version
     private long versao;
 
     public boolean isCancelada() { return cancelada; }
@@ -67,7 +72,7 @@ public class Venda {
         cancelada = true; dataCancelamento = quando; motivoCancelamento = motivo.trim();
     }
 
-    @jakarta.persistence.Column(unique = true)
+    @Column(unique = true)
     private String token;
     public String getToken() { return token; }
     public void setToken(String token) { this.token = token; }
