@@ -3,7 +3,7 @@ package br.com.lac.caixa.postgres;
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.servico.ConsultaHistorico;
 import br.com.lac.caixa.servico.FechamentoService;
-import br.com.lac.caixa.servico.FiltroHistorico;
+import br.com.lac.caixa.repositorio.FiltroHistorico;
 import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;

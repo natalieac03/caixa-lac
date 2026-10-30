@@ -3,7 +3,7 @@ package br.com.lac.caixa.repositorio;
 import br.com.lac.caixa.modelo.ItemVenda;
 import br.com.lac.caixa.modelo.PagamentoVenda;
 import br.com.lac.caixa.modelo.Venda;
-import br.com.lac.caixa.servico.FiltroHistorico;
+import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
@@ -37,12 +37,13 @@ public final class VendaSpecs {
                 predicados.add(cb.lessThan(v.get("dataHora"), filtro.fimConsulta()));
             }
             if (!filtro.produto().isEmpty()) {
-                // Trecho literal do nome (sem curingas de LIKE), em qualquer item da venda.
+                // Trecho literal do nome (sem curingas de LIKE), sem acento, em qualquer item da venda.
                 Subquery<Long> item = consulta.subquery(Long.class);
                 Root<Venda> mesma = item.correlate(v);
                 Join<Venda, ItemVenda> i = mesma.join("itens");
-                item.select(i.get("id")).where(
-                        cb.greaterThan(cb.locate(cb.lower(i.get("produto").get("nome")), filtro.produto()), 0));
+                Expression<String> nome = cb.lower(cb.function("translate", String.class, i.get("produto").get("nome"),
+                        cb.literal(FiltroHistorico.COM_ACENTO), cb.literal(FiltroHistorico.SEM_ACENTO)));
+                item.select(i.get("id")).where(cb.greaterThan(cb.locate(nome, filtro.produto()), 0));
                 predicados.add(cb.exists(item));
             }
             return cb.and(predicados.toArray(Predicate[]::new));

@@ -10,7 +10,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
-import jakarta.validation.constraints.Positive;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
@@ -44,7 +43,6 @@ public class Promocao {
     private TipoPromocao tipo = TipoPromocao.A_PARTIR_DE;
 
     /** Preço unitário (A_PARTIR_DE) ou total do pacote (PACOTE). */
-    @Positive(message = "Preço deve ser maior que zero.")
     private BigDecimal preco;
 
     private boolean ativo = true;
@@ -96,17 +94,6 @@ public class Promocao {
             min = Math.min(min, disp / pi.getQuantidade());
         }
         return min == Integer.MAX_VALUE ? 0 : min;
-    }
-
-    /** Total de unidades exigidas pelo combo (soma de todas as categorias). */
-    public int getTotalUnidades() {
-        return itens.stream().mapToInt(PromocaoItem::getQuantidade).sum();
-    }
-
-    /** Preço médio por unidade para consulta; não determina a combinação de pacotes. */
-    public double getPrecoPorUnidade() {
-        int total = getTotalUnidades();
-        return total == 0 ? Double.MAX_VALUE : preco.doubleValue() / total;
     }
 
     public Long getId() { return id; }

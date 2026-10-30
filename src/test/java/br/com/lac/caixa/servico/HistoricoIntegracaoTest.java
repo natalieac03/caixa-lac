@@ -1,5 +1,6 @@
 package br.com.lac.caixa.servico;
 
+import br.com.lac.caixa.repositorio.FiltroHistorico;
 import br.com.lac.caixa.modelo.*;
 import br.com.lac.caixa.repositorio.*;
 import org.junit.jupiter.api.Test;
@@ -48,5 +49,14 @@ class HistoricoIntegracaoTest {
         assertEquals(1,r.resumo().getVendas()); assertEquals(5,r.resumo().getItens());
         assertEquals(0,new BigDecimal("5").compareTo(r.resumo().getTotal()));
         assertEquals(2,r.pagina().getContent().get(0).getItens().size());
+    }
+    @Test void produtoSemDiferenciarAcentoNoH2() {
+        var dia=LocalDate.of(2033,2,2);
+        var p=produtos.save(new Produto("Pão de Açúcar ÉPICO",BigDecimal.ONE,10));
+        venda(p,FormaPagamento.PIX,dia);
+        for (String termo : new String[]{"pao de acucar","PÃO","epico","acuca"}) {
+            assertEquals(1,consulta.consultar(new FiltroHistorico(null,dia,dia,termo),0).resumo().getVendas(),termo);
+        }
+        assertEquals(0,consulta.consultar(new FiltroHistorico(null,dia,dia,"paes"),0).resumo().getVendas());
     }
 }

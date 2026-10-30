@@ -2,7 +2,7 @@ package br.com.lac.caixa.controle;
 
 import br.com.lac.caixa.RelogioDeTeste;
 import br.com.lac.caixa.SenhaDeTeste;
-import br.com.lac.caixa.servico.LimiteLogin;
+import br.com.lac.caixa.config.LimiteLogin;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;

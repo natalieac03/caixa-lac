@@ -58,17 +58,18 @@ public class CaixaController {
                             @RequestParam(required = false) String motivoAjuste,
                             @RequestParam String token,
                             RedirectAttributes flash) {
-        if (caixa.tokenRegistrado(token)) return "redirect:/historico";
         try {
             ResultadoVenda resultado = caixa.registrarVenda(Quantidades.porProduto(params),
                     PagamentosDoFormulario.ler(params), Dinheiro.parse(valorTotal), motivoAjuste, token);
-            flash.addFlashAttribute("sucesso",
-                    "Venda #" + resultado.venda().getId() + " registrada. " + resultado.mensagemPagamento());
+            flash.addFlashAttribute("sucesso", resultado.repetida()
+                    ? "Venda #" + resultado.venda().getId() + " já estava registrada."
+                    : "Venda #" + resultado.venda().getId() + " registrada. " + resultado.mensagemPagamento());
             return "redirect:/historico";
-        } catch (DataIntegrityViolationException | ObjectOptimisticLockingFailureException ex) {
-            // Dois envios simultâneos do mesmo token: o segundo perde, mas a venda existe.
-            if (caixa.tokenRegistrado(token)) return "redirect:/historico";
-            throw ex;
+        } catch (DataIntegrityViolationException ex) {
+            // Corrida: dois envios do mesmo token ao mesmo tempo; o segundo bate no índice único.
+            if (!caixa.tokenRegistrado(token)) throw ex;
+            flash.addFlashAttribute("sucesso", "Venda já registrada.");
+            return "redirect:/historico";
         }
     }
 

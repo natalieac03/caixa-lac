@@ -23,8 +23,6 @@ public interface VendaRepository extends JpaRepository<Venda, Long>, JpaSpecific
 
     boolean existsByToken(String token);
 
-    List<Venda> findAllByOrderByDataHoraDesc();
-
     // A página é cortada no banco sem os itens (findAll(spec, pageable)); os itens
     // da página vêm depois, por id, para não paginar em memória.
     @EntityGraph(attributePaths = {"itens", "itens.produto"})

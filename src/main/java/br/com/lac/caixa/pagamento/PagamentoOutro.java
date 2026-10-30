@@ -10,4 +10,10 @@ public class PagamentoOutro implements Pagamento {
                 ? "outro meio" : parte.getDescricao();
         return Dinheiro.reais(parte.getValor()) + " via " + descricao;
     }
+
+    /** No historico aparece a descricao ("Vale"), nao "Outro". */
+    @Override
+    public String nome(PagamentoVenda parte) {
+        return parte.getDescricao() == null || parte.getDescricao().isBlank() ? parte.getForma().getRotulo() : parte.getDescricao();
+    }
 }

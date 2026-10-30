@@ -1,5 +1,6 @@
 package br.com.lac.caixa.servico;
 
+import br.com.lac.caixa.repositorio.FiltroHistorico;
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.*;
 import br.com.lac.caixa.repositorio.*;

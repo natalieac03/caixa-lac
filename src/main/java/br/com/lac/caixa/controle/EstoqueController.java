@@ -122,6 +122,6 @@ public class EstoqueController {
     @GetMapping("/estoque/exportar.csv")
     public ResponseEntity<Resource> exportar() {
         String csv = ExportadorCSV.doEstoque(estoque.listar());
-        return ExportadorCSV.arquivoCsv(csv, "estoque.csv");
+        return RespostaCsv.arquivo(csv, "estoque.csv");
     }
 }

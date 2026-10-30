@@ -6,19 +6,14 @@ import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.modelo.Venda;
 import br.com.lac.caixa.servico.Fechamento;
 
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Gera o conteudo dos arquivos .csv do estoque, do historico e do fechamento.
+ * Gera o TEXTO dos arquivos .csv do estoque, do historico e do fechamento
+ * (a resposta HTTP com o arquivo fica em controle.RespostaCsv).
  * Usa ';' como separador (o Excel em pt-br abre direto) e escapa aspas.
  */
 public final class ExportadorCSV {
@@ -92,18 +87,5 @@ public final class ExportadorCSV {
         }
         String escapado = valor.replace("\"", "\"\"");
         return "\"" + escapado + "\"";
-    }
-    public static ResponseEntity<Resource> arquivoCsv(String csv, String nomeArquivo) {
-        // BOM UTF-8 para o Excel exibir os acentos corretamente.
-        byte[] bom = new byte[]{(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
-        byte[] corpo = csv.getBytes(StandardCharsets.UTF_8);
-        byte[] conteudo = new byte[bom.length + corpo.length];
-        System.arraycopy(bom, 0, conteudo, 0, bom.length);
-        System.arraycopy(corpo, 0, conteudo, bom.length, corpo.length);
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nomeArquivo + "\"")
-                .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
-                .body(new ByteArrayResource(conteudo));
     }
 }

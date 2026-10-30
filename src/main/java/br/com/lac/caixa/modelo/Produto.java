@@ -9,8 +9,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Version;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.PositiveOrZero;
 import java.math.BigDecimal;
 
 /**
@@ -27,10 +25,8 @@ public class Produto {
     @Column(nullable = false)
     private String nome;
 
-    @Positive(message = "Preço deve ser maior que zero.")
     private BigDecimal preco;
 
-    @PositiveOrZero(message = "Quantidade não pode ser negativa.")
     private int quantidade;
 
     /** Controle otimista: duas baixas simultâneas do mesmo produto não passam juntas. */
@@ -129,9 +125,5 @@ public class Produto {
 
     public void setAtivo(boolean ativo) {
         this.ativo = ativo;
-    }
-
-    public boolean temEstoquePara(int qtd) {
-        return this.quantidade >= qtd;
     }
 }

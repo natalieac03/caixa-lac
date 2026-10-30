@@ -7,11 +7,17 @@ import br.com.lac.caixa.repositorio.ProdutoRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * Produtos de exemplo na primeira execução, só no perfil local (desenvolvimento).
+ * Em produção um banco vazio continua vazio: a LAC cadastra o próprio estoque.
+ */
 @Configuration
+@Profile("local")
 public class DadosIniciais {
 
     @Bean

@@ -1,4 +1,4 @@
-package br.com.lac.caixa.servico;
+package br.com.lac.caixa.config;
 
 import org.springframework.stereotype.Component;
 

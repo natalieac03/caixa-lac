@@ -1,5 +1,5 @@
 package br.com.lac.caixa.controle;
-import br.com.lac.caixa.servico.LimiteLogin;
+import br.com.lac.caixa.config.LimiteLogin;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import static org.junit.jupiter.api.Assertions.*;

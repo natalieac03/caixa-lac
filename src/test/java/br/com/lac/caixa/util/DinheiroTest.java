@@ -32,8 +32,5 @@ class DinheiroTest {
         assertTrue(ExportadorCSV.doEstoque(List.of(p)).contains("\"Produto \"\"especial\"\"\";\"\";12,50;2"));
         var v=Venda.nova(); v.setValorTotal(new BigDecimal("12.50")); v.registrarPagamentos(List.of(new PagamentoVenda(FormaPagamento.PIX,new BigDecimal("12.50"),null,null)));
         assertTrue(ExportadorCSV.doHistorico(List.of(v)).contains(";12,50;12,50;0,00;0,00;0,00;0,00;\"\"\n"));
-        var resposta=ExportadorCSV.arquivoCsv("Teste","estoque.csv");
-        assertEquals("attachment; filename=\"estoque.csv\"",resposta.getHeaders().getFirst("Content-Disposition"));
-        assertNotNull(resposta.getBody());
     }
 }

@@ -94,6 +94,10 @@ class PostgresLegadoTest {
             ",,,CAPIVARA,                          1, 4, 23",
             ",,,logo,                              1, 1, 5",
             ",,,bóton,                             2, 5, 28",
+            // sem diferenciar acento: o banco tira os acentos do nome e o filtro, do termo
+            ",,,boton,                             2, 5, 28",
+            ",,,BOTON LOGO,                        1, 1, 5",
+            ",,,adesivo capivára,                  1, 4, 23",
             ",,,%,                                 0, 0, 0",
             // todos juntos
             "PIX,2024-05-10,2024-05-10,capivara,   1, 4, 23",

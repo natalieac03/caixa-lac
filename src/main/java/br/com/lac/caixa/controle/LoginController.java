@@ -1,7 +1,7 @@
 package br.com.lac.caixa.controle;
 
 import br.com.lac.caixa.config.SenhaDeAcesso;
-import br.com.lac.caixa.servico.LimiteLogin;
+import br.com.lac.caixa.config.LimiteLogin;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;

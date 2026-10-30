@@ -37,9 +37,6 @@ public class CaixaService {
         this.promocoes = promocoes;
     }
 
-    public List<Venda> historico() {
-        return vendas.findAllByOrderByDataHoraDesc();
-    }
 
     /**
      * Corrige o dia e a hora de uma venda já registrada (ex.: venda anotada
@@ -68,7 +65,8 @@ public class CaixaService {
                                          BigDecimal totalManual, String motivoAjuste, String token) {
         if (token == null || !UUID.fromString(token).toString().equals(token)) throw new RegraDeNegocioException("Token de venda inválido.");
         var existente = vendas.findByToken(token);
-        if (existente.isPresent()) return new ResultadoVenda(existente.get(), "Venda já registrada.");
+        // Idempotência: o mesmo formulário (token) enviado de novo devolve a venda que já existe.
+        if (existente.isPresent()) return new ResultadoVenda(existente.get(), "Venda já registrada.", true);
 
 
         Venda venda = Venda.nova();
@@ -111,7 +109,7 @@ public class CaixaService {
         }
 
         Venda salva = vendas.save(venda);
-        return new ResultadoVenda(salva, PagamentoFactory.mensagem(salva.getPagamentos()));
+        return new ResultadoVenda(salva, PagamentoFactory.mensagem(salva.getPagamentos()), false);
     }
 
     /**

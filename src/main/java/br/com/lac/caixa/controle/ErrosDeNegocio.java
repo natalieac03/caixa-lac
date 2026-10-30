@@ -2,8 +2,6 @@ package br.com.lac.caixa.controle;
 
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSourceResolvable;
@@ -49,16 +47,6 @@ public class ErrosDeNegocio {
                                     RedirectAttributes flash) {
         String mensagem = ex.getAllErrors().stream()
                 .map(MessageSourceResolvable::getDefaultMessage)
-                .collect(Collectors.joining(" "));
-        return responder(mensagem, HttpStatus.BAD_REQUEST, request, flash);
-    }
-
-    /** Restrições das entidades, conferidas pelo Hibernate antes de gravar. */
-    @ExceptionHandler(ConstraintViolationException.class)
-    public Object entidadeInvalida(ConstraintViolationException ex, HttpServletRequest request,
-                                   RedirectAttributes flash) {
-        String mensagem = ex.getConstraintViolations().stream()
-                .map(ConstraintViolation::getMessage)
                 .collect(Collectors.joining(" "));
         return responder(mensagem, HttpStatus.BAD_REQUEST, request, flash);
     }

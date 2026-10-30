@@ -1,5 +1,6 @@
 package br.com.lac.caixa.controle;
 
+import br.com.lac.caixa.repositorio.FiltroHistorico;
 import br.com.lac.caixa.servico.*;
 import br.com.lac.caixa.util.ExportadorCSV;
 import org.springframework.core.io.Resource;
@@ -31,6 +32,6 @@ public class FechamentoController {
     public ResponseEntity<Resource> exportar(@RequestParam(required=false) String inicio, @RequestParam(required=false) String fim) {
         var filtro = intervalo(inicio, fim);
         var resultado = fechamento.consultar(filtro.inicio(), filtro.fim());
-        return ExportadorCSV.arquivoCsv(ExportadorCSV.doFechamento(resultado, filtro.inicio(), filtro.fim()), "fechamento.csv");
+        return RespostaCsv.arquivo(ExportadorCSV.doFechamento(resultado, filtro.inicio(), filtro.fim()), "fechamento.csv");
     }
 }

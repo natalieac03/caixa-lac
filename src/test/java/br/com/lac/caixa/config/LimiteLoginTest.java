@@ -1,7 +1,7 @@
-package br.com.lac.caixa.servico;
+package br.com.lac.caixa.config;
 
 import br.com.lac.caixa.RelogioDeTeste;
-import br.com.lac.caixa.servico.LimiteLogin.Situacao;
+import br.com.lac.caixa.config.LimiteLogin.Situacao;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 

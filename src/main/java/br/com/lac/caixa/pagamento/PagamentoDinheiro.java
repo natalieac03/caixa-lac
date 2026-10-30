@@ -7,7 +7,6 @@ import br.com.lac.caixa.util.Dinheiro;
 public class PagamentoDinheiro implements Pagamento {
     @Override
     public String descrever(PagamentoVenda parte) {
-        String texto = Dinheiro.reais(parte.getValor()) + " em dinheiro";
-        return parte.getTroco() == null ? texto : texto + " (troco " + Dinheiro.reais(parte.getTroco()) + ")";
+        return Dinheiro.reais(parte.getValor()) + " em dinheiro" + Pagamento.troco(parte);
     }
 }

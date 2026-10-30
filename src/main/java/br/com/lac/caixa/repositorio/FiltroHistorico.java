@@ -1,4 +1,4 @@
-package br.com.lac.caixa.servico;
+package br.com.lac.caixa.repositorio;
 
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.FormaPagamento;
@@ -10,7 +10,8 @@ import java.util.Locale;
 
 /**
  * Filtro do histórico, do CSV e do fechamento. Campo vazio = sem filtro:
- * VendaSpecs só adiciona o predicado dos campos preenchidos.
+ * VendaSpecs só adiciona o predicado dos campos preenchidos. O produto é
+ * buscado sem diferenciar maiúsculas nem acentos ("boton" acha "Bóton").
  * Datas da tela são inclusivas; a consulta usa limite final exclusivo.
  */
 public record FiltroHistorico(FormaPagamento forma, LocalDate inicio, LocalDate fim, String produto) {
@@ -18,7 +19,25 @@ public record FiltroHistorico(FormaPagamento forma, LocalDate inicio, LocalDate 
     public FiltroHistorico {
         if (inicio != null && fim != null && inicio.isAfter(fim))
             throw new RegraDeNegocioException("A data inicial deve ser anterior ou igual à final.");
-        produto = produto == null ? "" : produto.trim().toLowerCase(Locale.ROOT);
+        produto = semAcento(produto == null ? "" : produto.trim());
+    }
+
+    /**
+     * Letras acentuadas e suas versões sem acento, na mesma posição. O banco faz
+     * lower(translate(nome, COM_ACENTO, SEM_ACENTO)) (H2 e Postgres, sem extensão);
+     * o termo buscado passa pelo mesmo caminho aqui.
+     */
+    public static final String COM_ACENTO = "áàâãäéèêëíìîïóòôõöúùûüçÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ";
+    public static final String SEM_ACENTO = "aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC";
+
+    /** "Bóton" -> "boton". */
+    public static String semAcento(String texto) {
+        StringBuilder sb = new StringBuilder(texto.length());
+        for (char c : texto.toCharArray()) {
+            int i = COM_ACENTO.indexOf(c);
+            sb.append(i >= 0 ? SEM_ACENTO.charAt(i) : c);
+        }
+        return sb.toString().toLowerCase(Locale.ROOT);
     }
 
     /** Só por intervalo de datas (fechamento). */

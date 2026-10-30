@@ -1,6 +1,7 @@
 package br.com.lac.caixa.modelo;
 
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
+import br.com.lac.caixa.pagamento.PagamentoFactory;
 import br.com.lac.caixa.util.Dinheiro;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -9,7 +10,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.validation.constraints.Positive;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -31,7 +31,6 @@ public class PagamentoVenda {
     @Column(nullable = false)
     private FormaPagamento forma;
 
-    @Positive(message = "O valor de cada parte do pagamento deve ser maior que zero.")
     @Column(nullable = false)
     private BigDecimal valor;
 
@@ -74,16 +73,14 @@ public class PagamentoVenda {
         return valorRecebido == null ? null : valorRecebido.subtract(valor);
     }
 
-    /** "Pix", "Dinheiro" ou a descrição do Outro. */
+    /** "Pix", "Dinheiro" ou a descrição do Outro (pela estratégia da forma). */
     public String getNomeForma() {
-        if (forma == FormaPagamento.OUTRO && descricao != null && !descricao.isBlank()) return descricao;
-        return forma.getRotulo();
+        return PagamentoFactory.criar(forma).nome(this);
     }
 
-    /** "Pix R$ 10,00" ou "Dinheiro R$ 8,00 (troco R$ 2,00)". */
+    /** "Pix R$ 10,00" ou "Dinheiro R$ 8,00 (troco R$ 2,00)" (pela estratégia da forma). */
     public String getTexto() {
-        String texto = getNomeForma() + " " + Dinheiro.reais(valor);
-        return getTroco() == null ? texto : texto + " (troco " + Dinheiro.reais(getTroco()) + ")";
+        return PagamentoFactory.criar(forma).resumir(this);
     }
 
     public Long getId() { return id; }

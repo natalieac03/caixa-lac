@@ -1,5 +1,6 @@
 package br.com.lac.caixa.controle;
 
+import br.com.lac.caixa.repositorio.FiltroHistorico;
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.servico.*;
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
@@ -45,7 +46,7 @@ public class HistoricoController {
             @RequestParam(required=false) String produto, @RequestParam(required=false) String inicio,
             @RequestParam(required=false) String fim, @RequestParam(required=false) String dia) {
         var vendas = consulta.exportar(FiltroHistorico.criar(forma, inicio, fim, dia, produto));
-        return ExportadorCSV.arquivoCsv(ExportadorCSV.doHistorico(vendas), "historico.csv");
+        return RespostaCsv.arquivo(ExportadorCSV.doHistorico(vendas), "historico.csv");
     }
 
     @PostMapping("/historico/{id}/data")

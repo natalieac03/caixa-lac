@@ -329,8 +329,6 @@ p { margin: 0 0 0.6em; }
     margin-bottom: 12px;
 }
 .cartao-cabecalho h2 { margin: 0; }
-.cartao-sem-padding { padding: 0; overflow: hidden; }
-.cartao-sem-padding .cartao-cabecalho { padding: 18px 24px 0; }
 
 /* Card destacado ("Produto novo", "Nova promoção") */
 .cartao-lac {
@@ -411,8 +409,6 @@ p { margin: 0 0 0.6em; }
     border-color: var(--linha-forte);
 }
 .botao-secundario:hover { background: var(--roxo-fundo); }
-.botao-destaque { background: var(--laranja); color: var(--on-destaque); }
-.botao-destaque:hover { filter: brightness(0.95); }
 .botao-fantasma { background: transparent; color: var(--tinta-suave); }
 .botao-fantasma:hover { background: var(--roxo-fundo); color: var(--roxo-forte); }
 .botao-perigo {
@@ -479,7 +475,6 @@ input[type=checkbox], input[type=radio] { accent-color: var(--roxo); width: 18px
     pointer-events: none;
 }
 .busca input { padding-left: 38px; }
-.busca-produtos { max-width: 380px; margin-bottom: 16px; }
 
 /* Seletor de quantidade: − [ n ] + */
 .passo {
@@ -617,7 +612,6 @@ table.dados th.num, table.dados td.num { text-align: right; }
 .aviso .icone { width: 20px; height: 20px; margin-top: 2px; }
 .aviso-sucesso { background: var(--verde-fundo); color: var(--verde-texto); }
 .aviso-erro { background: var(--coral-fundo); color: var(--coral-texto); }
-.aviso-info { background: var(--ceu-fundo); color: var(--ceu-texto); }
 
 .vazio {
     text-align: center;
@@ -759,17 +753,6 @@ table.dados th.num, table.dados td.num { text-align: right; }
 .item-carrinho:last-child { border-bottom: none; }
 .item-carrinho .nome { font-weight: 700; }
 .item-carrinho .meta { display: block; font-size: 13px; color: var(--tinta-suave); font-family: var(--font-mono); }
-.tag-promo {
-    background: var(--verde-fundo);
-    color: var(--verde-texto);
-    font-size: 11px;
-    font-weight: 700;
-    padding: 1px 8px;
-    border-radius: var(--raio-pill);
-    margin-left: 4px;
-    vertical-align: middle;
-    font-family: var(--font-texto);
-}
 .total-carrinho {
     display: flex;
     justify-content: space-between;
@@ -786,7 +769,6 @@ table.dados th.num, table.dados td.num { text-align: right; }
     font-weight: 600;
     color: var(--roxo-forte);
 }
-.linha-desconto { color: var(--verde-texto); font-weight: 700; }
 .contagem-itens { font-size: 13px; color: var(--tinta-suave); font-weight: 600; }
 
 .acoes { display: flex; gap: 12px; flex-wrap: wrap; }
@@ -951,8 +933,6 @@ table.dados th.num, table.dados td.num { text-align: right; }
     .cartao { padding: 16px 14px; }
     .cartao-lac .corpo { padding: 16px 14px; }
     .cartao-lac h2 { padding: 13px 14px; }
-    .cartao-sem-padding { padding: 0; }
-    .cartao-sem-padding .cartao-cabecalho { padding: 14px 14px 0; }
 
     .linha-campos .campo { min-width: 100%; }
     .linha-campos .campo-acao { min-width: 0; flex: 1; }
@@ -961,7 +941,7 @@ table.dados th.num, table.dados td.num { text-align: right; }
     table.dados { font-size: 14px; }
     table.dados th, table.dados td { padding: 9px 8px; }
 
-    .busca, .busca-produtos { max-width: 100%; }
+    .busca { max-width: 100%; }
     .midia, .palco-caixa .midia { width: 200px; }
     .emoji-fallback { font-size: 92px; }
     .botao-mais { width: 80px; height: 80px; }
