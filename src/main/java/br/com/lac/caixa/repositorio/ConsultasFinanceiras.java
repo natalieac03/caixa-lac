@@ -1,5 +1,6 @@
 package br.com.lac.caixa.repositorio;
 
+import br.com.lac.caixa.modelo.FormaPagamento;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -171,5 +172,117 @@ public class ConsultasFinanceiras {
                         dec(r, "liquido"),
                         dec(r, "cmv"),
                         r.getLong("vendas")));
+    }
+
+    // ---------------------------------------------------------------- rankings
+
+    /** Por produto: unidades, receita líquida, CMV e unidades sem custo. */
+    public record SomaProduto(
+            Long produtoId,
+            String nome,
+            boolean ativo,
+            Long categoriaId,
+            String categoria,
+            long unidades,
+            BigDecimal liquido,
+            BigDecimal cmv,
+            long unidadesSemCusto) {}
+
+    public List<SomaProduto> porProduto(FiltroFinancas f) {
+        Onde o = onde(f);
+        return jdbc.query(
+                "SELECT p.id, p.nome, p.ativo, p.categoria_id, c.nome AS categoria,"
+                        + " SUM(i.quantidade) AS unidades, COALESCE(SUM(i.valor_liquido), 0) AS liquido,"
+                        + " COALESCE(SUM(CASE WHEN i.custo_unitario IS NOT NULL THEN i.custo_unitario * i.quantidade END), 0) AS cmv,"
+                        + " COALESCE(SUM(CASE WHEN i.custo_unitario IS NULL THEN i.quantidade ELSE 0 END), 0) AS sem_custo"
+                        + " FROM item_venda i JOIN venda v ON v.id = i.venda_id JOIN produto p ON p.id = i.produto_id"
+                        + " LEFT JOIN categoria c ON c.id = p.categoria_id"
+                        + " WHERE " + o.vendas() + o.itens()
+                        + " GROUP BY p.id, p.nome, p.ativo, p.categoria_id, c.nome",
+                o.parametros(),
+                (r, n) -> new SomaProduto(
+                        r.getLong("id"),
+                        r.getString("nome"),
+                        r.getBoolean("ativo"),
+                        idOuNull(r, "categoria_id"),
+                        r.getString("categoria"),
+                        r.getLong("unidades"),
+                        dec(r, "liquido"),
+                        dec(r, "cmv"),
+                        r.getLong("sem_custo")));
+    }
+
+    /** Por categoria de produto (categoria null = sem categoria). */
+    public record SomaCategoria(
+            Long categoriaId,
+            String categoria,
+            long unidades,
+            BigDecimal liquido,
+            BigDecimal cmv,
+            long unidadesSemCusto,
+            long vendas) {}
+
+    public List<SomaCategoria> porCategoria(FiltroFinancas f) {
+        Onde o = onde(f);
+        return jdbc.query(
+                "SELECT p.categoria_id, c.nome AS categoria,"
+                        + " SUM(i.quantidade) AS unidades, COALESCE(SUM(i.valor_liquido), 0) AS liquido,"
+                        + " COALESCE(SUM(CASE WHEN i.custo_unitario IS NOT NULL THEN i.custo_unitario * i.quantidade END), 0) AS cmv,"
+                        + " COALESCE(SUM(CASE WHEN i.custo_unitario IS NULL THEN i.quantidade ELSE 0 END), 0) AS sem_custo,"
+                        + " COUNT(DISTINCT v.id) AS vendas"
+                        + " FROM item_venda i JOIN venda v ON v.id = i.venda_id JOIN produto p ON p.id = i.produto_id"
+                        + " LEFT JOIN categoria c ON c.id = p.categoria_id"
+                        + " WHERE " + o.vendas() + o.itens()
+                        + " GROUP BY p.categoria_id, c.nome",
+                o.parametros(),
+                (r, n) -> new SomaCategoria(
+                        idOuNull(r, "categoria_id"),
+                        r.getString("categoria"),
+                        r.getLong("unidades"),
+                        dec(r, "liquido"),
+                        dec(r, "cmv"),
+                        r.getLong("sem_custo"),
+                        r.getLong("vendas")));
+    }
+
+    /** Por forma, pelas partes de pagamento: valor, vendas distintas e taxa estimada. */
+    public record SomaForma(FormaPagamento forma, BigDecimal valor, long vendas, BigDecimal taxas) {}
+
+    public List<SomaForma> porForma(FiltroFinancas f) {
+        Onde o = onde(f);
+        return jdbc.query(
+                "SELECT pg.forma, COALESCE(SUM(pg.valor), 0) AS valor, COUNT(DISTINCT pg.venda_id) AS vendas,"
+                        + " COALESCE(SUM(pg.taxa_estimada), 0) AS taxas"
+                        + " FROM pagamento_venda pg JOIN venda v ON v.id = pg.venda_id"
+                        + " WHERE " + o.vendas() + " GROUP BY pg.forma",
+                o.parametros(),
+                (r, n) -> new SomaForma(
+                        FormaPagamento.valueOf(r.getString("forma")),
+                        dec(r, "valor"),
+                        r.getLong("vendas"),
+                        dec(r, "taxas")));
+    }
+
+    /**
+     * Por promoção (promocao_id null = promoções apagadas): vendas em que entrou,
+     * desconto total e receita líquida (valor cobrado) dessas vendas.
+     */
+    public record SomaPromocao(Long promocaoId, long vendas, BigDecimal desconto, BigDecimal receita) {}
+
+    public List<SomaPromocao> porPromocao(FiltroFinancas f) {
+        Onde o = onde(f);
+        return jdbc.query(
+                "SELECT d.promocao_id, d.vendas, d.desconto, r.receita FROM"
+                        + " (SELECT vd.promocao_id, COUNT(DISTINCT vd.venda_id) AS vendas, SUM(vd.valor) AS desconto"
+                        + "  FROM venda_desconto vd JOIN venda v ON v.id = vd.venda_id WHERE " + o.vendas()
+                        + "  GROUP BY vd.promocao_id) d"
+                        + " JOIN (SELECT x.promocao_id, SUM(v.valor_cobrado) AS receita"
+                        + "  FROM (SELECT DISTINCT promocao_id, venda_id FROM venda_desconto) x"
+                        + "  JOIN venda v ON v.id = x.venda_id WHERE " + o.vendas()
+                        + "  GROUP BY x.promocao_id) r"
+                        + " ON r.promocao_id = d.promocao_id OR (r.promocao_id IS NULL AND d.promocao_id IS NULL)",
+                o.parametros(),
+                (r, n) -> new SomaPromocao(
+                        idOuNull(r, "promocao_id"), r.getLong("vendas"), dec(r, "desconto"), dec(r, "receita")));
     }
 }

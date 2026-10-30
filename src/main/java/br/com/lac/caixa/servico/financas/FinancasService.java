@@ -1,18 +1,29 @@
 package br.com.lac.caixa.servico.financas;
 
+import br.com.lac.caixa.modelo.FormaPagamento;
+import br.com.lac.caixa.modelo.Promocao;
 import br.com.lac.caixa.repositorio.ConsultasFinanceiras;
 import br.com.lac.caixa.repositorio.ConsultasFinanceiras.Balde;
+import br.com.lac.caixa.repositorio.ConsultasFinanceiras.SomaProduto;
 import br.com.lac.caixa.repositorio.EventoRepository;
 import br.com.lac.caixa.repositorio.FiltroFinancas;
 import br.com.lac.caixa.repositorio.PeriodoDoEvento;
 import br.com.lac.caixa.repositorio.PromocaoRepository;
 import br.com.lac.caixa.servico.financas.Financas.Celula;
+import br.com.lac.caixa.servico.financas.Financas.ClasseAbc;
 import br.com.lac.caixa.servico.financas.Financas.Cobertura;
 import br.com.lac.caixa.servico.financas.Financas.Comparacao;
+import br.com.lac.caixa.servico.financas.Financas.LinhaAbc;
+import br.com.lac.caixa.servico.financas.Financas.LinhaCategoria;
+import br.com.lac.caixa.servico.financas.Financas.LinhaForma;
+import br.com.lac.caixa.servico.financas.Financas.LinhaProduto;
+import br.com.lac.caixa.servico.financas.Financas.LinhaPromocao;
+import br.com.lac.caixa.servico.financas.Financas.Metrica;
 import br.com.lac.caixa.servico.financas.Financas.Ponto;
 import br.com.lac.caixa.servico.financas.Financas.Resumo;
 import br.com.lac.caixa.servico.financas.Financas.Serie;
 import br.com.lac.caixa.servico.financas.Financas.Variacao;
+import br.com.lac.caixa.util.Dinheiro;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.DayOfWeek;
@@ -20,10 +31,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 import java.util.function.Function;
 import org.springframework.stereotype.Service;
@@ -209,5 +222,197 @@ public class FinancasService {
             for (int h = 0; h < 24; h++) celulas.add(new Celula(d, h, vendas.get(d)[h], dinheiro(receita.get(d)[h])));
         }
         return celulas;
+    }
+
+    // ---------------------------------------------------------------- C: rankings
+
+    private static Comparator<LinhaProduto> ordem(Metrica metrica) {
+        Comparator<LinhaProduto> c = switch (metrica) {
+            case QUANTIDADE -> Comparator.comparingLong(LinhaProduto::quantidade);
+            case RECEITA, PARTICIPACAO -> Comparator.comparing(LinhaProduto::receitaLiquida);
+            case LUCRO -> Comparator.comparing(LinhaProduto::lucroBruto);
+            case MARGEM ->
+                Comparator.comparing(LinhaProduto::margemPercentual, Comparator.nullsFirst(Comparator.naturalOrder()));
+        };
+        // Maior primeiro; empate pelo nome e pelo id.
+        return c.reversed().thenComparing(LinhaProduto::nome).thenComparing(LinhaProduto::produtoId);
+    }
+
+    private static List<LinhaProduto> linhasDeProduto(List<SomaProduto> somas, BigDecimal total, Metrica metrica) {
+        List<LinhaProduto> linhas = new ArrayList<>();
+        for (SomaProduto s : somas) {
+            BigDecimal liquido = dinheiro(s.liquido());
+            BigDecimal cmv = dinheiro(s.cmv());
+            BigDecimal lucro = liquido.subtract(cmv);
+            linhas.add(new LinhaProduto(
+                    0,
+                    s.produtoId(),
+                    s.nome(),
+                    s.categoria(),
+                    !s.ativo(),
+                    s.unidades(),
+                    liquido,
+                    cmv,
+                    lucro,
+                    percentual(lucro, liquido),
+                    percentual(liquido, total),
+                    s.unidadesSemCusto()));
+        }
+        linhas.sort(ordem(metrica));
+        List<LinhaProduto> numeradas = new ArrayList<>();
+        for (int i = 0; i < linhas.size(); i++) {
+            LinhaProduto l = linhas.get(i);
+            numeradas.add(new LinhaProduto(
+                    i + 1,
+                    l.produtoId(),
+                    l.nome(),
+                    l.categoria(),
+                    l.arquivado(),
+                    l.quantidade(),
+                    l.receitaLiquida(),
+                    l.cmv(),
+                    l.lucroBruto(),
+                    l.margemPercentual(),
+                    l.participacaoPercentual(),
+                    l.unidadesSemCusto()));
+        }
+        return numeradas;
+    }
+
+    private static BigDecimal somaLiquidos(List<SomaProduto> somas) {
+        return somas.stream().map(s -> dinheiro(s.liquido())).reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /** Produtos vendidos no filtro, ordenados pela métrica (maior primeiro), com posição. */
+    public List<LinhaProduto> rankingProdutos(FiltroFinancas f, Metrica metrica) {
+        var somas = consultas.porProduto(f);
+        return linhasDeProduto(somas, somaLiquidos(somas), metrica);
+    }
+
+    /** Categorias com as mesmas métricas e, em cada uma, o ranking dos seus produtos. */
+    public List<LinhaCategoria> rankingCategorias(FiltroFinancas f, Metrica metrica) {
+        var categorias = consultas.porCategoria(f);
+        var produtos = consultas.porProduto(f);
+        BigDecimal total = categorias.stream().map(c -> dinheiro(c.liquido())).reduce(BigDecimal.ZERO, BigDecimal::add);
+        List<LinhaCategoria> linhas = new ArrayList<>();
+        for (var c : categorias) {
+            BigDecimal liquido = dinheiro(c.liquido());
+            BigDecimal cmv = dinheiro(c.cmv());
+            BigDecimal lucro = liquido.subtract(cmv);
+            var daCategoria = produtos.stream()
+                    .filter(p -> Objects.equals(p.categoriaId(), c.categoriaId()))
+                    .toList();
+            linhas.add(new LinhaCategoria(
+                    0,
+                    c.categoriaId(),
+                    c.categoria() == null ? "Sem categoria" : c.categoria(),
+                    c.unidades(),
+                    c.vendas(),
+                    liquido,
+                    cmv,
+                    lucro,
+                    percentual(lucro, liquido),
+                    percentual(liquido, total),
+                    c.unidadesSemCusto(),
+                    linhasDeProduto(daCategoria, liquido, metrica)));
+        }
+        Comparator<LinhaCategoria> c = switch (metrica) {
+            case QUANTIDADE -> Comparator.comparingLong(LinhaCategoria::quantidade);
+            case RECEITA, PARTICIPACAO -> Comparator.comparing(LinhaCategoria::receitaLiquida);
+            case LUCRO -> Comparator.comparing(LinhaCategoria::lucroBruto);
+            case MARGEM ->
+                Comparator.comparing(
+                        LinhaCategoria::margemPercentual, Comparator.nullsFirst(Comparator.naturalOrder()));
+        };
+        linhas.sort(c.reversed().thenComparing(LinhaCategoria::categoria));
+        List<LinhaCategoria> numeradas = new ArrayList<>();
+        for (int i = 0; i < linhas.size(); i++) {
+            var l = linhas.get(i);
+            numeradas.add(new LinhaCategoria(
+                    i + 1,
+                    l.categoriaId(),
+                    l.categoria(),
+                    l.quantidade(),
+                    l.vendas(),
+                    l.receitaLiquida(),
+                    l.cmv(),
+                    l.lucroBruto(),
+                    l.margemPercentual(),
+                    l.participacaoPercentual(),
+                    l.unidadesSemCusto(),
+                    l.produtos()));
+        }
+        return numeradas;
+    }
+
+    /** Curva ABC por receita líquida: A até 80% acumulado, B até 95%, C o resto. */
+    public List<LinhaAbc> curvaAbc(FiltroFinancas f) {
+        var produtos = rankingProdutos(f, Metrica.RECEITA);
+        BigDecimal total = produtos.stream().map(LinhaProduto::receitaLiquida).reduce(BigDecimal.ZERO, BigDecimal::add);
+        List<LinhaAbc> linhas = new ArrayList<>();
+        BigDecimal acumulado = BigDecimal.ZERO;
+        for (LinhaProduto p : produtos) {
+            BigDecimal antes =
+                    total.signum() == 0 ? CEM : acumulado.multiply(CEM).divide(total, 10, RoundingMode.HALF_EVEN);
+            ClasseAbc classe = antes.compareTo(BigDecimal.valueOf(80)) < 0
+                    ? ClasseAbc.A
+                    : antes.compareTo(BigDecimal.valueOf(95)) < 0 ? ClasseAbc.B : ClasseAbc.C;
+            acumulado = acumulado.add(p.receitaLiquida());
+            linhas.add(new LinhaAbc(
+                    p.posicao(),
+                    p.produtoId(),
+                    p.nome(),
+                    p.receitaLiquida(),
+                    p.participacaoPercentual(),
+                    percentual(acumulado, total),
+                    classe));
+        }
+        return linhas;
+    }
+
+    /** Por forma de pagamento, pelas partes: valor, vendas, taxa estimada e participação. Todas as formas. */
+    public List<LinhaForma> formasDePagamento(FiltroFinancas f) {
+        var somas = consultas.porForma(f);
+        BigDecimal total = somas.stream().map(s -> dinheiro(s.valor())).reduce(BigDecimal.ZERO, BigDecimal::add);
+        List<LinhaForma> linhas = new ArrayList<>();
+        for (FormaPagamento forma : FormaPagamento.values()) {
+            var s = somas.stream().filter(x -> x.forma() == forma).findFirst();
+            BigDecimal valor = s.map(x -> dinheiro(x.valor())).orElse(BigDecimal.ZERO.setScale(2));
+            linhas.add(new LinhaForma(
+                    forma,
+                    valor,
+                    s.map(ConsultasFinanceiras.SomaForma::vendas).orElse(0L),
+                    s.map(x -> dinheiro(x.taxas())).orElse(BigDecimal.ZERO.setScale(2)),
+                    percentual(valor, total)));
+        }
+        return linhas;
+    }
+
+    /** Por promoção: vendas em que entrou, desconto concedido e receita líquida dessas vendas. */
+    public List<LinhaPromocao> promocoes(FiltroFinancas f) {
+        List<LinhaPromocao> linhas = new ArrayList<>();
+        for (var s : consultas.porPromocao(f)) {
+            String nome = s.promocaoId() == null
+                    ? "Promoções apagadas"
+                    : promocoes
+                            .findById(s.promocaoId())
+                            .map(FinancasService::nome)
+                            .orElse("Promoção #" + s.promocaoId());
+            linhas.add(
+                    new LinhaPromocao(s.promocaoId(), nome, s.vendas(), dinheiro(s.desconto()), dinheiro(s.receita())));
+        }
+        linhas.sort(
+                Comparator.comparing(LinhaPromocao::descontoTotal).reversed().thenComparing(LinhaPromocao::promocao));
+        return linhas;
+    }
+
+    private static String nome(Promocao p) {
+        String tipo = p.getTipo() == null
+                ? ""
+                : switch (p.getTipo()) {
+                    case A_PARTIR_DE -> "A partir de: ";
+                    case PACOTE -> "Pacote: ";
+                };
+        return tipo + p.getNomesCategorias() + " por " + Dinheiro.reais(p.getPreco());
     }
 }
