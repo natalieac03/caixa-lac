@@ -26,4 +26,4 @@ jobs:
           java-version: '17'
           cache: maven
       - name: Verificar projeto
-        run: mvn -B verify
+        run: ./mvnw -B verify

@@ -33,10 +33,10 @@ está em `pagamento/`, e cada `@Service` é um **Singleton** mantido pelo Spring
 
 ## Rodar no seu computador
 
-Precisa de **Java 17+** e **Maven** instalados.
+Precisa de **Java 17+**. O Maven vem junto pelo Maven Wrapper.
 
 ```bash
-mvn spring-boot:run
+./mvnw spring-boot:run        # Windows: mvnw.cmd spring-boot:run
 ```
 
 Abra **http://localhost:8080**. No modo local o banco é um arquivo H2 (pasta
@@ -97,9 +97,14 @@ local existe um padrão definido apenas em `application-local.properties`;
 Após cinco erros por IP em uma janela móvel de dez minutos, o IP fica bloqueado
 por dez minutos. Um login correto limpa as falhas anteriores e renova o ID da
 sessão. O controle fica em memória e reinicia junto com a aplicação. O endereço
-usado é o IP remoto informado pelo servidor, sem confiar diretamente em
-cabeçalhos enviados pelo cliente. Em produção, o cookie de sessão exige HTTPS e
-usa `SameSite=Strict`. O perfil local escuta apenas em `127.0.0.1`.
+usado é o IP remoto: no Railway, com `server.forward-headers-strategy=native`, o
+Tomcat lê o `X-Forwarded-For` só quando a conexão vem do proxy (rede privada);
+cabeçalho vindo direto da internet é ignorado. Sem isso, todo mundo apareceria
+com o IP do proxy e cinco erros de qualquer pessoa bloqueariam a todos.
+Em produção, o cookie de sessão exige HTTPS e usa `SameSite=Strict`. **Sair** é
+um POST (um link em outra página não consegue deslogar ninguém). O perfil local
+escuta apenas em `127.0.0.1`, que é o que protege o console do H2: ele é um
+servlet à parte e não passa pelo interceptor de login.
 
 ## Regras de preço e promoção
 
@@ -131,14 +136,19 @@ usa `SameSite=Strict`. O perfil local escuta apenas em `127.0.0.1`.
 
 ## Verificação e dados
 
-Execute a suíte normal com `mvn -B verify` (Java 17). Os testes HTTP usam um H2
-em memória, separado do banco local. As colunas novas de venda aceitam `null`
+Execute a suíte normal com `./mvnw -B verify` (Java 17). Os testes HTTP usam um H2
+em memória, separado do banco local. Com Docker disponível, `PostgresLegadoTest`
+e `PostgresBancoNovoTest` sobem um PostgreSQL 16 (Testcontainers) e repetem a
+migração da produção e a de um banco vazio; sem Docker eles são pulados. As colunas novas de venda aceitam `null`
 para preservar os registros antigos. O Flyway aplica as migrações antes de
 `ddl-auto=validate`; veja [o roteiro de produção](docs/MIGRACOES.md).
 
 O **ID** da venda é o número da compra. Os CSVs usam ponto e vírgula, BOM UTF-8
-e valores monetários com vírgula decimal. Os PNGs mantêm transparência e têm
-largura máxima de 512 pixels.
+e valores monetários com vírgula decimal, sem separador de milhar (`1234,56`);
+nas telas e mensagens o valor aparece como `R$ 1.234,56`. Os PNGs mantêm
+transparência e têm largura máxima de 512 pixels. CSS e imagens vão com
+`Cache-Control` de um ano; a URL leva o hash do conteúdo
+(`/css/estilo-<hash>.css`), então uma versão nova chega ao navegador na hora.
 
 ## Histórico
 
@@ -172,11 +182,11 @@ incluindo backup e interrupção das instâncias antigas antes da migração V3.
 
 ## CI e Maven Wrapper
 
-O GitHub Actions executa `mvn -B verify` com Java 17 em pushes e pull requests
+O GitHub Actions executa `./mvnw -B verify` com Java 17 em pushes e pull requests
 para `main`, sem banco externo nem segredos de produção. A suíte integra Flyway,
-JPA e HTTP usando H2 em memória; o H2 local em arquivo é preservado.
+JPA e HTTP usando H2 em memória, e PostgreSQL via Testcontainers (o runner do
+GitHub tem Docker); o H2 local em arquivo é preservado.
 
-O Maven Wrapper oficial 3.3.4 fixa Maven 3.9.9. Para usá-lo, execute
-`./mvnw -B verify` no Linux/macOS ou `mvnw.cmd -B verify` no Windows. A primeira
-execução precisa baixar a distribuição Maven se ela ainda não estiver no cache.
-Nesta tarefa as verificações foram executadas somente com `mvn -B verify`.
+O Maven Wrapper oficial 3.3.4 fixa Maven 3.9.9: `./mvnw -B verify` no
+Linux/macOS ou `mvnw.cmd -B verify` no Windows. A primeira execução baixa a
+distribuição Maven se ela ainda não estiver no cache.
