@@ -2,6 +2,7 @@ package br.com.lac.caixa.controle;
 
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.FormaPagamento;
+import br.com.lac.caixa.modelo.OrigemPagamento;
 import br.com.lac.caixa.servico.PagamentoInformado;
 import br.com.lac.caixa.util.Dinheiro;
 import java.util.ArrayList;
@@ -35,8 +36,32 @@ final class PagamentosDoFormulario {
                 forma(forma),
                 Dinheiro.parse(params.get("pag_valor_" + n)),
                 params.get("pag_descricao_" + n),
-                Dinheiro.parse(params.get("pag_recebido_" + n)))));
+                Dinheiro.parse(params.get("pag_recebido_" + n)),
+                origem(params.get("pag_origem_" + n)),
+                parte(params.get("pag_parte_" + n), n))));
         return partes;
+    }
+
+    /** pag_origem_N: MERCADO_PAGO ou MANUAL; vazio = manual. */
+    private static OrigemPagamento origem(String texto) {
+        if (texto == null || texto.isBlank()) return null;
+        try {
+            return OrigemPagamento.valueOf(texto.trim());
+        } catch (IllegalArgumentException ex) {
+            throw new RegraDeNegocioException("Origem de pagamento inválida: " + texto.trim());
+        }
+    }
+
+    /** pag_parte_N: número estável da parte (não muda quando outra linha é removida); padrão N. */
+    private static int parte(String texto, int padrao) {
+        if (texto == null || texto.isBlank()) return padrao;
+        try {
+            int parte = Integer.parseInt(texto.trim());
+            if (parte < 0) throw new NumberFormatException();
+            return parte;
+        } catch (NumberFormatException ex) {
+            throw new RegraDeNegocioException("Parte do pagamento inválida: " + texto.trim());
+        }
     }
 
     private static FormaPagamento forma(String texto) {

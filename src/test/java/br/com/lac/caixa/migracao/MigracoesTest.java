@@ -61,7 +61,7 @@ class MigracoesTest {
     }
 
     @Test
-    @DisplayName("Banco vazio migra V1-V6 e o banco recusa valores inválidos")
+    @DisplayName("Banco vazio migra todas as versões e o banco recusa valores inválidos")
     void bancoNovoMigraEImpedeValoresInvalidos() throws Exception {
         // Arrange
         String url = banco();
@@ -69,9 +69,9 @@ class MigracoesTest {
         // Act
         flyway(url).migrate();
 
-        // Assert: seis migrações SQL aplicadas
+        // Assert: todas as migrações SQL aplicadas (V1-V8)
         assertEquals(
-                7,
+                8,
                 numero(
                         url,
                         "select count(*) from \"flyway_schema_history\" where \"success\"=true and \"type\"='SQL'"));

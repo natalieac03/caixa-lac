@@ -39,9 +39,34 @@ public class PagamentoVenda {
     /** Só para DINHEIRO: quanto a pessoa entregou. */
     private BigDecimal valorRecebido;
 
+    /** Só para PIX: MERCADO_PAGO (confirmado pela API) ou MANUAL (conferido no app). */
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private OrigemPagamento origem;
+
+    /** Id da order do Mercado Pago que pagou esta parte (só com origem MERCADO_PAGO). */
+    @Column(length = 64)
+    private String mpOrderId;
+
     protected PagamentoVenda() {}
 
+    /** Parte comum; Pix sai como manual. */
     public PagamentoVenda(FormaPagamento forma, BigDecimal valor, String descricao, BigDecimal valorRecebido) {
+        this(forma, valor, descricao, valorRecebido, null, null);
+    }
+
+    /**
+     * @param origem    só para PIX (null = MANUAL); outras formas não têm origem
+     * @param mpOrderId obrigatório com MERCADO_PAGO, proibido nos outros casos
+     */
+    public PagamentoVenda(
+            FormaPagamento forma,
+            BigDecimal valor,
+            String descricao,
+            BigDecimal valorRecebido,
+            OrigemPagamento origem,
+            String mpOrderId) {
         if (forma == null) throw new RegraDeNegocioException("Escolha a forma de pagamento.");
         if (valor == null || valor.signum() <= 0) {
             throw new RegraDeNegocioException("O valor de cada parte do pagamento deve ser maior que zero.");
@@ -64,6 +89,20 @@ public class PagamentoVenda {
         this.valor = valor;
         this.descricao = forma == FormaPagamento.OUTRO ? texto : null;
         this.valorRecebido = valorRecebido;
+        if (forma != FormaPagamento.PIX) {
+            if (origem != null || mpOrderId != null) {
+                throw new RegraDeNegocioException("Só o Pix tem origem (Mercado Pago ou manual).");
+            }
+        } else {
+            this.origem = origem == null ? OrigemPagamento.MANUAL : origem;
+            if (this.origem == OrigemPagamento.MERCADO_PAGO && (mpOrderId == null || mpOrderId.isBlank())) {
+                throw new RegraDeNegocioException("Pix do Mercado Pago sem a order que o pagou.");
+            }
+            if (this.origem == OrigemPagamento.MANUAL && mpOrderId != null) {
+                throw new RegraDeNegocioException("Pix manual não tem order do Mercado Pago.");
+            }
+            this.mpOrderId = mpOrderId;
+        }
     }
 
     /** Troco do dinheiro; null se não informou o recebido. */
@@ -95,6 +134,14 @@ public class PagamentoVenda {
 
     public String getDescricao() {
         return descricao;
+    }
+
+    public OrigemPagamento getOrigem() {
+        return origem;
+    }
+
+    public String getMpOrderId() {
+        return mpOrderId;
     }
 
     public BigDecimal getValorRecebido() {

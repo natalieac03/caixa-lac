@@ -51,7 +51,7 @@ class SegurancaHttpTest {
                         ? RequestMethod.GET
                         : metodos.iterator().next();
                 var req = metodo == RequestMethod.POST ? post(url) : get(url);
-                if (url.equals("/venda/previa")) {
+                if (url.equals("/venda/previa") || url.startsWith("/venda/pix")) {
                     // Chamada do JS: 401 em JSON em vez de redirect (veja SessaoEErrosHttpTest).
                     mvc.perform(req).andExpect(status().isUnauthorized());
                 } else {

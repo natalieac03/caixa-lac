@@ -1,0 +1,200 @@
+package br.com.lac.caixa.servico;
+
+import br.com.lac.caixa.dominio.RegraDeNegocioException;
+import br.com.lac.caixa.modelo.CobrancaPix;
+import br.com.lac.caixa.modelo.StatusCobranca;
+import br.com.lac.caixa.pix.MercadoPagoException;
+import br.com.lac.caixa.pix.MercadoPagoPix;
+import br.com.lac.caixa.repositorio.CobrancaPixRepository;
+import br.com.lac.caixa.util.Dinheiro;
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * Cobranças Pix do Mercado Pago para as partes Pix de uma venda em andamento.
+ * Regra de ouro: PAGA só com a resposta do Mercado Pago (consulta ou webhook
+ * seguido de consulta), conferindo que o valor pago é o valor da cobrança.
+ */
+@Service
+public class CobrancaPixService {
+
+    private static final Logger LOG = LoggerFactory.getLogger(CobrancaPixService.class);
+
+    private final CobrancaPixRepository cobrancas;
+    private final MercadoPagoPix mp;
+    private final Clock relogio;
+    private final Auditoria auditoria;
+
+    public CobrancaPixService(CobrancaPixRepository cobrancas, MercadoPagoPix mp, Clock relogio, Auditoria auditoria) {
+        this.cobrancas = cobrancas;
+        this.mp = mp;
+        this.relogio = relogio;
+        this.auditoria = auditoria;
+    }
+
+    public boolean ligado() {
+        return mp.ligado();
+    }
+
+    private LocalDateTime agora() {
+        return LocalDateTime.now(relogio);
+    }
+
+    private void exigirLigado() {
+        if (!mp.ligado()) throw new RegraDeNegocioException("Pix automático desligado. Use Pix manual.");
+    }
+
+    private static void exigirToken(String token) {
+        try {
+            if (token != null && UUID.fromString(token).toString().equals(token)) return;
+        } catch (IllegalArgumentException naoEUuid) {
+            // cai na mensagem abaixo
+        }
+        throw new RegraDeNegocioException("Token de venda inválido.");
+    }
+
+    /**
+     * Cria a cobrança da parte ou reaproveita a que já existe com o mesmo valor.
+     * Com outro valor, a pendente é cancelada no Mercado Pago e outra é criada;
+     * se já foi paga, recusa.
+     */
+    @Transactional
+    public CobrancaPix gerar(String token, int parte, BigDecimal valor) {
+        exigirLigado();
+        exigirToken(token);
+        if (valor == null || valor.signum() <= 0)
+            throw new RegraDeNegocioException("O valor do Pix deve ser maior que zero.");
+        var existente = cobrancas.buscarParaAtualizar(token, parte);
+        if (existente.isPresent()) {
+            CobrancaPix c = existente.get();
+            boolean mesmoValor = c.getValor().compareTo(valor) == 0;
+            if (c.getStatus() == StatusCobranca.PENDENTE) atualizarPeloMercadoPago(c);
+            if (c.getStatus() == StatusCobranca.PAGA) {
+                if (mesmoValor) return c;
+                throw new RegraDeNegocioException("Esta parte já foi paga no Pix (" + Dinheiro.reais(c.getValor())
+                        + "). Ajuste as outras partes.");
+            }
+            if (c.getStatus() == StatusCobranca.PENDENTE) {
+                if (mesmoValor) return c;
+                cancelarNoMercadoPago(c);
+                if (c.getStatus() == StatusCobranca.PAGA) {
+                    throw new RegraDeNegocioException("Esta parte acabou de ser paga no Pix ("
+                            + Dinheiro.reais(c.getValor()) + "). Ajuste as outras partes.");
+                }
+            }
+            return criarOrder(c, valor);
+        }
+        return criarOrder(new CobrancaPix(token, parte, valor), valor);
+    }
+
+    private CobrancaPix criarOrder(CobrancaPix c, BigDecimal valor) {
+        String referencia = c.referenciaDaProximaTentativa(valor);
+        var order = mp.criarPix(valor, referencia);
+        if (order.orderId() == null || order.qrCode() == null) {
+            throw new MercadoPagoException("Mercado Pago: criar Pix respondeu sem order ou sem QR", 0, null, null);
+        }
+        c.registrarOrder(valor, order.orderId(), order.qrCode(), order.qrCodeBase64(), agora());
+        CobrancaPix salva = cobrancas.save(c);
+        auditoria.registrar("pix_gerado", "order", order.orderId(), "valor", valor, "parte", c.getParte());
+        return salva;
+    }
+
+    /** Situação da parte; se pendente, pergunta ao Mercado Pago (falha do MP: continua pendente). */
+    @Transactional
+    public CobrancaPix consultar(String token, int parte) {
+        exigirToken(token);
+        CobrancaPix c = cobrancas
+                .buscarParaAtualizar(token, parte)
+                .orElseThrow(() -> new RegraDeNegocioException("Não há Pix gerado para esta parte."));
+        if (c.getStatus() == StatusCobranca.PENDENTE && mp.ligado()) {
+            try {
+                atualizarPeloMercadoPago(c);
+            } catch (MercadoPagoException e) {
+                LOG.warn("Consulta do Pix {} falhou; continua pendente.", c.getOrderId());
+            }
+        }
+        return c;
+    }
+
+    /** Cancela a cobrança pendente da parte (o total mudou ou a pessoa desistiu). */
+    @Transactional
+    public CobrancaPix cancelar(String token, int parte) {
+        exigirLigado();
+        exigirToken(token);
+        CobrancaPix c = cobrancas
+                .buscarParaAtualizar(token, parte)
+                .orElseThrow(() -> new RegraDeNegocioException("Não há Pix gerado para esta parte."));
+        if (c.getStatus() == StatusCobranca.PENDENTE) cancelarNoMercadoPago(c);
+        return c;
+    }
+
+    /**
+     * Para o POST /venda: a parte Pix do Mercado Pago só vale se a cobrança está
+     * PAGA com o mesmo valor. Se ainda pendente, consulta o Mercado Pago uma vez.
+     *
+     * @return o id da order que pagou
+     */
+    @Transactional
+    public String exigirPaga(String token, int parte, BigDecimal valorDaParte) {
+        CobrancaPix c = cobrancas
+                .buscarParaAtualizar(token, parte)
+                .orElseThrow(() -> new RegraDeNegocioException(
+                        "Não há Pix do Mercado Pago gerado para esta parte. " + "Gere o Pix ou use Pix manual."));
+        if (c.getStatus() == StatusCobranca.PENDENTE && mp.ligado()) {
+            try {
+                atualizarPeloMercadoPago(c);
+            } catch (MercadoPagoException e) {
+                throw new RegraDeNegocioException(
+                        "Não foi possível confirmar o Pix no Mercado Pago agora. " + "Tente de novo em instantes.");
+            }
+        }
+        if (c.isValorDivergente()) {
+            throw new RegraDeNegocioException("O Pix foi pago com " + Dinheiro.reais(c.getValorPago())
+                    + ", diferente do valor da cobrança (" + Dinheiro.reais(c.getValor()) + "). Resolva à mão.");
+        }
+        if (c.getStatus() != StatusCobranca.PAGA) {
+            throw new RegraDeNegocioException("O Pix de " + Dinheiro.reais(c.getValor()) + " ainda não foi pago.");
+        }
+        if (valorDaParte == null
+                || c.getValor().compareTo(valorDaParte) != 0
+                || c.getValorPago().compareTo(valorDaParte) != 0) {
+            throw new RegraDeNegocioException("O Pix pago (" + Dinheiro.reais(c.getValorPago())
+                    + ") não bate com o valor da parte (" + Dinheiro.reais(valorDaParte) + ").");
+        }
+        return c.getOrderId();
+    }
+
+    /** Pergunta ao Mercado Pago e aplica (só sai de PENDENTE). */
+    void atualizarPeloMercadoPago(CobrancaPix c) {
+        var s = mp.consultar(c.getOrderId());
+        if (c.atualizar(s.status(), s.statusDetail(), s.valorPago(), agora())) {
+            auditoria.registrar(
+                    "pix_" + c.getStatus().name().toLowerCase(),
+                    "order",
+                    c.getOrderId(),
+                    "valor",
+                    c.getValor(),
+                    "pago",
+                    c.getValorPago());
+        }
+    }
+
+    /** Cancela no Mercado Pago; se ele recusar (409), consulta: pode ter sido pago. */
+    void cancelarNoMercadoPago(CobrancaPix c) {
+        try {
+            mp.cancelar(c.getOrderId());
+            c.marcarCancelada();
+            auditoria.registrar("pix_cancelado", "order", c.getOrderId(), "valor", c.getValor());
+        } catch (MercadoPagoException e) {
+            if (e.getStatus() != 409) throw e;
+            atualizarPeloMercadoPago(c);
+            if (c.getStatus() == StatusCobranca.PENDENTE) c.marcarCancelada();
+        }
+    }
+}

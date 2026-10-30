@@ -2,6 +2,7 @@ package br.com.lac.caixa.controle;
 
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.servico.CaixaService;
+import br.com.lac.caixa.servico.CobrancaPixService;
 import br.com.lac.caixa.servico.EstoqueService;
 import br.com.lac.caixa.servico.ResultadoVenda;
 import br.com.lac.caixa.servico.preco.Orcamento;
@@ -24,10 +25,12 @@ public class CaixaController {
 
     private final EstoqueService estoque;
     private final CaixaService caixa;
+    private final CobrancaPixService cobrancasPix;
 
-    public CaixaController(EstoqueService estoque, CaixaService caixa) {
+    public CaixaController(EstoqueService estoque, CaixaService caixa, CobrancaPixService cobrancasPix) {
         this.estoque = estoque;
         this.caixa = caixa;
+        this.cobrancasPix = cobrancasPix;
     }
 
     @GetMapping("/caixa")
@@ -41,6 +44,7 @@ public class CaixaController {
         model.addAttribute("tokenVenda", UUID.randomUUID().toString());
         model.addAttribute("produtos", estoque.listar());
         model.addAttribute("formas", FormaPagamento.values());
+        model.addAttribute("pixAutomatico", cobrancasPix.ligado());
         return "venda-nova";
     }
 

@@ -991,3 +991,13 @@ tr.linha-edicao td { background: var(--roxo-fundo); }
 tr.linha-edicao.oculto { display: none; }
 .form-edicao .acoes-linha { margin-top: 8px; }
 .linha-categoria { align-items: flex-end; margin-top: 8px; }
+
+/* Pix automático (Mercado Pago) na tela de venda. */
+.painel-pix { display: flex; flex-direction: column; gap: 6px; }
+.painel-pix .qr-area { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.painel-pix .qr-area.oculto, .painel-pix .acoes-linha.oculto { display: none; }
+.qr-pix { width: 200px; max-width: 100%; height: auto; background: #fff; padding: 6px; border-radius: 8px; }
+.qr-valor { font-weight: 700; margin: 0; }
+.situacao-pix { margin: 0; font-weight: 700; }
+.linha-pagamento .campo-pix { flex: 1 1 100%; }
+.linha-pagamento .campo-pix.oculto { display: none; }

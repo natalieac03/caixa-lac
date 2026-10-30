@@ -1,7 +1,9 @@
 package br.com.lac.caixa.servico;
 
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
+import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.modelo.ItemVenda;
+import br.com.lac.caixa.modelo.OrigemPagamento;
 import br.com.lac.caixa.modelo.PagamentoVenda;
 import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.modelo.Promocao;
@@ -32,12 +34,19 @@ public class CaixaService {
 
     private final Auditoria auditoria;
 
+    private final CobrancaPixService cobrancasPix;
+
     public CaixaService(
-            VendaRepository vendas, EstoqueService estoque, PromocaoService promocoes, Auditoria auditoria) {
+            VendaRepository vendas,
+            EstoqueService estoque,
+            PromocaoService promocoes,
+            Auditoria auditoria,
+            CobrancaPixService cobrancasPix) {
         this.vendas = vendas;
         this.estoque = estoque;
         this.promocoes = promocoes;
         this.auditoria = auditoria;
+        this.cobrancasPix = cobrancasPix;
     }
 
     /**
@@ -110,7 +119,7 @@ public class CaixaService {
                 total,
                 motivoAjuste);
         // O servidor confere o pagamento de novo: soma, formas, descrição do Outro, recebido.
-        venda.registrarPagamentos(partes(pagamentos, total));
+        venda.registrarPagamentos(partes(pagamentos, total, token));
 
         for (var item : orcamento.itens()) {
             Produto p = selecionados.get(item.produtoId());
@@ -153,19 +162,34 @@ public class CaixaService {
      * Parte única sem valor = o total (um toque). Na cortesia (total zero),
      * essa parte some: cortesia não tem pagamento.
      */
-    private static List<PagamentoVenda> partes(List<PagamentoInformado> informados, BigDecimal total) {
+    private List<PagamentoVenda> partes(List<PagamentoInformado> informados, BigDecimal total, String token) {
         if (informados == null || informados.isEmpty()) return List.of();
         if (informados.size() == 1 && informados.get(0).valor() == null) {
             PagamentoInformado unico = informados.get(0);
             if (total.signum() == 0) return List.of();
-            return List.of(new PagamentoVenda(unico.forma(), total, unico.descricao(), unico.recebido()));
+            return List.of(parte(unico, total, token));
         }
         List<PagamentoVenda> partes = new ArrayList<>();
         for (PagamentoInformado p : informados) {
             if (p.valor() == null) throw new RegraDeNegocioException("Informe o valor de cada parte do pagamento.");
-            partes.add(new PagamentoVenda(p.forma(), p.valor(), p.descricao(), p.recebido()));
+            partes.add(parte(p, p.valor(), token));
         }
         return partes;
+    }
+
+    /**
+     * Pix do Mercado Pago: o servidor confere de novo que a cobrança da parte
+     * está PAGA com o mesmo valor (não confia no que a tela diz).
+     */
+    private PagamentoVenda parte(PagamentoInformado p, BigDecimal valor, String token) {
+        String orderId = null;
+        if (p.origem() == OrigemPagamento.MERCADO_PAGO) {
+            if (p.forma() != FormaPagamento.PIX) {
+                throw new RegraDeNegocioException("Só o Pix pode ser do Mercado Pago.");
+            }
+            orderId = cobrancasPix.exigirPaga(token, p.parte(), valor);
+        }
+        return new PagamentoVenda(p.forma(), valor, p.descricao(), p.recebido(), p.origem(), orderId);
     }
 
     @Transactional(readOnly = true)

@@ -1,6 +1,7 @@
 package br.com.lac.caixa.controle;
 
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
+import br.com.lac.caixa.pix.MercadoPagoException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.util.Map;
@@ -34,6 +35,16 @@ public class ErrosDeNegocio {
         return responder(ex.getMessage(), HttpStatus.BAD_REQUEST, request, flash);
     }
 
+    /** Mercado Pago fora do ar ou recusando: a tela oferece o Pix manual. */
+    @ExceptionHandler(MercadoPagoException.class)
+    public Object mercadoPagoFora(MercadoPagoException ex, HttpServletRequest request, RedirectAttributes flash) {
+        return responder(
+                "O Mercado Pago não respondeu. Tente de novo ou use Pix manual.",
+                HttpStatus.SERVICE_UNAVAILABLE,
+                request,
+                flash);
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public Object erroDePrograma(IllegalArgumentException ex, HttpServletRequest request, RedirectAttributes flash) {
         LOG.error("Erro inesperado em {} {}", request.getMethod(), request.getRequestURI(), ex);
@@ -61,6 +72,7 @@ public class ErrosDeNegocio {
     static boolean querJson(HttpServletRequest request) {
         String accept = request.getHeader("Accept");
         return request.getRequestURI().equals("/venda/previa")
+                || request.getRequestURI().startsWith("/venda/pix")
                 || (accept != null && accept.contains("application/json"));
     }
 

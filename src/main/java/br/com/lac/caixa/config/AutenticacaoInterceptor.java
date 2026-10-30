@@ -41,6 +41,7 @@ public class AutenticacaoInterceptor implements HandlerInterceptor {
     private static boolean querJson(HttpServletRequest request) {
         String accept = request.getHeader("Accept");
         return request.getRequestURI().equals(request.getContextPath() + "/venda/previa")
+                || request.getRequestURI().startsWith(request.getContextPath() + "/venda/pix")
                 || (accept != null && accept.contains("application/json"));
     }
 }
