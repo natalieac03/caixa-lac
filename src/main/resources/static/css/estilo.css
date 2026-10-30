@@ -1055,3 +1055,5 @@ table.ordenavel th[aria-sort="descending"] button::after { content: " ▼"; }
 .mapa-calor td.nivel-3 { background: color-mix(in srgb, var(--roxo) 60%, transparent); color: var(--on-roxo); font-weight: 700; }
 .mapa-calor td.nivel-4 { background: var(--roxo); color: var(--on-roxo); font-weight: 700; }
 .drill h3 { margin: 10px 0; }
+.cabecalho-secao { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.cabecalho-secao h2, .cabecalho-secao h3 { margin: 0; }

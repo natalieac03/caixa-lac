@@ -85,6 +85,8 @@
     Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
     Chart.defaults.maintainAspectRatio = false;
 
+    var nomeMetrica = { QUANTIDADE: 'Quantidade vendida', RECEITA: 'Receita líquida', LUCRO: 'Lucro bruto' };
+
     function texto(textos) {
         return function (ctx) { return ctx.dataset.label + ': ' + textos[ctx.dataIndex]; };
     }
@@ -130,15 +132,15 @@
             });
             new Chart(document.getElementById('grafico-produtos'), {
                 type: 'bar',
-                data: { labels: d.produtos.rotulos, datasets: [{ label: 'Valor', data: d.produtos.valores, backgroundColor: roxo }] },
-                options: { indexAxis: 'y', plugins: { legend: { display: false }, tooltip: { callbacks: { label: texto(d.produtos.textos) } } } }
+                data: { labels: d.produtos.rotulos, datasets: [{ label: nomeMetrica[d.metrica] || 'Valor', data: d.produtos.valores, backgroundColor: roxo }] },
+                options: { indexAxis: 'y', plugins: { tooltip: { callbacks: { label: texto(d.produtos.textos) } } } }
             });
             new Chart(document.getElementById('grafico-categorias'), {
                 type: 'bar',
                 data: { labels: d.categorias.rotulos, datasets: [{ label: 'Receita líquida', data: d.categorias.valores, backgroundColor: roxo }] },
                 options: {
                     indexAxis: 'y',
-                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: texto(d.categorias.textos) } } },
+                    plugins: { tooltip: { callbacks: { label: texto(d.categorias.textos) } } },
                     onClick: function (evento, elementos) {
                         if (!elementos.length) return;
                         var id = d.categoriaIds[elementos[0].index];

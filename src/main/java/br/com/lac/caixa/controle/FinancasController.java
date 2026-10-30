@@ -1,14 +1,19 @@
 package br.com.lac.caixa.controle;
 
+import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.servico.CategoriaService;
 import br.com.lac.caixa.servico.EventoService;
 import br.com.lac.caixa.servico.financas.Financas.Metrica;
 import br.com.lac.caixa.servico.financas.PainelFinancas;
+import br.com.lac.caixa.util.ExportadorFinancas;
+import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
@@ -72,5 +77,23 @@ public class FinancasController {
             @RequestParam(required = false) String metrica) {
         var resolvido = filtros.resolver(atalho, inicio, fim, evento, categoria, forma);
         return painel.dados(resolvido.filtro(), metrica(metrica));
+    }
+
+    /** CSV de uma tabela da tela (mesmo filtro): demonstrativo, serie, produtos, categorias, formas, mapa... */
+    @GetMapping("/financas/exportar/{tabela}.csv")
+    public ResponseEntity<Resource> exportar(
+            @PathVariable String tabela,
+            @RequestParam(required = false) String atalho,
+            @RequestParam(required = false) String inicio,
+            @RequestParam(required = false) String fim,
+            @RequestParam(required = false) Long evento,
+            @RequestParam(required = false) Long categoria,
+            @RequestParam(required = false) FormaPagamento forma,
+            @RequestParam(required = false) String metrica) {
+        if (!ExportadorFinancas.TABELAS.contains(tabela)) throw new RegraDeNegocioException("Tabela desconhecida.");
+        var resolvido = filtros.resolver(atalho, inicio, fim, evento, categoria, forma);
+        var dados = painel.montar(resolvido.filtro(), metrica(metrica));
+        return RespostaCsv.arquivo(
+                ExportadorFinancas.gerar(tabela, dados, resolvido.periodo()), "financas-" + tabela + ".csv");
     }
 }

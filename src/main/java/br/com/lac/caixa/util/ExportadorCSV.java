@@ -121,7 +121,7 @@ public final class ExportadorCSV {
         return csv.toString();
     }
 
-    private static String campo(String valor) {
+    static String campo(String valor) {
         if (valor == null) {
             return "";
         }

@@ -1,0 +1,145 @@
+package br.com.lac.caixa.sistema;
+
+import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+
+import br.com.lac.caixa.SenhaDeTeste;
+import br.com.lac.caixa.financas.MassaDeTeste;
+import com.microsoft.playwright.BrowserContext;
+import com.microsoft.playwright.Page;
+import com.microsoft.playwright.options.AriaRole;
+import java.nio.file.Path;
+import java.util.List;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.ApplicationContext;
+
+/** A tela de Finanças num Chromium, com a massa fixa: cartões e demonstrativo com os números calculados à mão. */
+@ExtendWith(Navegador.class)
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = {
+            "spring.profiles.active=test",
+            "spring.datasource.url=jdbc:h2:mem:sistema_financas;DB_CLOSE_DELAY=-1"
+        })
+class FinancasNoNavegadorTest {
+    static final String MARCO = "/financas?atalho=personalizado&inicio=2025-03-01&fim=2025-03-15";
+
+    @LocalServerPort
+    int porta;
+
+    @Autowired
+    ApplicationContext contexto;
+
+    BrowserContext navegador;
+    Page pagina;
+    MassaDeTeste massa;
+
+    @BeforeEach
+    void abrir() {
+        massa = new MassaDeTeste(contexto).montar();
+        navegador = Navegador.browser()
+                .newContext(new com.microsoft.playwright.Browser.NewContextOptions().setViewportSize(1280, 900));
+        pagina = navegador.newPage();
+        pagina.navigate(url("/login"));
+        pagina.locator("#senha").fill(SenhaDeTeste.VALOR);
+        pagina.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Entrar"))
+                .click();
+        pagina.waitForURL(url("/"));
+    }
+
+    @AfterEach
+    void fechar() {
+        navegador.close();
+    }
+
+    String url(String caminho) {
+        return "http://localhost:" + porta + caminho;
+    }
+
+    @Test
+    @DisplayName("01 a 15/03: cartões, demonstrativo e gráficos com os números da massa")
+    void cartoesEDemonstrativo() {
+        pagina.navigate(url(MARCO));
+
+        // Cartões (comparados com 14/02 a 28/02, sem vendas)
+        assertThat(pagina.locator("#cartao-receita .indicador-valor")).hasText("R$ 229,00");
+        assertThat(pagina.locator("#cartao-lucro .indicador-valor")).hasText("R$ 56,42");
+        assertThat(pagina.locator("#cartao-margem .indicador-valor")).hasText("63,54%");
+        assertThat(pagina.locator("#cartao-ticket .indicador-valor")).hasText("R$ 28,62");
+        assertThat(pagina.locator("#cartao-vendas .indicador-valor")).hasText("8");
+        assertThat(pagina.locator("#cartao-itens .indicador-valor")).hasText("16");
+        assertThat(pagina.locator("#cartao-receita .variacao")).containsText("antes era zero");
+        assertThat(pagina.locator("#aviso-parcial")).containsText("R$ 46,00");
+
+        // Demonstrativo: valor e % da receita líquida
+        var linhas = pagina.locator("#demonstrativo tbody tr");
+        List<String> esperado = List.of(
+                "Receita bruta R$ 257,00 112,23%",
+                "(-) Descontos promocionais R$ 8,00 3,49%",
+                "(+/-) Ajustes manuais R$ -20,00 -8,73%",
+                "= Receita líquida R$ 229,00 100,00%",
+                "(-) Taxas estimadas R$ 3,58 1,56%",
+                "(-) CMV (custo da mercadoria vendida) R$ 83,50 36,46%",
+                "= Margem bruta R$ 145,50 63,54%",
+                "(-) Despesas R$ 85,50 37,34%",
+                "= Lucro líquido R$ 56,42 24,64%");
+        assertThat(linhas).hasCount(esperado.size());
+        List<String> lidas = linhas.allInnerTexts().stream()
+                .map(t -> t.replaceAll("\\s+", " ").trim())
+                .toList();
+        org.junit.jupiter.api.Assertions.assertEquals(esperado, lidas);
+
+        // Gráficos desenhados a partir do JSON
+        assertThat(pagina.locator("#financas")).hasAttribute("data-graficos", "prontos");
+        pagina.screenshot(new Page.ScreenshotOptions()
+                .setPath(Path.of("target", "financas-marco.png"))
+                .setFullPage(true));
+    }
+
+    @Test
+    @DisplayName("Feira 2 contra a Feira 1: variação escrita; drill-down de categoria e voltar")
+    void variacaoEDrillDown() {
+        pagina.navigate(url("/financas?evento=" + massa.e.get("Feira 2").getId()));
+        assertThat(pagina.locator("#cartao-receita .indicador-valor")).hasText("R$ 29,00");
+        assertThat(pagina.locator("#cartao-receita .variacao")).hasText("▼ -78,52% em relação a evento Feira 1");
+
+        pagina.locator("#tabela-categorias button[data-categoria]").first().click();
+        var drill = pagina.locator(".drill:not(.oculto)");
+        assertThat(drill).isVisible();
+        assertThat(pagina.locator("#categorias-visao")).isHidden();
+        drill.getByText("← Voltar para as categorias").click();
+        assertThat(pagina.locator("#categorias-visao")).isVisible();
+    }
+
+    @Test
+    @DisplayName("Celular: a página não rola na horizontal (as tabelas rolam dentro delas)")
+    void celular() {
+        var celular = Navegador.browser()
+                .newContext(new com.microsoft.playwright.Browser.NewContextOptions().setViewportSize(390, 844));
+        try {
+            var p = celular.newPage();
+            p.navigate(url("/login"));
+            p.locator("#senha").fill(SenhaDeTeste.VALOR);
+            p.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Entrar"))
+                    .click();
+            p.waitForURL(url("/"));
+            p.navigate(url(MARCO));
+            assertThat(p.locator("#cartao-receita .indicador-valor")).hasText("R$ 229,00");
+            Object largura =
+                    p.evaluate("() => document.documentElement.scrollWidth - document.documentElement.clientWidth");
+            org.junit.jupiter.api.Assertions.assertEquals(
+                    0, ((Number) largura).intValue(), "rolagem horizontal da página");
+            p.screenshot(new Page.ScreenshotOptions()
+                    .setPath(Path.of("target", "financas-celular.png"))
+                    .setFullPage(true));
+        } finally {
+            celular.close();
+        }
+    }
+}

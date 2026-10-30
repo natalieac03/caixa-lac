@@ -65,22 +65,33 @@
 
     <!--/* 5. Demonstrativo */-->
     <section class="cartao tabela-area" aria-labelledby="titulo-demonstrativo">
-        <h2 id="titulo-demonstrativo">Demonstrativo</h2>
+        <div class="cabecalho-secao"><h2 id="titulo-demonstrativo">Demonstrativo</h2>
+        <a class="botao botao-secundario botao-pequeno exportar-csv" th:href="@{/financas/exportar/demonstrativo.csv} + '?' + ${f.consulta()} + '&metrica=' + ${metrica}">Exportar CSV</a></div>
         <table th:replace="~{fragments/financas :: demonstrativo(${painel})}"></table>
     </section>
 
     <!--/* 6. Série */-->
     <section class="cartao" aria-labelledby="titulo-serie">
-        <h2 id="titulo-serie" th:text="${painel.serie.porHora} ? 'Receita líquida e lucro bruto por hora' : 'Receita líquida e lucro bruto por dia'">Receita e lucro por dia</h2>
+        <div class="cabecalho-secao"><h2 id="titulo-serie" th:text="${painel.serie.porHora} ? 'Receita líquida e lucro bruto por hora' : 'Receita líquida e lucro bruto por dia'">Receita e lucro por dia</h2>
+        <a class="botao botao-secundario botao-pequeno exportar-csv" th:href="@{/financas/exportar/serie.csv} + '?' + ${f.consulta()} + '&metrica=' + ${metrica}">Exportar CSV</a></div>
         <figure class="grafico grafico-linha">
-            <canvas id="grafico-serie" role="img" aria-describedby="tabela-serie-titulo"></canvas>
+            <canvas id="grafico-serie" role="img" aria-describedby="tabela-serie-titulo" aria-label="Gráfico de linha: receita líquida e lucro bruto"></canvas>
             <figcaption>Linha roxa: receita líquida. Linha laranja tracejada: lucro bruto (receita líquida - CMV).</figcaption>
         </figure>
+        <div class="sr-only"><table id="tabela-serie-titulo">
+            <caption>Receita líquida e lucro bruto (dados do gráfico)</caption>
+            <thead><tr><th scope="col">Início</th><th scope="col">Receita líquida</th><th scope="col">Lucro bruto</th><th scope="col">Vendas</th></tr></thead>
+            <tbody><tr th:each="x : ${painel.serie.pontos}">
+                <th scope="row" th:text="${#temporals.format(x.inicio, 'dd/MM/yyyy HH:mm')}">01/03</th>
+                <td th:text="${R.reais(x.receitaLiquida)}">R$ 0,00</td><td th:text="${R.reais(x.lucroBruto)}">R$ 0,00</td>
+                <td th:text="${x.vendas}">0</td></tr></tbody>
+        </table></div>
     </section>
 
     <!--/* 7. Produtos */-->
     <section class="cartao" aria-labelledby="titulo-produtos" id="secao-produtos">
-        <h2 id="titulo-produtos">Ranking de produtos</h2>
+        <div class="cabecalho-secao"><h2 id="titulo-produtos">Ranking de produtos</h2>
+        <a class="botao botao-secundario botao-pequeno exportar-csv" th:href="@{/financas/exportar/produtos.csv} + '?' + ${f.consulta()} + '&metrica=' + ${metrica}">Exportar CSV</a></div>
         <nav class="atalhos-periodo" aria-label="Métrica do ranking">
             <a th:each="m : ${ {'quantidade','receita','lucro'} }"
                th:href="@{/financas} + '?' + ${f.consulta()} + '&metrica=' + ${m} + '#secao-produtos'"
@@ -88,9 +99,17 @@
                th:text="${m == 'quantidade'} ? 'Quantidade' : (${m == 'receita'} ? 'Receita' : 'Lucro')">Receita</a>
         </nav>
         <figure class="grafico grafico-barras">
-            <canvas id="grafico-produtos" role="img" aria-describedby="tabela-produtos-top"></canvas>
+            <canvas id="grafico-produtos" role="img" aria-describedby="tabela-produtos-top" aria-label="Gráfico de barras: os 10 primeiros produtos"></canvas>
             <figcaption th:text="'Os 10 primeiros por ' + (${metrica == 'quantidade'} ? 'quantidade vendida' : (${metrica == 'lucro'} ? 'lucro bruto' : 'receita líquida')) + '.'">Os 10 primeiros.</figcaption>
         </figure>
+        <div class="sr-only"><table id="tabela-produtos-top">
+            <caption>Os 10 primeiros produtos do gráfico</caption>
+            <thead><tr><th scope="col">Posição</th><th scope="col">Produto</th><th scope="col">Quantidade</th><th scope="col">Receita líquida</th><th scope="col">Lucro bruto</th></tr></thead>
+            <tbody><tr th:each="x, st : ${painel.produtos}" th:if="${st.index < 10}">
+                <td th:text="${x.produto.posicao}">1</td><th scope="row" th:text="${x.produto.nome}">Bóton</th>
+                <td th:text="${x.produto.quantidade}">0</td><td th:text="${R.reais(x.produto.receitaLiquida)}">R$ 0,00</td>
+                <td th:text="${R.reais(x.produto.lucroBruto)}">R$ 0,00</td></tr></tbody>
+        </table></div>
         <div class="linha-campos busca-tabela">
             <div class="campo"><label for="buscaProdutos">Buscar produto</label>
                 <input type="search" id="buscaProdutos" data-busca="tabela-produtos" placeholder="Ex.: capivara"></div>
@@ -131,12 +150,19 @@
 
     <!--/* 8. Categorias com drill-down */-->
     <section class="cartao" aria-labelledby="titulo-categorias" id="secao-categorias">
-        <h2 id="titulo-categorias">Categorias</h2>
+        <div class="cabecalho-secao"><h2 id="titulo-categorias">Categorias</h2>
+        <a class="botao botao-secundario botao-pequeno exportar-csv" th:href="@{/financas/exportar/categorias.csv} + '?' + ${f.consulta()} + '&metrica=' + ${metrica}">Exportar CSV</a></div>
         <div id="categorias-visao">
             <figure class="grafico grafico-barras">
-                <canvas id="grafico-categorias" role="img" aria-describedby="tabela-categorias"></canvas>
+                <canvas id="grafico-categorias" role="img" aria-describedby="tabela-categorias-grafico" aria-label="Gráfico de barras: receita líquida por categoria"></canvas>
                 <figcaption>Receita líquida por categoria. Clique numa barra (ou em "Ver produtos") para abrir os produtos dela.</figcaption>
             </figure>
+            <div class="sr-only"><table id="tabela-categorias-grafico">
+                <caption>Receita líquida por categoria (dados do gráfico)</caption>
+                <thead><tr><th scope="col">Categoria</th><th scope="col">Receita líquida</th></tr></thead>
+                <tbody><tr th:each="c : ${painel.categorias}"><th scope="row" th:text="${c.categoria}">Bóton</th>
+                    <td th:text="${R.reais(c.receitaLiquida)}">R$ 0,00</td></tr></tbody>
+            </table></div>
             <div class="tabela-area">
             <table class="dados" id="tabela-categorias">
                 <caption class="sr-only">Receita, lucro e participação por categoria</caption>
@@ -185,11 +211,18 @@
 
     <!--/* 9. Formas de pagamento */-->
     <section class="cartao" aria-labelledby="titulo-formas">
-        <h2 id="titulo-formas">Formas de pagamento</h2>
+        <div class="cabecalho-secao"><h2 id="titulo-formas">Formas de pagamento</h2>
+        <a class="botao botao-secundario botao-pequeno exportar-csv" th:href="@{/financas/exportar/formas.csv} + '?' + ${f.consulta()} + '&metrica=' + ${metrica}">Exportar CSV</a></div>
         <figure class="grafico grafico-barras">
-            <canvas id="grafico-formas" role="img" aria-describedby="tabela-formas"></canvas>
+            <canvas id="grafico-formas" role="img" aria-describedby="tabela-formas-grafico" aria-label="Gráfico de barras: valor e número de vendas por forma de pagamento"></canvas>
             <figcaption>Barras roxas: valor recebido (eixo da esquerda). Barras laranja listradas: número de vendas (eixo da direita).</figcaption>
         </figure>
+        <div class="sr-only"><table id="tabela-formas-grafico">
+            <caption>Valor e vendas por forma de pagamento (dados do gráfico)</caption>
+            <thead><tr><th scope="col">Forma</th><th scope="col">Valor recebido</th><th scope="col">Vendas</th></tr></thead>
+            <tbody><tr th:each="l : ${painel.formas}"><th scope="row" th:text="${l.forma.rotulo}">Pix</th>
+                <td th:text="${R.reais(l.valor)}">R$ 0,00</td><td th:text="${l.vendas}">0</td></tr></tbody>
+        </table></div>
         <div class="tabela-area">
         <table class="dados" id="tabela-formas">
             <caption class="sr-only">Valor, vendas e taxa estimada por forma de pagamento</caption>
@@ -211,7 +244,8 @@
 
     <!--/* 10. Mapa de calor */-->
     <section class="cartao" aria-labelledby="titulo-mapa">
-        <h2 id="titulo-mapa">Vendas por dia da semana e hora</h2>
+        <div class="cabecalho-secao"><h2 id="titulo-mapa">Vendas por dia da semana e hora</h2>
+        <a class="botao botao-secundario botao-pequeno exportar-csv" th:href="@{/financas/exportar/mapa.csv} + '?' + ${f.consulta()} + '&metrica=' + ${metrica}">Exportar CSV</a></div>
         <div class="tabela-area">
         <table class="dados mapa-calor" id="mapa-calor">
             <caption class="sr-only">Número de vendas em cada dia da semana e hora do dia; a receita aparece ao passar o mouse.</caption>
@@ -230,7 +264,8 @@
 
     <!--/* 11. Promoções */-->
     <section class="cartao tabela-area" aria-labelledby="titulo-promocoes">
-        <h2 id="titulo-promocoes">Promoções</h2>
+        <div class="cabecalho-secao"><h2 id="titulo-promocoes">Promoções</h2>
+        <a class="botao botao-secundario botao-pequeno exportar-csv" th:href="@{/financas/exportar/promocoes.csv} + '?' + ${f.consulta()} + '&metrica=' + ${metrica}">Exportar CSV</a></div>
         <p class="vazio" th:if="${painel.promocoes.isEmpty()}">Nenhuma promoção usada no período.</p>
         <table class="dados" id="tabela-promocoes" th:unless="${painel.promocoes.isEmpty()}">
             <thead><tr><th scope="col">Promoção</th><th scope="col" class="num">Vendas</th><th scope="col" class="num">Desconto concedido</th>
@@ -258,7 +293,8 @@
             <div class="indicador" id="estoque-a-preco"><div class="indicador-rotulo">Estoque a preço de venda</div>
                 <div class="indicador-valor" th:text="${R.reais(painel.valorEstoque.aPreco)}">R$ 0,00</div></div>
         </div>
-        <h3>Giro (o que acaba primeiro vem primeiro)</h3>
+        <div class="cabecalho-secao"><h3>Giro (o que acaba primeiro vem primeiro)</h3>
+        <a class="botao botao-secundario botao-pequeno exportar-csv" th:href="@{/financas/exportar/giro.csv} + '?' + ${f.consulta()} + '&metrica=' + ${metrica}">Exportar CSV</a></div>
         <div class="tabela-area">
         <table class="dados" id="tabela-giro">
             <thead><tr><th scope="col">Produto</th><th scope="col" class="num">Vendidas no período</th><th scope="col" class="num">Média por dia</th>
@@ -276,7 +312,8 @@
             </tbody>
         </table>
         </div>
-        <h3>Produtos parados (com estoque e sem venda no período)</h3>
+        <div class="cabecalho-secao"><h3>Produtos parados (com estoque e sem venda no período)</h3>
+        <a class="botao botao-secundario botao-pequeno exportar-csv" th:href="@{/financas/exportar/parados.csv} + '?' + ${f.consulta()} + '&metrica=' + ${metrica}">Exportar CSV</a></div>
         <p class="vazio" th:if="${painel.parados.isEmpty()}">Nenhum produto parado.</p>
         <div class="tabela-area" th:unless="${painel.parados.isEmpty()}">
         <table class="dados" id="tabela-parados">
