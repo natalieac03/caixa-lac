@@ -12,7 +12,6 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 ![Flyway](https://img.shields.io/badge/Flyway-12-CC0200?logo=flyway&logoColor=white)
 ![Mercado Pago](https://img.shields.io/badge/Pix-Mercado_Pago-00B1EA?logo=mercadopago&logoColor=white)
-![Railway](https://img.shields.io/badge/deploy-Railway-0B0D0E?logo=railway&logoColor=white)
 ![Testes](https://img.shields.io/badge/testes-JUnit_·_Playwright_·_Testcontainers-25A162)
 
 <br>
@@ -23,33 +22,18 @@
 
 ---
 
-## Sumário
-
-- [O que o caixa faz](#o-que-o-caixa-faz)
-- [Telas](#telas)
-- [Stack](#stack)
-- [Arquitetura](#arquitetura)
-- [Como funciona por dentro](#como-funciona-por-dentro)
-- [Rodar no computador](#rodar-no-computador)
-- [Testes](#testes)
-- [Colocar no ar](#colocar-no-ar)
-- [Regras de negócio](#regras-de-negócio)
-- [Documentação](#documentação)
-
----
-
 ## O que o caixa faz
 
 | | |
 |---|---|
-| 🛒 **Vender** | Busca de produtos, total na hora com as promoções (o cliente sempre paga o menor total), pagamento em Pix, débito, crédito, dinheiro com troco ou "outro", **pagamento dividido**, ajuste com motivo e cortesia. |
-| ⚡ **Pix automático** | Com o Mercado Pago ligado, a tela mostra o QR Code e confirma sozinha quando o pagamento cai. Sem ele, o Pix é conferido à mão. |
-| 📦 **Estoque e promoções** | Produtos por categoria, custo médio pelas compras, limite de estoque baixo, livro de movimentos e promoções "a partir de N" ou em pacote. |
-| 🧾 **Histórico e fechamento** | Filtros por dia, forma, produto e evento; correção de data; cancelamento com motivo; fechamento por forma de pagamento (Pix do Mercado Pago separado do manual); CSV. |
-| 🎪 **Eventos** | "Iniciar evento" com um toque, relatório para imprimir e comparativo entre eventos. Fora deles é o "dia a dia". |
-| 📊 **Finanças** | Receita, CMV, margem, taxas, despesas e lucro; gráficos, rankings, curva ABC, mapa de calor, giro de estoque e metas. Toda tabela exporta CSV. |
-| 🔔 **Avisos** | O sininho avisa estoque acabando, produto sem custo, ajustes do dia, fechamento que não bate, evento esquecido e Pix estornado. |
-| 🔒 **Segurança** | Senha do grupo só em variável de ambiente, freio contra tentativas, sessão de um dia de evento, proteção contra formulários de outros sites e auditoria. |
+| **Vender** | Busca de produtos, total na hora com as promoções (o cliente sempre paga o menor total), pagamento em Pix, débito, crédito, dinheiro com troco ou "outro", **pagamento dividido**, ajuste com motivo e cortesia. |
+| **Pix automático** | Com o Mercado Pago ligado, a tela mostra o QR Code e confirma sozinha quando o pagamento cai. Sem ele, o Pix é conferido à mão. |
+| **Estoque e promoções** | Produtos por categoria, custo médio pelas compras, limite de estoque baixo, livro de movimentos e promoções "a partir de N" ou em pacote. |
+| **Histórico e fechamento** | Filtros por dia, forma, produto e evento; correção de data; cancelamento com motivo; fechamento por forma de pagamento (Pix do Mercado Pago separado do manual); CSV. |
+| **Eventos** | "Iniciar evento" com um toque, relatório para imprimir e comparativo entre eventos. Fora deles é o "dia a dia". |
+| **Finanças** | Receita, CMV, margem, taxas, despesas e lucro; gráficos, rankings, curva ABC, mapa de calor, giro de estoque e metas. Toda tabela exporta CSV. |
+| **Avisos** | O sininho avisa estoque acabando, produto sem custo, ajustes do dia, fechamento que não bate, evento esquecido e Pix estornado. |
+| **Segurança** | Senha do grupo só em variável de ambiente, freio contra tentativas, sessão de um dia de evento, proteção contra formulários de outros sites e auditoria. |
 
 ## Telas
 
@@ -72,8 +56,6 @@
   </tr>
 </table>
 
-O relatório completo de um evento, como sai na impressão, está em
-[`docs/prints/relatorio-feira-1.pdf`](docs/prints/relatorio-feira-1.pdf).
 
 ## Stack
 
@@ -149,7 +131,7 @@ e `RegraDeNegocioException` para a mensagem que vai para a pessoa no caixa.
 ## Como funciona por dentro
 
 <details>
-<summary><b>🛒 Venda</b></summary>
+<summary><b>Venda</b></summary>
 
 1. A tela abre com um **token** novo; reenviar o mesmo formulário nunca cria
    outra venda.
@@ -164,7 +146,7 @@ e `RegraDeNegocioException` para a mensagem que vai para a pessoa no caixa.
 </details>
 
 <details>
-<summary><b>🧮 Calculadora de preço</b></summary>
+<summary><b> Calculadora de preço</b></summary>
 
 Java puro, sem Spring nem banco. O cliente paga o **menor total possível** e cada
 unidade entra em **no máximo uma promoção**. As `A_PARTIR_DE` que não disputam
@@ -177,7 +159,7 @@ bruta independente em carrinhos aleatórios.
 </details>
 
 <details>
-<summary><b>⚡ Pix pelo Mercado Pago</b></summary>
+<summary><b>Pix pelo Mercado Pago</b></summary>
 
 ```mermaid
 sequenceDiagram
@@ -211,7 +193,7 @@ sequenceDiagram
 </details>
 
 <details>
-<summary><b>📊 Finanças</b></summary>
+<summary><b>Finanças</b></summary>
 
 As somas são feitas no banco, em SQL que roda igual no PostgreSQL e no H2. Os
 serviços de `servico/financas/` cuidam de arredondamento, percentuais e
@@ -224,7 +206,7 @@ o máximo.
 </details>
 
 <details>
-<summary><b>🗄️ Persistência e concorrência</b></summary>
+<summary><b>Persistência e concorrência</b></summary>
 
 - O **Flyway** é dono do esquema; o Hibernate só valida (`ddl-auto=validate`).
   Migração aplicada nunca é editada.
@@ -240,7 +222,7 @@ o máximo.
 </details>
 
 <details>
-<summary><b>🔒 Segurança</b></summary>
+<summary><b>Segurança</b></summary>
 
 - Senha única do grupo (`APP_SENHA`), obrigatória e comparada em tempo constante;
   sem ela o app não sobe.
@@ -256,14 +238,6 @@ o máximo.
 
 </details>
 
-<details>
-<summary><b>🕐 Hora de Brasília</b></summary>
-
-O relógio da aplicação é sempre `America/Sao_Paulo`, qualquer que seja o fuso da
-máquina (o contêiner do Railway roda em UTC). Todo código que precisa de "agora"
-recebe o `Clock`, e os testes usam um relógio controlado.
-
-</details>
 
 ## Rodar no computador
 
@@ -315,22 +289,6 @@ O `verify` também roda o **Spotless** (formatação; para corrigir,
 testes usam um servidor falso. Sem Docker ou sem navegador, esses testes são
 pulados no computador; no **GitHub Actions** a falta deles é erro.
 
-## Colocar no ar
-
-O caixa roda no **[Railway](https://railway.app)** com um PostgreSQL do próprio
-Railway. O serviço do app precisa destas variáveis:
-
-| Variável | Para quê |
-|---|---|
-| `SPRING_PROFILES_ACTIVE=prod` | perfil de produção |
-| `SPRING_DATASOURCE_URL`, `PGUSER`, `PGPASSWORD` | o banco do Railway |
-| `APP_SENHA` | a senha de acesso (segredo) |
-| `RAILPACK_JDK_VERSION=21` | Java 21 no build |
-| `TZ=America/Sao_Paulo` | fuso da máquina |
-| `MP_ACCESS_TOKEN`, `MP_PAYER_EMAIL`, `MP_WEBHOOK_SECRET` | opcionais: ligam o Pix automático |
-
-O roteiro completo (backup, migrações, deploy, conferência, rollback, Mercado
-Pago e troca de senha) está em **[docs/DEPLOY.md](docs/DEPLOY.md)**.
 
 ## Regras de negócio
 
@@ -387,14 +345,3 @@ Pago e troca de senha) está em **[docs/DEPLOY.md](docs/DEPLOY.md)**.
 
 </details>
 
-## Documentação
-
-| Documento | Para quê |
-|---|---|
-| [docs/DEPLOY.md](docs/DEPLOY.md) | deploy no Railway, Mercado Pago, troca de senha, backup e rollback |
-| [docs/MIGRACOES.md](docs/MIGRACOES.md) | mudanças de esquema e o roteiro para migrar um banco existente |
-| [docs/DECISOES.md](docs/DECISOES.md) | os porquês das decisões que o código não mostra |
-
-<sub>Inclui o [Chart.js](https://www.chartjs.org/) 4.4.1 (licença MIT), em
-`src/main/resources/static/js/vendor/` com a licença ao lado. Para atualizar,
-troque o arquivo e o `<script>` em `templates/financas.html`.</sub>
