@@ -1,6 +1,8 @@
 package br.com.lac.caixa.controle;
 
+import br.com.lac.caixa.modelo.Evento;
 import br.com.lac.caixa.servico.AlertasService;
+import br.com.lac.caixa.servico.EventoService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -13,9 +15,44 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 @ControllerAdvice
 public class AvisosNaTela {
     private final AlertasService alertas;
+    private final EventoService eventos;
 
-    public AvisosNaTela(AlertasService alertas) {
+    public AvisosNaTela(AlertasService alertas, EventoService eventos) {
         this.alertas = alertas;
+        this.eventos = eventos;
+    }
+
+    /** O evento em andamento para o selo do topo (ou null) e a sugestão de nome para iniciar um. */
+    public static final class EventoDaTela {
+        private final EventoService servico;
+        private Evento aberto;
+        private boolean lido;
+
+        EventoDaTela(EventoService servico) {
+            this.servico = servico;
+        }
+
+        public Evento getAberto() {
+            if (!lido) {
+                aberto = servico.aberto().orElse(null);
+                lido = true;
+            }
+            return aberto;
+        }
+
+        /** "14:00" (hoje) ou "dd/MM HH:mm". */
+        public String getDesde() {
+            return getAberto() == null ? "" : servico.desde(getAberto());
+        }
+
+        public String getNomeSugerido() {
+            return servico.nomeSugerido();
+        }
+    }
+
+    @ModelAttribute("eventoDaTela")
+    public EventoDaTela eventoDaTela() {
+        return new EventoDaTela(eventos);
     }
 
     /** Calcula na primeira leitura e guarda o resultado para o resto da página. */

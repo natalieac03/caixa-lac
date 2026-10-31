@@ -16,7 +16,8 @@ import org.springframework.web.util.UriComponentsBuilder;
  * Os filtros da tela de Finanças (todos na URL, para mandar o link) viram um
  * FiltroFinancas. Atalhos: hoje, evento ("Este evento": o que está acontecendo
  * ou o último que começou), 7dias, mes (do dia 1 até hoje) e personalizado
- * (De/Até). Um evento escolhido na lista vale como período. Sem atalho: mes.
+ * (De/Até). Um evento escolhido na lista vale como período; "Dia a dia" fica
+ * dentro do período do atalho (vendas fora de qualquer evento). Sem atalho: mes.
  */
 @Component
 public class FiltrosDaTelaFinancas {
@@ -37,6 +38,7 @@ public class FiltrosDaTelaFinancas {
             LocalDate inicio,
             LocalDate fim,
             Long evento,
+            boolean diaADia,
             Long categoria,
             FormaPagamento forma,
             FiltroFinancas filtro,
@@ -48,6 +50,7 @@ public class FiltrosDaTelaFinancas {
             var b = UriComponentsBuilder.newInstance().queryParam("atalho", atalho);
             if ("personalizado".equals(atalho)) b.queryParam("inicio", inicio).queryParam("fim", fim);
             if (evento != null) b.queryParam("evento", evento);
+            if (diaADia) b.queryParam("evento", SeletorDeEvento.DIA_A_DIA);
             if (categoria != null) b.queryParam("categoria", categoria);
             if (forma != null) b.queryParam("forma", forma);
             return b.build().encode().getQuery();
@@ -63,11 +66,14 @@ public class FiltrosDaTelaFinancas {
     }
 
     public Resolvido resolver(
-            String atalho, String inicio, String fim, Long evento, Long categoria, FormaPagamento forma) {
+            String atalho, String inicio, String fim, String evento, Long categoria, FormaPagamento forma) {
         LocalDate hoje = LocalDate.now(relogio);
-        String a = atalho == null || atalho.isBlank() ? (evento != null ? "evento" : "mes") : atalho.trim();
+        var sel = SeletorDeEvento.ler(evento);
+        String a = atalho == null || atalho.isBlank() ? (sel.id() != null ? "evento" : "mes") : atalho.trim();
+        // Dia a dia é dentro de um período: com o atalho "Este evento", vale o mês.
+        if (sel.diaADia() && "evento".equals(a)) a = "mes";
         String aviso = null;
-        Long eventoId = evento;
+        Long eventoId = sel.id();
         if ("evento".equals(a) && eventoId == null) {
             var atual = eventos.atual(LocalDateTime.now(relogio));
             if (atual.isPresent()) {
@@ -81,8 +87,8 @@ public class FiltrosDaTelaFinancas {
             var periodo = eventos.periodo(eventoId);
             var filtro = new FiltroFinancas(null, null, periodo, categoria, forma);
             String texto = periodo.nome() + " (" + periodo.inicio().format(DATA_HORA) + " a "
-                    + periodo.fim().format(DATA_HORA) + ")";
-            return new Resolvido("evento", null, null, eventoId, categoria, forma, filtro, texto, aviso);
+                    + (periodo.aberto() ? "agora, em andamento" : periodo.fim().format(DATA_HORA)) + ")";
+            return new Resolvido("evento", null, null, eventoId, false, categoria, forma, filtro, texto, aviso);
         }
         LocalDate de;
         LocalDate ate;
@@ -105,9 +111,11 @@ public class FiltrosDaTelaFinancas {
             }
             default -> throw new RegraDeNegocioException("Atalho de período desconhecido.");
         }
-        var filtro = new FiltroFinancas(de, ate, null, categoria, forma);
-        String texto = de.equals(ate) ? de.format(DATA) : de.format(DATA) + " a " + ate.format(DATA);
-        return new Resolvido(a, de, ate, null, categoria, forma, filtro, texto, aviso);
+        var filtro = new FiltroFinancas(
+                de, ate, null, categoria, forma, sel.diaADia(), sel.diaADia() ? LocalDateTime.now(relogio) : null);
+        String texto = (de.equals(ate) ? de.format(DATA) : de.format(DATA) + " a " + ate.format(DATA))
+                + (sel.diaADia() ? " · dia a dia (fora dos eventos)" : "");
+        return new Resolvido(a, de, ate, null, sel.diaADia(), categoria, forma, filtro, texto, aviso);
     }
 
     private static LocalDate data(String texto, LocalDate padrao) {

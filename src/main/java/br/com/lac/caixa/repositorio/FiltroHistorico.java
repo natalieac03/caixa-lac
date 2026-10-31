@@ -13,23 +13,42 @@ import java.util.Locale;
  * buscado sem diferenciar maiúsculas nem acentos ("boton" acha "Bóton").
  * Datas da tela são inclusivas; a consulta usa limite final exclusivo.
  * Evento é um atalho de período: com ele, vale o intervalo [inicio, fim) do
- * evento (com hora) e as datas ficam vazias.
+ * evento (com hora) e as datas ficam vazias. Dia a dia: dentro das datas, só as
+ * vendas fora de qualquer evento (o aberto vale até {@code agora}).
  */
 public record FiltroHistorico(
-        FormaPagamento forma, LocalDate inicio, LocalDate fim, String produto, PeriodoDoEvento evento) {
+        FormaPagamento forma,
+        LocalDate inicio,
+        LocalDate fim,
+        String produto,
+        PeriodoDoEvento evento,
+        boolean diaADia,
+        LocalDateTime agora) {
 
     public FiltroHistorico {
         if (evento != null) {
             inicio = null;
             fim = null;
+            diaADia = false;
         }
+        if (diaADia && agora == null) throw new IllegalArgumentException("Dia a dia precisa da hora de agora.");
         if (inicio != null && fim != null && inicio.isAfter(fim))
             throw new RegraDeNegocioException("A data inicial deve ser anterior ou igual à final.");
         produto = semAcento(produto == null ? "" : produto.trim());
     }
 
     public FiltroHistorico(FormaPagamento forma, LocalDate inicio, LocalDate fim, String produto) {
-        this(forma, inicio, fim, produto, null);
+        this(forma, inicio, fim, produto, null, false, null);
+    }
+
+    public FiltroHistorico(
+            FormaPagamento forma, LocalDate inicio, LocalDate fim, String produto, PeriodoDoEvento evento) {
+        this(forma, inicio, fim, produto, evento, false, null);
+    }
+
+    /** O mesmo filtro só com o dia a dia ligado (fora de qualquer evento). */
+    public FiltroHistorico comDiaADia(LocalDateTime quando) {
+        return new FiltroHistorico(forma, inicio, fim, produto, null, true, quando);
     }
 
     /**

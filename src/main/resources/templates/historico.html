@@ -61,12 +61,13 @@
                     <label for="produto">Produto contém</label>
                     <input type="text" id="produto" name="produto" th:value="${produto}" placeholder="Ex.: capivara">
                 </div>
-                <div class="campo" th:unless="${eventos.isEmpty()}">
+                <div class="campo">
                     <label for="evento">Evento</label>
                     <select id="evento" name="evento">
-                        <option value="">Nenhum (usar datas)</option>
+                        <option value="">Todos</option>
+                        <option value="dia-a-dia" th:selected="${evento == 'dia-a-dia'}">Dia a dia (fora dos eventos)</option>
                         <option th:each="e : ${eventos}" th:value="${e.id}" th:text="${e.nome}"
-                                th:selected="${evento != null and evento == e.id}">Feira</option>
+                                th:selected="${evento == '' + e.id}">Feira</option>
                     </select>
                 </div>
                 <div class="campo">
@@ -80,7 +81,7 @@
                 <div class="campo campo-acao">
                     <button type="submit" class="botao botao-principal">Filtrar</button>
                 </div>
-                <div class="campo campo-acao" th:if="${forma != null or !#strings.isEmpty(produto) or inicio != null or fim != null or evento != null}">
+                <div class="campo campo-acao" th:if="${forma != null or !#strings.isEmpty(produto) or inicio != null or fim != null or !#strings.isEmpty(evento)}">
                     <a class="botao botao-fantasma" th:href="@{/historico}">Limpar filtros</a>
                 </div>
             </div>
@@ -141,7 +142,7 @@
                                     onclick="abrirEdicaoData(this, 'date')"
                                     th:text="${#temporals.format(v.dataHora, 'dd/MM/yyyy')}">26/06/2026</button>
                             <th:block th:with="nomeEvento=${eventoDaVenda.nome(v.dataHora)}">
-                                <span class="evento-da-venda" th:unless="${#strings.isEmpty(nomeEvento)}"
+                                <span class="evento-da-venda" th:classappend="${nomeEvento == 'Dia a dia'} ? 'dia-a-dia'"
                                       th:text="${nomeEvento}">Feira</span>
                             </th:block>
                         </span>

@@ -1,6 +1,7 @@
 package br.com.lac.caixa.postgres;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -252,5 +253,66 @@ class PostgresBancoNovoTest {
                                 .orElseThrow()
                                 .getPercentual()));
         assertEquals(0, taxas.vendasSemTaxaRegistrada());
+    }
+
+    @Autowired
+    ConsultaHistorico consultaHistorico;
+
+    @Autowired
+    br.com.lac.caixa.servico.financas.FinancasService financas;
+
+    @Test
+    @DisplayName(
+            "Postgres: evento aberto (fim nulo) nas consultas; Dia a dia com NOT EXISTS; iniciar com outro aberto recusado")
+    void eventoAbertoEDiaADia() {
+        var p = estoque.criarNovo("Bóton Aberto PG", new BigDecimal("6.00"), 50, null);
+        var antes = caixa.registrarVenda(
+                        Map.of(p.getId(), 1),
+                        List.of(PagamentoInformado.total(FormaPagamento.PIX)),
+                        null,
+                        null,
+                        UUID.randomUUID().toString())
+                .venda();
+        antes.setDataHora(java.time.LocalDateTime.now().minusMinutes(10));
+        vendas.saveAndFlush(antes);
+        var feira = eventos.iniciar("Feira PG aberta");
+        try {
+            org.junit.jupiter.api.Assertions.assertThrows(
+                    br.com.lac.caixa.dominio.RegraDeNegocioException.class, () -> eventos.iniciar("Outra"));
+            var durante = caixa.registrarVenda(
+                            Map.of(p.getId(), 2),
+                            List.of(PagamentoInformado.total(FormaPagamento.PIX)),
+                            null,
+                            null,
+                            UUID.randomUUID().toString())
+                    .venda();
+            assertEquals(
+                    feira.getId(),
+                    eventos.doMomento(durante.getDataHora()).orElseThrow().getId());
+            var hoje = LocalDate.now();
+            var agora = java.time.LocalDateTime.now();
+            var diaADia = new br.com.lac.caixa.repositorio.FiltroHistorico(null, hoje, hoje, "").comDiaADia(agora);
+            var ids = consultaHistorico
+                    .consultar(diaADia, 0)
+                    .pagina()
+                    .map(v -> v.getId())
+                    .getContent();
+            assertTrue(ids.contains(antes.getId()) && !ids.contains(durante.getId()), ids.toString());
+            var r = financas.resumo(br.com.lac.caixa.repositorio.FiltroFinancas.diaADia(hoje, hoje, agora));
+            assertTrue(r.vendas() >= 1);
+            var doEvento = financas.resumo(
+                    br.com.lac.caixa.repositorio.FiltroFinancas.doEvento(eventos.periodo(feira.getId())));
+            assertEquals(1, doEvento.vendas());
+            assertEquals(0, new BigDecimal("12.00").compareTo(doEvento.receitaLiquida()));
+            // O aberto conta até agora na sobreposição
+            org.junit.jupiter.api.Assertions.assertThrows(
+                    br.com.lac.caixa.dominio.RegraDeNegocioException.class,
+                    () -> eventos.criar("Cruza PG", feira.getInicio().minusHours(1), agora.plusHours(1), null));
+        } finally {
+            jdbc.update(
+                    "update evento set fim = ? where id = ?",
+                    java.time.LocalDateTime.now().plusSeconds(1),
+                    feira.getId());
+        }
     }
 }

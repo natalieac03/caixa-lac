@@ -7,7 +7,8 @@
     <div class="cabecalho-pagina">
         <div>
             <h1>Comparativo de eventos</h1>
-            <p>Os indicadores principais de cada evento, do mais antigo ao mais recente.</p>
+            <p>Os indicadores principais de cada evento, do mais antigo ao mais recente, e o <strong>dia a dia</strong>
+                (vendas fora dos eventos e despesas sem evento) no mesmo intervalo, do primeiro ao último dia.</p>
         </div>
         <button type="button" class="botao botao-secundario botao-pequeno nao-imprimir" onclick="window.print()">Imprimir</button>
     </div>
@@ -21,8 +22,11 @@
             <caption class="sr-only">Indicadores por evento</caption>
             <thead><tr><th scope="col">Indicador</th>
                 <th scope="col" class="num" th:each="e : ${eventos}">
-                    <a th:href="@{'/eventos/' + ${e.eventoId} + '/relatorio'}" th:text="${e.nome}">Feira</a><br>
-                    <span class="suave" th:text="${#temporals.format(e.inicio, 'dd/MM/yyyy')}">01/03/2025</span></th></tr></thead>
+                    <a th:if="${e.eventoId != null}" th:href="@{'/eventos/' + ${e.eventoId} + '/relatorio'}" th:text="${e.nome}">Feira</a>
+                    <strong th:if="${e.eventoId == null}" class="dia-a-dia" th:text="${e.nome}">Dia a dia</strong><br>
+                    <span class="suave" th:if="${e.eventoId != null}" th:text="${#temporals.format(e.inicio, 'dd/MM/yyyy')}">01/03/2025</span>
+                    <span class="suave" th:if="${e.eventoId == null}"
+                          th:text="${#temporals.format(e.inicio, 'dd/MM')} + ' a ' + ${#temporals.format(e.fim.minusDays(1), 'dd/MM/yyyy')} + ', fora dos eventos'">01/03 a 15/03</span></th></tr></thead>
             <tbody>
             <tr><th scope="row">Receita líquida</th><td class="num" th:each="e : ${eventos}" th:text="${R.reais(e.resumo.receitaLiquida)}">R$ 0,00</td></tr>
             <tr><th scope="row">Lucro líquido</th><td class="num" th:each="e : ${eventos}"

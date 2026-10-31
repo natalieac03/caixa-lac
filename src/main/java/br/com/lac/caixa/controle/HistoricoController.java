@@ -9,6 +9,7 @@ import br.com.lac.caixa.servico.CobrancaPixService;
 import br.com.lac.caixa.servico.ConsultaHistorico;
 import br.com.lac.caixa.servico.EventoService;
 import br.com.lac.caixa.util.ExportadorCSV;
+import java.time.Clock;
 import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -33,17 +34,27 @@ public class HistoricoController {
     private final ConsultaHistorico consulta;
     private final CobrancaPixService cobrancasPix;
     private final EventoService eventos;
+    private final Clock relogio;
 
     public HistoricoController(
-            CaixaService caixa, ConsultaHistorico consulta, CobrancaPixService cobrancasPix, EventoService eventos) {
+            CaixaService caixa,
+            ConsultaHistorico consulta,
+            CobrancaPixService cobrancasPix,
+            EventoService eventos,
+            Clock relogio) {
         this.caixa = caixa;
         this.consulta = consulta;
         this.cobrancasPix = cobrancasPix;
         this.eventos = eventos;
+        this.relogio = relogio;
     }
 
-    private PeriodoDoEvento periodo(Long evento) {
-        return evento == null ? null : eventos.periodo(evento);
+    /** Evento (vale como período), Dia a dia (dentro das datas) ou Todos. */
+    private FiltroHistorico filtro(
+            FormaPagamento forma, String inicio, String fim, String dia, String produto, SeletorDeEvento sel) {
+        PeriodoDoEvento periodo = sel.id() == null ? null : eventos.periodo(sel.id());
+        var filtro = FiltroHistorico.criar(forma, inicio, fim, dia, produto, periodo);
+        return sel.diaADia() ? filtro.comDiaADia(LocalDateTime.now(relogio)) : filtro;
     }
 
     @GetMapping("/historico")
@@ -53,10 +64,11 @@ public class HistoricoController {
             @RequestParam(required = false) String inicio,
             @RequestParam(required = false) String fim,
             @RequestParam(required = false) String dia,
-            @RequestParam(required = false) Long evento,
+            @RequestParam(required = false) String evento,
             @RequestParam(defaultValue = "0") int pagina,
             Model model) {
-        var filtro = FiltroHistorico.criar(forma, inicio, fim, dia, produto, periodo(evento));
+        var sel = SeletorDeEvento.ler(evento);
+        var filtro = filtro(forma, inicio, fim, dia, produto, sel);
         var resultado = consulta.consultar(filtro, pagina);
         model.addAttribute("vendas", resultado.pagina().getContent());
         model.addAttribute("pixSemVenda", cobrancasPix.pixSemVenda());
@@ -67,11 +79,10 @@ public class HistoricoController {
         model.addAttribute("produto", filtro.produto());
         model.addAttribute("inicio", filtro.inicio());
         model.addAttribute("fim", filtro.fim());
-        model.addAttribute("evento", evento);
-        var todos = eventos.listar();
-        model.addAttribute("eventos", todos);
+        model.addAttribute("evento", sel.valor());
+        model.addAttribute("eventos", eventos.listar());
         // Evento de cada venda, calculado pela data e hora (não há vínculo gravado).
-        model.addAttribute("eventoDaVenda", new EventosDaVenda(todos));
+        model.addAttribute("eventoDaVenda", new EventosDaVenda(eventos.periodos()));
         return "historico";
     }
 
@@ -82,8 +93,8 @@ public class HistoricoController {
             @RequestParam(required = false) String inicio,
             @RequestParam(required = false) String fim,
             @RequestParam(required = false) String dia,
-            @RequestParam(required = false) Long evento) {
-        var vendas = consulta.exportar(FiltroHistorico.criar(forma, inicio, fim, dia, produto, periodo(evento)));
+            @RequestParam(required = false) String evento) {
+        var vendas = consulta.exportar(filtro(forma, inicio, fim, dia, produto, SeletorDeEvento.ler(evento)));
         return RespostaCsv.arquivo(ExportadorCSV.doHistorico(vendas), "historico.csv");
     }
 
@@ -96,7 +107,7 @@ public class HistoricoController {
             @RequestParam(required = false) String produto,
             @RequestParam(required = false) String inicio,
             @RequestParam(required = false) String fim,
-            @RequestParam(required = false) Long evento,
+            @RequestParam(required = false) String evento,
             @RequestParam(defaultValue = "0") int pagina,
             RedirectAttributes flash) {
         LocalDateTime nova;
@@ -111,7 +122,7 @@ public class HistoricoController {
         if (produto != null && !produto.isBlank()) flash.addAttribute("produto", produto);
         if (inicio != null && !inicio.isBlank()) flash.addAttribute("inicio", inicio);
         if (fim != null && !fim.isBlank()) flash.addAttribute("fim", fim);
-        if (evento != null) flash.addAttribute("evento", evento);
+        if (evento != null && !evento.isBlank()) flash.addAttribute("evento", evento);
         flash.addAttribute("pagina", pagina);
         return "redirect:/historico";
     }

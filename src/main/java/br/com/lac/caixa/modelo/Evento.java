@@ -13,6 +13,10 @@ import java.time.LocalDateTime;
  * Um evento (feira, encontro) com início e fim. O intervalo é [inicio, fim):
  * uma venda às 18:00 de um evento que vai até 18:00 já não é dele. Vendas não
  * guardam o evento; ele é calculado pela data e hora da venda.
+ *
+ * <p>Sem fim = em andamento (aberto): vale até agora, ou até o início do
+ * próximo evento se ele já começou (EventoService.periodo), e se encerra com
+ * {@link #encerrar}. Só pode haver um aberto.
  */
 @Entity
 public class Evento {
@@ -27,7 +31,7 @@ public class Evento {
     @Column(nullable = false)
     private LocalDateTime inicio;
 
-    @Column(nullable = false)
+    /** null = em andamento. */
     private LocalDateTime fim;
 
     private String observacao;
@@ -49,8 +53,9 @@ public class Evento {
         String n = nome == null ? "" : nome.trim();
         if (n.isEmpty() || n.length() > 120)
             throw new RegraDeNegocioException("Informe o nome do evento (até 120 caracteres).");
-        if (inicio == null || fim == null) throw new RegraDeNegocioException("Informe o início e o fim do evento.");
-        if (!fim.isAfter(inicio)) throw new RegraDeNegocioException("O fim do evento deve ser depois do início.");
+        if (inicio == null) throw new RegraDeNegocioException("Informe o início do evento.");
+        if (fim != null && !fim.isAfter(inicio))
+            throw new RegraDeNegocioException("O fim do evento deve ser depois do início.");
         String obs = observacao == null || observacao.isBlank() ? null : observacao.trim();
         if (obs != null && obs.length() > 255) throw new RegraDeNegocioException("Observação com até 255 caracteres.");
         this.nome = n;
@@ -81,9 +86,26 @@ public class Evento {
         return metaLucro;
     }
 
-    /** A data e hora está dentro do evento (início incluído, fim excluído)? */
-    public boolean contem(LocalDateTime dataHora) {
-        return !dataHora.isBefore(inicio) && dataHora.isBefore(fim);
+    public boolean isAberto() {
+        return fim == null;
+    }
+
+    /** Grava o fim (o serviço passa agora, ou o início do próximo evento se vier antes). */
+    public void encerrar(LocalDateTime quando) {
+        if (fim != null) throw new RegraDeNegocioException("O evento \"" + nome + "\" já foi encerrado.");
+        if (quando == null || !quando.isAfter(inicio))
+            throw new RegraDeNegocioException("O evento acabou de começar: espere um minuto para encerrar.");
+        this.fim = quando;
+    }
+
+    /** O fim que vale nas contas: o gravado ou, aberto, o dado (agora ou o início do próximo evento). */
+    public LocalDateTime fimEfetivo(LocalDateTime seAberto) {
+        return fim != null ? fim : seAberto;
+    }
+
+    /** A data e hora está dentro do evento (início incluído, fim excluído; aberto vai até agora)? */
+    public boolean contem(LocalDateTime dataHora, LocalDateTime agora) {
+        return !dataHora.isBefore(inicio) && dataHora.isBefore(fimEfetivo(agora));
     }
 
     public Long getId() {

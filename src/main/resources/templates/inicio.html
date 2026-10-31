@@ -15,6 +15,31 @@
         <p>Registre vendas, controle o estoque e acompanhe o histórico.</p>
     </div>
 
+    <section class="cartao evento-inicio" aria-labelledby="titulo-evento-inicio" th:with="ev=${eventoDaTela.aberto}">
+        <th:block th:if="${ev != null}">
+            <h2 id="titulo-evento-inicio"><span class="ponto-ao-vivo" aria-hidden="true"></span>
+                <span th:text="${ev.nome}">Feira</span> em andamento</h2>
+            <p>Desde <strong th:text="${#temporals.format(ev.inicio, 'dd/MM HH:mm')}">14:00</strong>. As vendas de agora contam neste evento.</p>
+            <div class="acoes">
+                <a class="botao botao-secundario botao-pequeno" th:href="@{/financas(evento=${ev.id})}">Ver nas Finanças</a>
+                <form method="post" th:action="@{'/eventos/' + ${ev.id} + '/encerrar'}"
+                      th:attr="data-pergunta='Encerrar o evento ' + ${ev.nome} + ' agora?'"
+                      onsubmit="return confirm(this.getAttribute('data-pergunta'));">
+                    <button type="submit" class="botao botao-fantasma botao-pequeno">Encerrar evento</button>
+                </form>
+            </div>
+        </th:block>
+        <th:block th:if="${ev == null}">
+            <h2 id="titulo-evento-inicio">Vai começar uma feira?</h2>
+            <form method="post" th:action="@{/eventos/iniciar}" class="linha-campos" style="align-items:flex-end;">
+                <div class="campo"><label for="nomeEventoInicio">Nome do evento</label>
+                    <input type="text" id="nomeEventoInicio" name="nome" required maxlength="120" th:value="${eventoDaTela.nomeSugerido}"></div>
+                <div class="campo campo-acao"><button type="submit" class="botao botao-secundario">Iniciar evento agora</button></div>
+            </form>
+            <p class="ajuda">Sem evento, as vendas ficam no <strong>dia a dia</strong>. Para eventos passados ou com horário marcado, use Finanças → Eventos.</p>
+        </th:block>
+    </section>
+
     <div class="atalhos">
         <a class="atalho atalho-destaque" th:href="@{/venda/nova}">
             <span class="atalho-icone"><svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>

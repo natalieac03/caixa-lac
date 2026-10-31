@@ -15,21 +15,41 @@ import java.time.temporal.ChronoUnit;
  * <ul>
  *   <li>categoria: só os itens dessa categoria (e as vendas que têm algum);</li>
  *   <li>forma: as vendas com alguma parte nessa forma (como no histórico),
- *       com todos os seus itens.</li>
+ *       com todos os seus itens;</li>
+ *   <li>diaADia: dentro do período, só as vendas fora de qualquer evento (o
+ *       aberto vale até {@code agora}) e as despesas sem evento.</li>
  * </ul>
  */
 public record FiltroFinancas(
-        LocalDate inicio, LocalDate fim, PeriodoDoEvento evento, Long categoriaId, FormaPagamento forma) {
+        LocalDate inicio,
+        LocalDate fim,
+        PeriodoDoEvento evento,
+        Long categoriaId,
+        FormaPagamento forma,
+        boolean diaADia,
+        LocalDateTime agora) {
 
     public FiltroFinancas {
         if (evento != null) {
             inicio = null;
             fim = null;
+            diaADia = false;
         } else {
             if (inicio == null || fim == null) throw new RegraDeNegocioException("Informe o período ou um evento.");
             if (inicio.isAfter(fim))
                 throw new RegraDeNegocioException("A data inicial deve ser anterior ou igual à final.");
         }
+        if (diaADia && agora == null) throw new IllegalArgumentException("Dia a dia precisa da hora de agora.");
+    }
+
+    public FiltroFinancas(
+            LocalDate inicio, LocalDate fim, PeriodoDoEvento evento, Long categoriaId, FormaPagamento forma) {
+        this(inicio, fim, evento, categoriaId, forma, false, null);
+    }
+
+    /** Dia a dia: o período, só fora dos eventos. */
+    public static FiltroFinancas diaADia(LocalDate inicio, LocalDate fim, LocalDateTime agora) {
+        return new FiltroFinancas(inicio, fim, null, null, null, true, agora);
     }
 
     public static FiltroFinancas periodo(LocalDate inicio, LocalDate fim) {
@@ -41,20 +61,20 @@ public record FiltroFinancas(
     }
 
     public FiltroFinancas comCategoria(Long categoria) {
-        return new FiltroFinancas(inicio, fim, evento, categoria, forma);
+        return new FiltroFinancas(inicio, fim, evento, categoria, forma, diaADia, agora);
     }
 
     public FiltroFinancas comForma(FormaPagamento outra) {
-        return new FiltroFinancas(inicio, fim, evento, categoriaId, outra);
+        return new FiltroFinancas(inicio, fim, evento, categoriaId, outra, diaADia, agora);
     }
 
-    /** O mesmo filtro em outro período (ou evento), para comparar. */
+    /** O mesmo filtro em outro período (ou evento), para comparar; o dia a dia continua dia a dia. */
     public FiltroFinancas noPeriodo(LocalDate de, LocalDate ate) {
-        return new FiltroFinancas(de, ate, null, categoriaId, forma);
+        return new FiltroFinancas(de, ate, null, categoriaId, forma, diaADia, agora);
     }
 
     public FiltroFinancas noEvento(PeriodoDoEvento outro) {
-        return new FiltroFinancas(null, null, outro, categoriaId, forma);
+        return new FiltroFinancas(null, null, outro, categoriaId, forma, false, null);
     }
 
     public LocalDateTime inicioConsulta() {

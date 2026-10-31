@@ -28,7 +28,8 @@ import org.springframework.transaction.annotation.Transactional;
  *       terminou (quantidade x dias do evento &lt; vendidas no evento);</li>
  *   <li>produtos ativos sem custo;</li>
  *   <li>vendas de hoje com ajuste manual;</li>
- *   <li>fechamento de hoje em que a soma das formas não bate com o total.</li>
+ *   <li>fechamento de hoje em que a soma das formas não bate com o total;</li>
+ *   <li>evento aberto (sem fim) há mais de 12 horas, com link para encerrar.</li>
  * </ul>
  */
 @Service
@@ -39,24 +40,33 @@ public class AlertasService {
     private final FinancasService financas;
     private final FechamentoService fechamento;
     private final Clock relogio;
+    private final EventoService servicoDeEventos;
 
     public AlertasService(
             EstoqueService estoque,
             EventoRepository eventos,
             FinancasService financas,
             FechamentoService fechamento,
-            Clock relogio) {
+            Clock relogio,
+            EventoService servicoDeEventos) {
         this.estoque = estoque;
         this.eventos = eventos;
         this.financas = financas;
         this.fechamento = fechamento;
         this.relogio = relogio;
+        this.servicoDeEventos = servicoDeEventos;
     }
 
     /** motivo já escrito: "limite de 5 un." ou "média de 4,00 un./dia na Feira 1". */
     public record EstoqueAcabando(Long produtoId, String nome, int estoque, String motivo) {}
 
     public record SemCusto(Long produtoId, String nome) {}
+
+    /** Evento em andamento há mais de {@link #HORAS_EVENTO_ABERTO} horas. */
+    public record EventoEsquecido(Long eventoId, String nome, LocalDateTime desde) {}
+
+    /** Depois de quantas horas um evento aberto vira aviso. */
+    public static final long HORAS_EVENTO_ABERTO = 12;
 
     /**
      * Um aviso do sininho. O id é estável e muda quando o conteúdo muda (ex.:
@@ -74,7 +84,8 @@ public class AlertasService {
             boolean fechamentoNaoBate,
             BigDecimal totalHoje,
             BigDecimal formasHoje,
-            LocalDate dia) {
+            LocalDate dia,
+            List<EventoEsquecido> eventosAbertos) {
 
         public boolean isTemAlgo() {
             return total() > 0;
@@ -139,6 +150,20 @@ public class AlertasService {
                                 "/fechamento",
                                 "Conferir o fechamento"))));
             }
+            if (!eventosAbertos.isEmpty()) {
+                secoes.add(new Secao(
+                        "alerta-evento-aberto",
+                        "Evento aberto há mais de " + HORAS_EVENTO_ABERTO + " horas",
+                        eventosAbertos.stream()
+                                .map(e -> new Aviso(
+                                        "evento-aberto-" + e.eventoId(),
+                                        "\"" + e.nome() + "\" está em andamento desde "
+                                                + e.desde().format(DateTimeFormatter.ofPattern("dd/MM 'às' HH:mm"))
+                                                + ". Esqueceu de encerrar?",
+                                        "/eventos#evento-aberto",
+                                        "Encerrar"))
+                                .toList()));
+            }
             return secoes;
         }
     }
@@ -187,7 +212,19 @@ public class AlertasService {
                 .toList();
         var ajustes = financas.ajustesManuais(FiltroFinancas.periodo(hoje, hoje));
         var fechado = fechamento.consultar(hoje, hoje);
+        var esquecidos = servicoDeEventos
+                .aberto()
+                .filter(e -> e.getInicio().plusHours(HORAS_EVENTO_ABERTO).isBefore(agora))
+                .map(e -> List.of(new EventoEsquecido(e.getId(), e.getNome(), e.getInicio())))
+                .orElse(List.of());
         return new Alertas(
-                acabando, semCusto, ajustes, !fechado.isConfere(), fechado.total(), fechado.totalFormas(), hoje);
+                acabando,
+                semCusto,
+                ajustes,
+                !fechado.isConfere(),
+                fechado.total(),
+                fechado.totalFormas(),
+                hoje,
+                esquecidos);
     }
 }

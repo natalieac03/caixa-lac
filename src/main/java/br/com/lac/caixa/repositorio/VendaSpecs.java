@@ -1,5 +1,6 @@
 package br.com.lac.caixa.repositorio;
 
+import br.com.lac.caixa.modelo.Evento;
 import br.com.lac.caixa.modelo.ItemVenda;
 import br.com.lac.caixa.modelo.PagamentoVenda;
 import br.com.lac.caixa.modelo.Venda;
@@ -8,6 +9,7 @@ import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.data.jpa.domain.Specification;
@@ -33,6 +35,21 @@ public final class VendaSpecs {
             }
             if (filtro.fimConsulta() != null) {
                 predicados.add(cb.lessThan(v.get("dataHora"), filtro.fimConsulta()));
+            }
+            if (filtro.diaADia()) {
+                // Dia a dia: nenhum evento contém a data e hora da venda (o aberto vale até agora).
+                Subquery<Long> ev = consulta.subquery(Long.class);
+                Root<Evento> e = ev.from(Evento.class);
+                ev.select(e.get("id"))
+                        .where(
+                                cb.lessThanOrEqualTo(e.get("inicio"), v.get("dataHora")),
+                                cb.or(
+                                        cb.greaterThan(e.get("fim"), v.get("dataHora")),
+                                        cb.and(
+                                                cb.isNull(e.get("fim")),
+                                                cb.lessThanOrEqualTo(
+                                                        v.<LocalDateTime>get("dataHora"), filtro.agora()))));
+                predicados.add(cb.not(cb.exists(ev)));
             }
             if (!filtro.produto().isEmpty()) {
                 // Trecho literal do nome (sem curingas de LIKE), sem acento, em qualquer item da venda.

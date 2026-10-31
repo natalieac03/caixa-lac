@@ -527,4 +527,55 @@ abstract class MassaFinanceira {
                 financas.resumo(FiltroFinancas.periodo(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 12, 31)))
                         .vendas());
     }
+
+    @Autowired
+    br.com.lac.caixa.servico.ConsultaHistorico historico;
+
+    @Test
+    @DisplayName(
+            "Dia a dia: V6 (18:00, fora da Feira 1) e V9 (05/03); despesa sem evento; no histórico e no fechamento")
+    void diaADia() {
+        var agora = java.time.LocalDateTime.now();
+        Resumo x = financas.resumo(FiltroFinancas.diaADia(LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 15), agora));
+        assertValor("65.00", x.receitaLiquida()); // 25 + 40
+        assertEquals(2, x.vendas());
+        assertValor("20.00", x.despesas()); // Uber, sem evento (Lona e Mesa são da Feira 1, Lanche da Feira 2)
+        assertValor("27.00", x.cmv()); // 10 + 17
+        var periodo =
+                new FiltroHistorico(null, LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 15), "").comDiaADia(agora);
+        assertEquals(2, historico.consultar(periodo, 0).pagina().getTotalElements());
+        assertValor("65.00", fechamento.consultar(periodo).total().setScale(2));
+    }
+
+    @Test
+    @DisplayName("Invariante: soma de todos os eventos + dia a dia = total do período (receita, vendas, itens, CMV)")
+    void eventosMaisDiaADia() {
+        var agora = java.time.LocalDateTime.now();
+        Resumo total = financas.resumo(MARCO);
+        Resumo dia =
+                financas.resumo(FiltroFinancas.diaADia(LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 15), agora));
+        BigDecimal receita = dia.receitaLiquida();
+        BigDecimal cmv = dia.cmv();
+        long vendas = dia.vendas();
+        long itens = dia.itensVendidos();
+        for (String nome : List.of("Feira 1", "Feira 2", "Feira 3")) {
+            Resumo r = financas.resumo(evento(nome));
+            receita = receita.add(r.receitaLiquida());
+            cmv = cmv.add(r.cmv());
+            vendas += r.vendas();
+            itens += r.itensVendidos();
+        }
+        assertEquals(total.receitaLiquida(), receita); // 135 + 29 + 0 + 65 = 229
+        assertEquals(total.cmv(), cmv);
+        assertEquals(total.vendas(), vendas);
+        assertEquals(total.itensVendidos(), itens);
+
+        // O comparativo traz o dia a dia como coluna própria, no mesmo intervalo total (01/03 a 15/03)
+        var comparativo = financas.comparativoDeEventos();
+        var ultimo = comparativo.get(comparativo.size() - 1);
+        assertEquals("Dia a dia", ultimo.nome());
+        assertEquals(LocalDate.of(2025, 3, 1).atStartOfDay(), ultimo.inicio());
+        assertEquals(LocalDate.of(2025, 3, 16).atStartOfDay(), ultimo.fim());
+        assertValor("65.00", ultimo.resumo().receitaLiquida());
+    }
 }

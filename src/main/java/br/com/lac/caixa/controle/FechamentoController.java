@@ -4,7 +4,9 @@ import br.com.lac.caixa.repositorio.FiltroHistorico;
 import br.com.lac.caixa.servico.EventoService;
 import br.com.lac.caixa.servico.FechamentoService;
 import br.com.lac.caixa.util.ExportadorCSV;
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -16,32 +18,36 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class FechamentoController {
     private final FechamentoService fechamento;
     private final EventoService eventos;
+    private final Clock relogio;
 
-    public FechamentoController(FechamentoService fechamento, EventoService eventos) {
+    public FechamentoController(FechamentoService fechamento, EventoService eventos, Clock relogio) {
         this.fechamento = fechamento;
         this.eventos = eventos;
+        this.relogio = relogio;
     }
 
-    /** Evento escolhido vale como período; sem nada, o dia de hoje. */
-    private FiltroHistorico intervalo(String inicio, String fim, Long evento) {
-        if (evento != null) return FiltroHistorico.doEvento(eventos.periodo(evento));
+    /** Evento escolhido vale como período; Dia a dia, dentro das datas; sem datas, o dia de hoje. */
+    private FiltroHistorico intervalo(String inicio, String fim, SeletorDeEvento sel) {
+        if (sel.id() != null) return FiltroHistorico.doEvento(eventos.periodo(sel.id()));
         if ((inicio == null || inicio.isBlank()) && (fim == null || fim.isBlank())) {
-            inicio = LocalDate.now().toString();
+            inicio = LocalDate.now(relogio).toString();
             fim = inicio;
         }
-        return FiltroHistorico.criar(null, inicio, fim, null, "");
+        var filtro = FiltroHistorico.criar(null, inicio, fim, null, "");
+        return sel.diaADia() ? filtro.comDiaADia(LocalDateTime.now(relogio)) : filtro;
     }
 
     @GetMapping("/fechamento")
     public String tela(
             @RequestParam(required = false) String inicio,
             @RequestParam(required = false) String fim,
-            @RequestParam(required = false) Long evento,
+            @RequestParam(required = false) String evento,
             Model model) {
-        var filtro = intervalo(inicio, fim, evento);
+        var sel = SeletorDeEvento.ler(evento);
+        var filtro = intervalo(inicio, fim, sel);
         model.addAttribute("inicio", filtro.inicio());
         model.addAttribute("fim", filtro.fim());
-        model.addAttribute("evento", evento);
+        model.addAttribute("evento", sel.valor());
         model.addAttribute("eventos", eventos.listar());
         model.addAttribute("fechamento", fechamento.consultar(filtro));
         return "fechamento";
@@ -51,8 +57,8 @@ public class FechamentoController {
     public ResponseEntity<Resource> exportar(
             @RequestParam(required = false) String inicio,
             @RequestParam(required = false) String fim,
-            @RequestParam(required = false) Long evento) {
-        var filtro = intervalo(inicio, fim, evento);
+            @RequestParam(required = false) String evento) {
+        var filtro = intervalo(inicio, fim, SeletorDeEvento.ler(evento));
         var resultado = fechamento.consultar(filtro);
         // Com evento, as colunas Início e Fim levam os dias do evento.
         LocalDate de = filtro.evento() == null

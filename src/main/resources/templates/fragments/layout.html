@@ -18,15 +18,15 @@
                 if (t === 'claro' || t === 'escuro') document.documentElement.setAttribute('data-tema', t);
             } catch (e) {}
         })();
-        /* Menu Finanças: fecha ao clicar fora ou com Esc. */
+        /* Menu Finanças e "Iniciar evento": fecham ao clicar fora ou com Esc. */
         document.addEventListener('click', function (e) {
-            document.querySelectorAll('details.menu-grupo[open]').forEach(function (d) {
+            document.querySelectorAll('details.menu-grupo[open], details.iniciar-evento[open]').forEach(function (d) {
                 if (!d.contains(e.target)) d.removeAttribute('open');
             });
         });
         document.addEventListener('keydown', function (e) {
             if (e.key !== 'Escape') return;
-            document.querySelectorAll('details.menu-grupo[open]').forEach(function (d) {
+            document.querySelectorAll('details.menu-grupo[open], details.iniciar-evento[open]').forEach(function (d) {
                 d.removeAttribute('open');
                 d.querySelector('summary').focus();
             });
@@ -47,6 +47,7 @@
 <nav th:fragment="nav(ativo)" class="topo" aria-label="Navegação principal">
     <div class="topo-interno">
         <a class="marca" th:href="@{/}">Caixa LAC</a>
+        <div th:replace="~{fragments/layout :: evento-topo}"></div>
         <div th:replace="~{fragments/layout :: sino}"></div>
         <button th:replace="~{fragments/layout :: tema}"></button>
         <div class="nav-links">
@@ -103,6 +104,34 @@
         </div>
     </div>
 </nav>
+
+<!--/* Evento em andamento: selo "Nome, desde 14:00" com Encerrar (confirmação); sem evento aberto,
+     "Iniciar evento" pede só o nome e começa agora. */-->
+<div th:fragment="evento-topo" class="evento-topo" th:with="ev=${eventoDaTela.aberto}">
+    <th:block th:if="${ev != null}">
+        <span class="selo-evento" id="selo-evento" role="status">
+            <span class="ponto-ao-vivo" aria-hidden="true"></span>
+            <span class="sr-only">Evento em andamento:</span>
+            <span th:text="${ev.nome} + ', desde ' + ${eventoDaTela.desde}">Feira, desde 14:00</span>
+        </span>
+        <form method="post" th:action="@{'/eventos/' + ${ev.id} + '/encerrar'}" class="form-encerrar"
+              th:attr="data-pergunta='Encerrar o evento ' + ${ev.nome} + ' agora? As vendas seguintes ficam no dia a dia.'"
+              onsubmit="return confirm(this.getAttribute('data-pergunta'));">
+            <button type="submit" class="botao-encerrar" id="botao-encerrar">Encerrar</button>
+        </form>
+    </th:block>
+    <details th:if="${ev == null}" class="iniciar-evento">
+        <summary id="botao-iniciar-evento">
+            <svg class="icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+            Iniciar evento
+        </summary>
+        <form method="post" th:action="@{/eventos/iniciar}" class="iniciar-evento-form">
+            <label for="nomeEventoTopo">Nome do evento</label>
+            <input type="text" id="nomeEventoTopo" name="nome" required maxlength="120" th:value="${eventoDaTela.nomeSugerido}">
+            <button type="submit" class="botao botao-principal botao-pequeno">Começar agora</button>
+        </form>
+    </details>
+</div>
 
 <!--/* Sininho: avisos calculados no servidor (AlertasService via AvisosNaTela); o painel já vem
      desenhado e o avisos.js só conta os novos (localStorage), abre/fecha e atualiza a cada 60 s. */-->

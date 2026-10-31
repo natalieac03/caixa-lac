@@ -28,9 +28,10 @@
                 <input type="date" id="filtroInicio" name="inicio" th:value="${f.filtro.inicio != null ? f.filtro.inicio : f.filtro.inicioConsulta().toLocalDate()}"></div>
             <div class="campo"><label for="filtroFim">Até</label>
                 <input type="date" id="filtroFim" name="fim" th:value="${f.filtro.fim != null ? f.filtro.fim : f.filtro.fimConsulta().minusNanos(1).toLocalDate()}"></div>
-            <div class="campo" th:unless="${eventos.isEmpty()}"><label for="filtroEvento">Evento (vale como período)</label>
+            <div class="campo"><label for="filtroEvento">Evento</label>
                 <select id="filtroEvento" name="evento">
-                    <option value="">Nenhum (usar as datas)</option>
+                    <option value="">Todos</option>
+                    <option value="dia-a-dia" th:selected="${f.diaADia}">Dia a dia (fora dos eventos)</option>
                     <option th:each="e : ${eventos}" th:value="${e.id}" th:text="${e.nome}"
                             th:selected="${f.evento != null and f.evento == e.id}">Feira</option>
                 </select></div>

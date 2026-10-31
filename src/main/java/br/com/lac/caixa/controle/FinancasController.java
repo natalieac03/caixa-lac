@@ -48,7 +48,7 @@ public class FinancasController {
             @RequestParam(required = false) String atalho,
             @RequestParam(required = false) String inicio,
             @RequestParam(required = false) String fim,
-            @RequestParam(required = false) Long evento,
+            @RequestParam(required = false) String evento,
             @RequestParam(required = false) Long categoria,
             @RequestParam(required = false) FormaPagamento forma,
             @RequestParam(required = false) String metrica,
@@ -71,7 +71,7 @@ public class FinancasController {
             @RequestParam(required = false) String atalho,
             @RequestParam(required = false) String inicio,
             @RequestParam(required = false) String fim,
-            @RequestParam(required = false) Long evento,
+            @RequestParam(required = false) String evento,
             @RequestParam(required = false) Long categoria,
             @RequestParam(required = false) FormaPagamento forma,
             @RequestParam(required = false) String metrica) {
@@ -86,7 +86,7 @@ public class FinancasController {
             @RequestParam(required = false) String atalho,
             @RequestParam(required = false) String inicio,
             @RequestParam(required = false) String fim,
-            @RequestParam(required = false) Long evento,
+            @RequestParam(required = false) String evento,
             @RequestParam(required = false) Long categoria,
             @RequestParam(required = false) FormaPagamento forma,
             @RequestParam(required = false) String metrica) {

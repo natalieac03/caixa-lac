@@ -9,6 +9,7 @@ import br.com.lac.caixa.repositorio.EventoRepository;
 import br.com.lac.caixa.repositorio.FiltroFinancas;
 import br.com.lac.caixa.repositorio.PeriodoDoEvento;
 import br.com.lac.caixa.repositorio.PromocaoRepository;
+import br.com.lac.caixa.servico.EventoService;
 import br.com.lac.caixa.servico.financas.Financas.Celula;
 import br.com.lac.caixa.servico.financas.Financas.ClasseAbc;
 import br.com.lac.caixa.servico.financas.Financas.Cobertura;
@@ -27,6 +28,7 @@ import br.com.lac.caixa.servico.financas.Financas.Variacao;
 import br.com.lac.caixa.util.Dinheiro;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -57,11 +59,20 @@ public class FinancasService {
     private final ConsultasFinanceiras consultas;
     private final EventoRepository eventos;
     private final PromocaoRepository promocoes;
+    private final EventoService servicoDeEventos;
+    private final Clock relogio;
 
-    public FinancasService(ConsultasFinanceiras consultas, EventoRepository eventos, PromocaoRepository promocoes) {
+    public FinancasService(
+            ConsultasFinanceiras consultas,
+            EventoRepository eventos,
+            PromocaoRepository promocoes,
+            EventoService servicoDeEventos,
+            Clock relogio) {
         this.consultas = consultas;
         this.eventos = eventos;
         this.promocoes = promocoes;
+        this.servicoDeEventos = servicoDeEventos;
+        this.relogio = relogio;
     }
 
     static BigDecimal dinheiro(BigDecimal valor) {
@@ -532,18 +543,29 @@ public class FinancasService {
                 .toList();
     }
 
-    /** Todos os eventos, do mais antigo ao mais novo, cada um com o seu resumo. */
+    /**
+     * Todos os eventos, do mais antigo ao mais novo, cada um com o seu resumo (o
+     * aberto até agora), e por último o "Dia a dia": as vendas fora dos eventos e
+     * as despesas sem evento no mesmo intervalo total (do primeiro ao último dia).
+     */
     public List<Financas.ResumoDoEvento> comparativoDeEventos() {
-        return eventos.findAll().stream()
-                .sorted(Comparator.comparing(br.com.lac.caixa.modelo.Evento::getInicio))
-                .map(e -> new Financas.ResumoDoEvento(
-                        e.getId(),
-                        e.getNome(),
-                        e.getInicio(),
-                        e.getFim(),
-                        resumo(FiltroFinancas.doEvento(
-                                new PeriodoDoEvento(e.getId(), e.getNome(), e.getInicio(), e.getFim())))))
-                .toList();
+        var periodos = servicoDeEventos.periodos();
+        List<Financas.ResumoDoEvento> lista = new ArrayList<>();
+        for (PeriodoDoEvento p : periodos) {
+            lista.add(new Financas.ResumoDoEvento(
+                    p.id(), p.nome(), p.inicio(), p.fim(), resumo(FiltroFinancas.doEvento(p))));
+        }
+        if (!periodos.isEmpty()) {
+            LocalDate de = periodos.get(0).inicio().toLocalDate();
+            LocalDate ate = periodos.stream()
+                    .map(p -> p.fim().minusNanos(1).toLocalDate())
+                    .max(Comparator.naturalOrder())
+                    .orElse(de);
+            var diaADia = FiltroFinancas.diaADia(de, ate, LocalDateTime.now(relogio));
+            lista.add(new Financas.ResumoDoEvento(
+                    null, "Dia a dia", de.atStartOfDay(), ate.plusDays(1).atStartOfDay(), resumo(diaADia)));
+        }
+        return lista;
     }
 
     // ---------------------------------------------------------------- metas

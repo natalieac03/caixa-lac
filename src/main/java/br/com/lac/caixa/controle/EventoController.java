@@ -3,7 +3,9 @@ package br.com.lac.caixa.controle;
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.servico.EventoService;
 import br.com.lac.caixa.util.Dinheiro;
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -28,11 +30,31 @@ public class EventoController {
         return "eventos";
     }
 
+    /** "Iniciar evento" (topo e tela inicial): só o nome; começa agora, sem fim. */
+    @PostMapping("/eventos/iniciar")
+    public String iniciar(
+            @RequestParam(required = false) String nome, HttpServletRequest request, RedirectAttributes flash) {
+        var e = eventos.iniciar(nome);
+        flash.addFlashAttribute(
+                "sucesso", "Evento \"" + e.getNome() + "\" começou agora. As vendas a partir de agora são dele.");
+        return "redirect:" + ErrosDeNegocio.origem(request);
+    }
+
+    /** "Encerrar": grava o fim agora. */
+    @PostMapping("/eventos/{id}/encerrar")
+    public String encerrar(@PathVariable Long id, HttpServletRequest request, RedirectAttributes flash) {
+        var e = eventos.encerrar(id);
+        flash.addFlashAttribute(
+                "sucesso",
+                "Evento \"" + e.getNome() + "\" encerrado às " + e.getFim().format(HORA) + ".");
+        return "redirect:" + ErrosDeNegocio.origem(request);
+    }
+
     @PostMapping("/eventos")
     public String criar(
             @RequestParam String nome,
             @RequestParam String inicio,
-            @RequestParam String fim,
+            @RequestParam(required = false) String fim,
             @RequestParam(required = false) String observacao,
             @RequestParam(required = false) String metaReceita,
             @RequestParam(required = false) String metaLucro,
@@ -40,7 +62,7 @@ public class EventoController {
         var e = eventos.criar(
                 nome,
                 dataHora(inicio),
-                dataHora(fim),
+                fimOpcional(fim),
                 observacao,
                 Dinheiro.parse(metaReceita),
                 Dinheiro.parse(metaLucro));
@@ -53,7 +75,7 @@ public class EventoController {
             @PathVariable Long id,
             @RequestParam String nome,
             @RequestParam String inicio,
-            @RequestParam String fim,
+            @RequestParam(required = false) String fim,
             @RequestParam(required = false) String observacao,
             @RequestParam(required = false) String metaReceita,
             @RequestParam(required = false) String metaLucro,
@@ -63,7 +85,7 @@ public class EventoController {
                 id,
                 nome,
                 dataHora(inicio),
-                dataHora(fim),
+                fimOpcional(fim),
                 observacao,
                 Dinheiro.parse(metaReceita),
                 Dinheiro.parse(metaLucro));
@@ -71,9 +93,16 @@ public class EventoController {
         return "redirect:/eventos";
     }
 
+    private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm");
+
+    /** Fim vazio = evento em andamento. */
+    static LocalDateTime fimOpcional(String texto) {
+        return texto == null || texto.isBlank() ? null : dataHora(texto);
+    }
+
     /** "2024-06-01T10:00" (campo datetime-local). */
     static LocalDateTime dataHora(String texto) {
-        if (texto == null || texto.isBlank()) throw new RegraDeNegocioException("Informe o início e o fim do evento.");
+        if (texto == null || texto.isBlank()) throw new RegraDeNegocioException("Informe o início do evento.");
         try {
             return LocalDateTime.parse(texto.trim());
         } catch (DateTimeParseException ex) {

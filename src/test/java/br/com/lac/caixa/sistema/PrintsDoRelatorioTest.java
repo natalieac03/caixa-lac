@@ -85,4 +85,46 @@ class PrintsDoRelatorioTest {
             navegador.close();
         }
     }
+
+    @Test
+    @DisplayName("Prints do topo: tela inicial com selo de evento e sino aberto, claro/escuro, computador/celular")
+    void gerarPrintsDoTopo() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("prints"), "use -Dprints=true para gerar os prints");
+        new MassaDeTeste(contexto).montar();
+        var eventos = contexto.getBean(EventoService.class);
+        if (eventos.aberto().isEmpty()) {
+            // Evento em andamento desde a última hora cheia (o selo mostra "desde HH:00").
+            var inicio =
+                    java.time.LocalDateTime.now().withMinute(0).withSecond(0).withNano(0);
+            eventos.criar("Feira de Outubro II", inicio, null, null);
+        }
+        Path pasta = Path.of("docs", "prints");
+        Files.createDirectories(pasta);
+        for (var tema : new com.microsoft.playwright.options.ColorScheme[] {
+            com.microsoft.playwright.options.ColorScheme.LIGHT, com.microsoft.playwright.options.ColorScheme.DARK
+        }) {
+            for (int[] tela : new int[][] {{1280, 860}, {390, 844}}) {
+                String nome = (tema == com.microsoft.playwright.options.ColorScheme.LIGHT ? "claro" : "escuro") + "-"
+                        + (tela[0] > 600 ? "computador" : "celular");
+                var navegador = Navegador.browser()
+                        .newContext(new Browser.NewContextOptions()
+                                .setViewportSize(tela[0], tela[1])
+                                .setColorScheme(tema));
+                try {
+                    Page p = navegador.newPage();
+                    p.navigate("http://localhost:" + porta + "/login");
+                    p.locator("#senha").fill(SenhaDeTeste.VALOR);
+                    p.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Entrar"))
+                            .click();
+                    p.waitForURL("http://localhost:" + porta + "/");
+                    p.screenshot(new Page.ScreenshotOptions().setPath(pasta.resolve("inicio-" + nome + ".png")));
+                    p.locator("#botao-sino").click();
+                    p.locator("#painel-avisos").waitFor();
+                    p.screenshot(new Page.ScreenshotOptions().setPath(pasta.resolve("sino-aberto-" + nome + ".png")));
+                } finally {
+                    navegador.close();
+                }
+            }
+        }
+    }
 }

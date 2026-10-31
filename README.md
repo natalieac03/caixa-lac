@@ -367,6 +367,26 @@ estoque do período escolhido (atalhos, evento, categoria e forma ficam na URL:
 dá para mandar o link). Os números vêm todos do servidor (`FinancasService`);
 os gráficos leem `/financas/dados` (mesmo filtro, exige login).
 
+### Eventos rápidos e dia a dia
+
+- **Iniciar evento** (no topo e na tela inicial) pede só o nome e começa agora,
+  sem fim. Com evento aberto, o topo mostra "Nome, desde 14:00" e o botão
+  **Encerrar** (com confirmação), que grava o fim. Só pode haver um aberto; ele
+  vale até agora (ou até o início do próximo evento marcado, para nunca
+  sobrepor). A tela Eventos continua para horários marcados e eventos passados.
+- **Dia a dia** = vendas fora de qualquer evento (calculado pela data, nada é
+  gravado na venda) e despesas sem evento. Histórico, fechamento e finanças têm
+  "Todos" e "Dia a dia" no seletor de evento; o comparativo de eventos traz o
+  dia a dia como coluna própria; cada venda do histórico mostra a etiqueta do
+  evento ou "Dia a dia".
+
+### Avisos (sininho)
+
+O sino no topo mostra quantos avisos novos há (estoque acabando, produtos sem
+custo, ajustes de hoje, fechamento que não bate, evento aberto há mais de 12 h).
+"Novo" é o que este navegador ainda não viu (guardado no localStorage). O sino
+consulta `/avisos` a cada 60 s enquanto a aba está visível.
+
 ### Bibliotecas de terceiros
 
 | Biblioteca | Versão | Arquivo | Licença |

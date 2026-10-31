@@ -1168,3 +1168,38 @@ table.ordenavel th[aria-sort="descending"] button::after { content: " ▼"; }
     /* No celular o painel ocupa a largura da tela, logo abaixo da barra. */
     .painel-avisos { position: fixed; left: 0; right: 0; width: auto; top: var(--topo-avisos, 96px); border-radius: 0 0 var(--raio-md) var(--raio-md); max-height: calc(100vh - var(--topo-avisos, 96px)); }
 }
+
+/* ---------- Evento em andamento (topo e tela inicial) ---------- */
+.evento-topo { order: 3; display: inline-flex; align-items: center; gap: 6px; position: relative; flex: none; }
+.selo-evento {
+    display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px;
+    background: var(--verde-fundo); color: var(--verde-texto); font-weight: 700; font-size: 14px;
+}
+.ponto-ao-vivo { width: 9px; height: 9px; border-radius: 50%; background: var(--verde); box-shadow: 0 0 0 3px color-mix(in srgb, var(--verde) 30%, transparent); }
+.form-encerrar { margin: 0; }
+.botao-encerrar {
+    border: 1px solid var(--linha-forte); background: var(--papel); color: var(--tinta); border-radius: 999px;
+    padding: 5px 12px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.botao-encerrar:hover { background: var(--roxo-fundo); }
+.iniciar-evento summary {
+    list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
+    border-radius: 999px; border: 1px solid var(--linha-forte); color: var(--roxo-forte); font-weight: 600; font-size: 14px;
+}
+.iniciar-evento summary::-webkit-details-marker { display: none; }
+.iniciar-evento summary:hover, .iniciar-evento[open] summary { background: var(--roxo-fundo); }
+.iniciar-evento-form {
+    position: absolute; right: 0; top: calc(100% + 8px); z-index: 50; width: 260px; display: grid; gap: 8px;
+    padding: 12px; background: var(--papel); border: 1px solid var(--linha); border-radius: var(--raio-md); box-shadow: var(--sombra-menu);
+}
+.evento-inicio { margin-bottom: 18px; }
+.evento-inicio h2 { display: flex; align-items: center; gap: 8px; margin-top: 0; }
+.evento-inicio .acoes { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.evento-inicio .acoes form { margin: 0; }
+.evento-da-venda.dia-a-dia { color: var(--tinta-suave); font-style: italic; }
+tr.linha-aberta td { background: var(--verde-fundo); }
+@media (max-width: 640px) {
+    .evento-topo { order: 3; width: 100%; justify-content: space-between; }
+    .nav-links { order: 4; }
+    .iniciar-evento-form { position: fixed; left: 12px; right: 12px; width: auto; top: auto; }
+}

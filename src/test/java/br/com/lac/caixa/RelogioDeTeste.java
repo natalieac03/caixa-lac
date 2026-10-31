@@ -9,6 +9,11 @@ import java.time.ZoneOffset;
 public class RelogioDeTeste extends Clock {
     private Instant agora = Instant.parse("2026-01-01T00:00:00Z");
 
+    /** Põe o relógio numa data e hora (UTC, a zona deste relógio). */
+    public synchronized void definir(java.time.LocalDateTime quando) {
+        agora = quando.toInstant(ZoneOffset.UTC);
+    }
+
     public synchronized void avancar(long segundos) {
         agora = agora.plusSeconds(segundos);
     }

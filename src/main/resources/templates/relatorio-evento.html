@@ -12,7 +12,7 @@
     <header class="cabecalho-relatorio">
         <p class="marca-relatorio">Caixa LAC · Relatório do evento</p>
         <h1 th:text="${evento.nome}">Feira</h1>
-        <p id="periodo-relatorio" th:text="${#temporals.format(evento.inicio, 'dd/MM/yyyy HH:mm')} + ' a ' + ${#temporals.format(evento.fim, 'dd/MM/yyyy HH:mm')}">01/03/2025 09:00 a 18:00</p>
+        <p id="periodo-relatorio" th:text="${#temporals.format(evento.inicio, 'dd/MM/yyyy HH:mm')} + ' a ' + (${evento.fim == null} ? 'agora (em andamento)' : ${#temporals.format(evento.fim, 'dd/MM/yyyy HH:mm')})">01/03/2025 09:00 a 18:00</p>
         <p class="suave" th:if="${evento.observacao != null}" th:text="${evento.observacao}"></p>
     </header>
 

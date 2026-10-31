@@ -25,6 +25,13 @@ public class ConsultasFinanceiras {
         this.jdbc = jdbc;
     }
 
+    /**
+     * Dia a dia: a venda não está em nenhum evento (início incluído, fim excluído;
+     * o evento aberto vale até agora). Usa ix_evento_inicio_fim.
+     */
+    static final String DIA_A_DIA = " AND NOT EXISTS (SELECT 1 FROM evento ev WHERE ev.inicio <= v.data_hora"
+            + " AND (ev.fim > v.data_hora OR (ev.fim IS NULL AND v.data_hora <= :agora)))";
+
     /** WHERE das vendas (alias v) e, se o filtro tem categoria, dos itens (alias p = produto do item). */
     private record Onde(String vendas, String itens, MapSqlParameterSource parametros) {}
 
@@ -37,6 +44,10 @@ public class ConsultasFinanceiras {
             vendas.append(
                     " AND EXISTS (SELECT 1 FROM pagamento_venda pf WHERE pf.venda_id = v.id AND pf.forma = :forma)");
             params.addValue("forma", f.forma().name());
+        }
+        if (f.diaADia()) {
+            vendas.append(DIA_A_DIA);
+            params.addValue("agora", f.agora());
         }
         if (f.categoriaId() != null) {
             vendas.append(" AND EXISTS (SELECT 1 FROM item_venda ic JOIN produto pc ON pc.id = ic.produto_id"
@@ -140,6 +151,13 @@ public class ConsultasFinanceiras {
             return jdbc.queryForObject(
                     "SELECT COALESCE(SUM(valor), 0) FROM despesa WHERE evento_id = :evento",
                     new MapSqlParameterSource("evento", f.evento().id()),
+                    BigDecimal.class);
+        }
+        if (f.diaADia()) {
+            // Despesa sem evento é do dia a dia.
+            return jdbc.queryForObject(
+                    "SELECT COALESCE(SUM(valor), 0) FROM despesa WHERE evento_id IS NULL AND data >= :de AND data <= :ate",
+                    new MapSqlParameterSource().addValue("de", f.inicio()).addValue("ate", f.fim()),
                     BigDecimal.class);
         }
         return jdbc.queryForObject(
@@ -371,11 +389,14 @@ public class ConsultasFinanceiras {
             String motivo) {}
 
     public List<Cancelamento> cancelamentos(FiltroFinancas f) {
-        var params =
-                new MapSqlParameterSource().addValue("ini", f.inicioConsulta()).addValue("fim", f.fimConsulta());
+        var params = new MapSqlParameterSource()
+                .addValue("ini", f.inicioConsulta())
+                .addValue("fim", f.fimConsulta())
+                .addValue("agora", f.agora());
         return jdbc.query(
                 "SELECT v.id, v.data_hora, v.valor_cobrado, v.data_cancelamento, v.motivo_cancelamento FROM venda v"
-                        + " WHERE v.cancelada = TRUE AND v.data_hora >= :ini AND v.data_hora < :fim ORDER BY v.data_hora, v.id",
+                        + " WHERE v.cancelada = TRUE AND v.data_hora >= :ini AND v.data_hora < :fim"
+                        + (f.diaADia() ? DIA_A_DIA : "") + " ORDER BY v.data_hora, v.id",
                 params,
                 (r, n) -> new Cancelamento(
                         r.getLong("id"),
