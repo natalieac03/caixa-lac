@@ -25,7 +25,7 @@ class MercadoPagoInicioTest {
 
     @Test
     @DisplayName("Sem MP_ACCESS_TOKEN: desligado e webhook não configurado no log")
-    void desligado(CapturedOutput saida) {
+    void semTokenLogaDesligadoEWebhookNaoConfigurado(CapturedOutput saida) {
         var c = config("", "", "");
         assertFalse(c.isLigado());
         new MercadoPagoInicio(c).avisar();
@@ -35,7 +35,7 @@ class MercadoPagoInicioTest {
 
     @Test
     @DisplayName("Com token, e-mail e segredo: ligado e assinatura configurada, sem mostrar os valores")
-    void ligado(CapturedOutput saida) {
+    void comTokenEmailESegredoLogaLigadoSemMostrarValores(CapturedOutput saida) {
         var c = config(TOKEN, SEGREDO, "caixa@lac.test");
         assertTrue(c.isLigado());
         new MercadoPagoInicio(c).avisar();

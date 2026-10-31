@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -360,11 +361,7 @@ public class ConsultasFinanceiras {
     }
 
     public record Cancelamento(
-            Long vendaId,
-            java.time.LocalDateTime dataHora,
-            BigDecimal valor,
-            java.time.LocalDateTime canceladaEm,
-            String motivo) {}
+            Long vendaId, LocalDateTime dataHora, BigDecimal valor, LocalDateTime canceladaEm, String motivo) {}
 
     public List<Cancelamento> cancelamentos(FiltroFinancas f) {
         var params = new MapSqlParameterSource()
@@ -378,14 +375,14 @@ public class ConsultasFinanceiras {
                 params,
                 (r, n) -> new Cancelamento(
                         r.getLong("id"),
-                        r.getObject("data_hora", java.time.LocalDateTime.class),
+                        r.getObject("data_hora", LocalDateTime.class),
                         dec(r, "valor_cobrado"),
-                        r.getObject("data_cancelamento", java.time.LocalDateTime.class),
+                        r.getObject("data_cancelamento", LocalDateTime.class),
                         r.getString("motivo_cancelamento")));
     }
 
     public record Ajuste(
-            Long vendaId, java.time.LocalDateTime dataHora, BigDecimal calculado, BigDecimal cobrado, String motivo) {}
+            Long vendaId, LocalDateTime dataHora, BigDecimal calculado, BigDecimal cobrado, String motivo) {}
 
     public List<Ajuste> ajustesManuais(FiltroFinancas f) {
         Onde o = onde(f);
@@ -397,7 +394,7 @@ public class ConsultasFinanceiras {
                 o.parametros(),
                 (r, n) -> new Ajuste(
                         r.getLong("id"),
-                        r.getObject("data_hora", java.time.LocalDateTime.class),
+                        r.getObject("data_hora", LocalDateTime.class),
                         dec(r, "valor_calculado"),
                         dec(r, "valor_cobrado"),
                         r.getString("motivo_ajuste")));

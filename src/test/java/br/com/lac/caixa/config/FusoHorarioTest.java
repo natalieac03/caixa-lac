@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 
+import br.com.lac.caixa.CaixaApplication;
+import br.com.lac.caixa.migracao.Migracoes;
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.modelo.Venda;
 import br.com.lac.caixa.repositorio.FiltroHistorico;
@@ -33,6 +35,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
 /** Com a JVM em UTC, o app grava e mostra a hora de Brasília. */
@@ -119,7 +122,7 @@ class FusoHorarioTest {
     }
 
     @Autowired
-    org.springframework.jdbc.core.JdbcTemplate jdbc;
+    JdbcTemplate jdbc;
 
     @Test
     @DisplayName("No H2 a V20 (conversão de UTC para Brasília) não roda: o H2 local já está em Brasília")
@@ -129,7 +132,7 @@ class FusoHorarioTest {
         assertEquals(0, v20);
         Integer comuns = jdbc.queryForObject(
                 "select count(*) from \"flyway_schema_history\" where \"type\" = 'SQL' and \"success\"", Integer.class);
-        assertEquals(br.com.lac.caixa.migracao.Migracoes.quantidade(), comuns);
+        assertEquals(Migracoes.quantidade(), comuns);
     }
 
     @Test
@@ -142,7 +145,7 @@ class FusoHorarioTest {
     @Test
     @DisplayName("O main fixa o fuso da JVM em America/Sao_Paulo antes de subir o Spring")
     void mainFixaOFuso() throws Exception {
-        var fixar = br.com.lac.caixa.CaixaApplication.class.getDeclaredMethod("fixarFuso");
+        var fixar = CaixaApplication.class.getDeclaredMethod("fixarFuso");
         TimeZone antes = TimeZone.getDefault();
         try {
             fixar.setAccessible(true);

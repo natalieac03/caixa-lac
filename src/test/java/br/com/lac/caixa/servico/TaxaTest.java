@@ -129,7 +129,7 @@ class TaxaTest {
 
     @Test
     @DisplayName("Arredondamento: percentual + fixo ao centavo, meio centavo para o par (HALF_EVEN)")
-    void arredondamento() {
+    void taxaArredondaAoCentavoComMeioCentavoParaOPar() {
         var agora = LocalDateTime.of(2025, 1, 1, 0, 0);
         var credito = new TaxaPagamento(FormaPagamento.CREDITO, r("3.5"), r("0"), LocalDate.of(2025, 1, 1), agora);
         assertValor("0.21", credito.estimar(r("6.00")));
@@ -160,7 +160,7 @@ class TaxaTest {
 
     @Test
     @DisplayName("Vigência: venda antes da mudança guarda a taxa antiga, depois guarda a nova; passado é recusado")
-    void vigencia() {
+    void vendaGuardaATaxaVigenteNoDiaEVigenciaNoPassadoERecusada() {
         taxas.definir(FormaPagamento.CREDITO, r("3.5"), null, hoje());
         taxas.definir(FormaPagamento.CREDITO, r("4.99"), r("0.50"), hoje().plusDays(2));
         assertThrows(
@@ -253,7 +253,7 @@ class TaxaTest {
 
     @Test
     @DisplayName("Tela Taxas: salvar com vírgula, mensagem, vigentes e recusa de vigência no passado")
-    void tela() throws Exception {
+    void telaSalvaTaxaComVirgulaERecusaVigenciaNoPassado() throws Exception {
         mvc.perform(post("/taxas")
                         .sessionAttr("autenticado", true)
                         .param("forma", "OUTRO")

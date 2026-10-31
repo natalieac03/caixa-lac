@@ -17,6 +17,7 @@ import br.com.lac.caixa.repositorio.PromocaoRepository;
 import br.com.lac.caixa.repositorio.VendaRepository;
 import br.com.lac.caixa.servico.CaixaService;
 import br.com.lac.caixa.servico.CategoriaService;
+import br.com.lac.caixa.servico.ConsultaHistorico;
 import br.com.lac.caixa.servico.DespesaService;
 import br.com.lac.caixa.servico.EstoqueService;
 import br.com.lac.caixa.servico.EventoService;
@@ -186,7 +187,7 @@ abstract class MassaFinanceira {
 
     @Test
     @DisplayName("Filtro de categoria e de forma: métricas da venda inteira e despesas ficam nulas")
-    void filtros() {
+    void filtroDeCategoriaOuFormaDeixaDespesasELucroNulos() {
         Resumo caneca = financas.resumo(MARCO.comCategoria(c.get("Caneca").getId()));
         assertValor("85.00", caneca.receitaBruta());
         assertValor("81.67", caneca.receitaLiquida());
@@ -211,7 +212,7 @@ abstract class MassaFinanceira {
 
     @Test
     @DisplayName("Comparação: evento anterior, período anterior de mesmo tamanho e evento sem anterior")
-    void comparacao() {
+    void comparaComEventoAnteriorOuPeriodoDeMesmoTamanho() {
         var feira2 = financas.comparar(evento("Feira 2"));
         assertValor("29.00", feira2.atual().receitaLiquida());
         assertValor("135.00", feira2.anterior().receitaLiquida());
@@ -247,7 +248,7 @@ abstract class MassaFinanceira {
 
     @Test
     @DisplayName("Série: por hora num evento de 9 h, por dia num período longo, zeros onde não vendeu")
-    void series() {
+    void seriePorHoraNoEventoEPorDiaNoPeriodoComZeros() {
         var feira1 = financas.serie(evento("Feira 1"));
         assertTrue(feira1.porHora());
         assertEquals(9, feira1.pontos().size());
@@ -426,7 +427,7 @@ abstract class MassaFinanceira {
 
     @Test
     @DisplayName("Giro, cobertura e produtos parados (cancelada e arquivado não contam)")
-    void estoque() {
+    void giroEParadosIgnoramCanceladaEArquivado() {
         var giro = estoqueFinanceiro.giro(MARCO);
         assertEquals(14, giro.size());
         Map<String, LinhaGiro> g = new HashMap<>();
@@ -455,7 +456,7 @@ abstract class MassaFinanceira {
 
     @Test
     @DisplayName("Invariantes: produtos = categorias = resumo = fechamento; formas = receita; canceladas fora")
-    void invariantes() {
+    void produtosCategoriasResumoFormasEFechamentoSomamOMesmo() {
         List<FiltroFinancas> filtros = List.of(
                 MARCO,
                 evento("Feira 1"),
@@ -500,13 +501,13 @@ abstract class MassaFinanceira {
     }
 
     @Autowired
-    br.com.lac.caixa.servico.ConsultaHistorico historico;
+    ConsultaHistorico historico;
 
     @Test
     @DisplayName(
             "Dia a dia: V6 (18:00, fora da Feira 1) e V9 (05/03); despesa sem evento; no histórico e no fechamento")
     void diaADia() {
-        var agora = java.time.LocalDateTime.now();
+        var agora = LocalDateTime.now();
         Resumo x = financas.resumo(FiltroFinancas.diaADia(LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 15), agora));
         assertValor("65.00", x.receitaLiquida());
         assertEquals(2, x.vendas());
@@ -521,7 +522,7 @@ abstract class MassaFinanceira {
     @Test
     @DisplayName("Invariante: soma de todos os eventos + dia a dia = total do período (receita, vendas, itens, CMV)")
     void eventosMaisDiaADia() {
-        var agora = java.time.LocalDateTime.now();
+        var agora = LocalDateTime.now();
         Resumo total = financas.resumo(MARCO);
         Resumo dia =
                 financas.resumo(FiltroFinancas.diaADia(LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 15), agora));

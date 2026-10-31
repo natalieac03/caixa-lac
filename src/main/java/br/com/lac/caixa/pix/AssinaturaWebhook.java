@@ -1,6 +1,7 @@
 package br.com.lac.caixa.pix;
 
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.Instant;
@@ -31,7 +32,7 @@ public final class AssinaturaWebhook {
             Mac mac = Mac.getInstance("HmacSHA256");
             mac.init(new SecretKeySpec(segredo.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
             return HexFormat.of().formatHex(mac.doFinal(mensagem.getBytes(StandardCharsets.UTF_8)));
-        } catch (java.security.GeneralSecurityException e) {
+        } catch (GeneralSecurityException e) {
             throw new IllegalStateException("HmacSHA256 indisponível", e);
         }
     }

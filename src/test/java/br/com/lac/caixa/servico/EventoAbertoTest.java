@@ -244,7 +244,7 @@ class EventoAbertoTest {
 
     @Test
     @DisplayName("Telas: iniciar e encerrar pelo topo, selo no topo, filtro Dia a dia e etiqueta no histórico")
-    void telas() throws Exception {
+    void topoEHistoricoMostramOEventoEmAndamento() throws Exception {
         Venda antes = vender(INICIO.minusHours(1));
         mvc.perform(get("/").sessionAttr("autenticado", true))
                 .andExpect(content().string(containsString("id=\"botao-iniciar-evento\"")))

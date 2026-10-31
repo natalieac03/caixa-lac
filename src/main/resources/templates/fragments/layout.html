@@ -16,7 +16,7 @@
             try {
                 var t = localStorage.getItem('lac-tema');
                 if (t === 'claro' || t === 'escuro') document.documentElement.setAttribute('data-tema', t);
-            } catch (e) {}
+            } catch (semLocalStorageFicaOTemaDoSistema) {}
         })();
         document.addEventListener('click', function (e) {
             document.querySelectorAll('details.menu-grupo[open], details.iniciar-evento[open]').forEach(function (d) {
@@ -36,7 +36,7 @@
                 || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro');
             var novo = atual === 'escuro' ? 'claro' : 'escuro';
             raiz.setAttribute('data-tema', novo);
-            try { localStorage.setItem('lac-tema', novo); } catch (e) {}
+            try { localStorage.setItem('lac-tema', novo); } catch (semLocalStorageValeSoNestaPagina) {}
         }
     </script>
 </head>

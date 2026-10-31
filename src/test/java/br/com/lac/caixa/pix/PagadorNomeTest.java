@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import br.com.lac.caixa.servico.CobrancaPixService;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.Properties;
 import java.util.UUID;
 import okhttp3.mockwebserver.MockWebServer;
@@ -61,9 +62,9 @@ class PagadorNomeTest {
     @ParameterizedTest(name = "MP_PAYER_NOME=''{0}'' MP_PAYER_FIRST_NAME=''{1}'' -> ''{2}''")
     @DisplayName("MP_PAYER_NOME tem preferência; o nome antigo continua aceito; sem nenhum, vazio")
     @CsvSource({"APRO,,APRO", ",APRO,APRO", "APRO,OUTRO,APRO", ",,''"})
-    void precedencia(String nome, String antigo, String esperado) throws Exception {
+    void payerNomeTemPreferenciaSobreONomeAntigo(String nome, String antigo, String esperado) throws Exception {
         var env = new StandardEnvironment();
-        var variaveis = new java.util.HashMap<String, Object>();
+        var variaveis = new HashMap<String, Object>();
         if (nome != null) variaveis.put("MP_PAYER_NOME", nome);
         if (antigo != null) variaveis.put("MP_PAYER_FIRST_NAME", antigo);
         env.getPropertySources().addFirst(new MapPropertySource("ambiente", variaveis));

@@ -7,6 +7,7 @@ import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.repositorio.ProdutoRepository;
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.options.AriaRole;
 import java.math.BigDecimal;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.AfterEach;
@@ -53,8 +54,7 @@ class VendaNoNavegadorTest {
     void entrarEAbrirVenda() {
         pagina.navigate(url("/login"));
         pagina.locator("#senha").fill(SenhaDeTeste.VALOR);
-        pagina.getByRole(
-                        com.microsoft.playwright.options.AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Entrar"))
+        pagina.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Entrar"))
                 .click();
         pagina.waitForURL(url("/"));
         pagina.navigate(url("/venda/nova"));
@@ -105,8 +105,7 @@ class VendaNoNavegadorTest {
 
         var aviso = pagina.locator("#sessaoExpirada");
         assertThat(aviso).containsText("Sessão expirou. Entre de novo.");
-        assertThat(aviso.getByRole(com.microsoft.playwright.options.AriaRole.LINK))
-                .hasAttribute("href", "/login");
+        assertThat(aviso.getByRole(AriaRole.LINK)).hasAttribute("href", "/login");
         assertThat(pagina.locator("#botaoConfirmar")).isDisabled();
     }
 }

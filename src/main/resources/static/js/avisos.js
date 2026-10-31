@@ -43,7 +43,7 @@
     function marcarVistos() {
         try {
             localStorage.setItem(CHAVE, JSON.stringify(idsAtuais()));
-        } catch (e) {
+        } catch (semLocalStorageTodosContinuamNovos) {
         }
     }
 
@@ -116,7 +116,7 @@
                 return r.ok ? r.json() : null;
             })
             .then(function (d) { if (d) desenhar(d); })
-            .catch(function () {});
+            .catch(function semRedeTentaNoProximoCiclo() {});
     }
 
     function iniciar() {

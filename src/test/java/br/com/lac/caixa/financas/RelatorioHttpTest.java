@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import br.com.lac.caixa.servico.EventoService;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -99,7 +100,7 @@ class RelatorioHttpTest {
 
     @Test
     @DisplayName("Comparativo com os 3 eventos lado a lado e o gráfico de receita e lucro")
-    void comparativo() throws Exception {
+    void comparativoMostraOsTresEventosEOGrafico() throws Exception {
         String html = pagina("/eventos/comparativo");
         String tabela = trecho(html, "id=\"tabela-comparativo\"", "</table>");
         assertTrue(tabela.indexOf("Feira 1") < tabela.indexOf("Feira 2")
@@ -117,7 +118,7 @@ class RelatorioHttpTest {
 
     @Test
     @DisplayName("Metas: progresso com valor e % na tela de Finanças e no relatório; só com filtro de evento")
-    void metas() throws Exception {
+    void metasAparecemSoComFiltroDeEvento() throws Exception {
         var feira1 = massa.e.get("Feira 1");
         var feira2 = massa.e.get("Feira 2");
         try {
@@ -150,8 +151,8 @@ class RelatorioHttpTest {
                     .andExpect(content().string(not(containsString("id=\"metas\""))));
             var futuro = eventos.criar(
                     "Feira futura",
-                    java.time.LocalDateTime.of(2030, 1, 5, 9, 0),
-                    java.time.LocalDateTime.of(2030, 1, 5, 18, 0),
+                    LocalDateTime.of(2030, 1, 5, 9, 0),
+                    LocalDateTime.of(2030, 1, 5, 18, 0),
                     null,
                     new BigDecimal("500"),
                     null);

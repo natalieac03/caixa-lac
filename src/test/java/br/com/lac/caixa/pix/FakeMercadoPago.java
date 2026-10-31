@@ -1,6 +1,8 @@
 package br.com.lac.caixa.pix;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,7 +40,7 @@ public class FakeMercadoPago extends Dispatcher {
     public final AtomicInteger consultas = new AtomicInteger();
     public final AtomicInteger cancelamentos = new AtomicInteger();
 
-    public volatile com.fasterxml.jackson.databind.JsonNode ultimaCriacao;
+    public volatile JsonNode ultimaCriacao;
 
     public static MockWebServer iniciar(FakeMercadoPago fake) {
         try {
@@ -46,7 +48,7 @@ public class FakeMercadoPago extends Dispatcher {
             servidor.setDispatcher(fake);
             servidor.start();
             return servidor;
-        } catch (java.io.IOException e) {
+        } catch (IOException e) {
             throw new IllegalStateException(e);
         }
     }

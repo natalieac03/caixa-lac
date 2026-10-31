@@ -39,7 +39,7 @@ class CobrancaPixTest {
     @ParameterizedTest(name = "{0} -> ESTORNADA")
     @DisplayName("Estorno e contestação no Mercado Pago: a cobrança vira ESTORNADA (nunca PAGA)")
     @ValueSource(strings = {"refunded", "charged_back"})
-    void estornada(String statusMp) {
+    void estornoOuContestacaoViraEstornadaNuncaPaga(String statusMp) {
         var c = pendente("10");
         assertTrue(c.atualizar(statusMp, statusMp, new BigDecimal("10.00"), AGORA));
         assertEquals(StatusCobranca.valueOf("ESTORNADA"), c.getStatus());

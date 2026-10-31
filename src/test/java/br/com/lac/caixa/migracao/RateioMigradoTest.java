@@ -101,7 +101,7 @@ class RateioMigradoTest {
 
     @Test
     @DisplayName("Propriedade: 400 vendas antigas aleatórias (semente fixa) migram igual ao Rateio.java")
-    void propriedade() throws Exception {
+    void vendasAntigasAleatoriasMigramIgualAoRateio() throws Exception {
         String url = banco();
         flyway(url, "11").migrate();
         Random aleatorio = new Random(777L);

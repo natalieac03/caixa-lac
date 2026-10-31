@@ -8,25 +8,34 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import br.com.lac.caixa.pix.FakeMercadoPago;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.Set;
 import java.util.UUID;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 /** Webhook do Mercado Pago: assinatura, atualização da cobrança e idempotência. */
 @SpringBootTest(
@@ -36,7 +45,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
             "mercadopago.webhook-sincrono=true"
         })
 @AutoConfigureMockMvc
-@org.junit.jupiter.api.extension.ExtendWith(org.springframework.boot.test.system.OutputCaptureExtension.class)
+@ExtendWith(OutputCaptureExtension.class)
 class WebhookHttpTest {
     static final String SEGREDO = "segredo-do-webhook-de-teste";
     static final FakeMercadoPago FAKE = new FakeMercadoPago();
@@ -207,21 +216,19 @@ class WebhookHttpTest {
         assertEquals("PENDENTE", situacao(order));
         assertEquals(
                 0,
-                new java.math.BigDecimal("1.00")
+                new BigDecimal("1.00")
                         .compareTo(jdbc.queryForObject(
-                                "select valor_pago from cobranca_pix where order_id = ?",
-                                java.math.BigDecimal.class,
-                                order)));
+                                "select valor_pago from cobranca_pix where order_id = ?", BigDecimal.class, order)));
     }
 
     @Autowired
-    @org.springframework.beans.factory.annotation.Qualifier("requestMappingHandlerMapping")
-    org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping rotas;
+    @Qualifier("requestMappingHandlerMapping")
+    RequestMappingHandlerMapping rotas;
 
     @Test
     @DisplayName(
             "\"Simular notificação\" do painel: assinatura válida, order que não existe -> 200 e só um aviso no log")
-    void simulacaoDoPainel(org.springframework.boot.test.system.CapturedOutput saida) throws Exception {
+    void simulacaoDoPainel(CapturedOutput saida) throws Exception {
         long agora = Instant.now().getEpochSecond();
         int consultas = FAKE.consultas.get();
         String manifesto = "id:123456;request-id:req-simulado;ts:" + agora + ";";
@@ -236,20 +243,19 @@ class WebhookHttpTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(""));
         String log = saida.getOut();
-        org.junit.jupiter.api.Assertions.assertTrue(
+        Assertions.assertTrue(
                 log.contains("Webhook: a order 123456 não é de nenhuma cobrança deste caixa; aviso ignorado."), log);
-        org.junit.jupiter.api.Assertions.assertFalse(log.contains(" ERROR "), "sem erro no log");
+        Assertions.assertFalse(log.contains(" ERROR "), "sem erro no log");
         assertEquals(consultas, FAKE.consultas.get(), "order que não é nossa não é consultada no Mercado Pago");
     }
 
     @Test
     @DisplayName("Id com quebra de linha não forja linhas no log")
-    void idNaoForjaLinhas(org.springframework.boot.test.system.CapturedOutput saida) throws Exception {
+    void idNaoForjaLinhas(CapturedOutput saida) throws Exception {
         mvc.perform(avisoAssinado("123\nINFO falso", "req-quebra", Instant.now().getEpochSecond()))
                 .andExpect(status().isOk());
-        org.junit.jupiter.api.Assertions.assertTrue(
-                saida.getOut().contains("a order 123_INFO falso não é"), saida.getOut());
-        org.junit.jupiter.api.Assertions.assertFalse(saida.getOut().contains("\nINFO falso"));
+        Assertions.assertTrue(saida.getOut().contains("a order 123_INFO falso não é"), saida.getOut());
+        Assertions.assertFalse(saida.getOut().contains("\nINFO falso"));
     }
 
     @Test
@@ -259,9 +265,9 @@ class WebhookHttpTest {
                 .filter(r -> r.getPatternValues().stream().anyMatch(x -> x.contains("webhook")))
                 .toList();
         assertEquals(1, webhooks.size(), webhooks.toString());
-        assertEquals(java.util.Set.of("/webhooks/mercadopago"), webhooks.get(0).getPatternValues());
+        assertEquals(Set.of("/webhooks/mercadopago"), webhooks.get(0).getPatternValues());
         assertEquals(
-                java.util.Set.of(org.springframework.web.bind.annotation.RequestMethod.POST),
+                Set.of(RequestMethod.POST),
                 webhooks.get(0).getMethodsCondition().getMethods());
         mvc.perform(post("/webhooks/mercadopago").param("data.id", "1"))
                 .andExpect(status().isUnauthorized())

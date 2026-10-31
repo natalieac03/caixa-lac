@@ -11,6 +11,8 @@ import br.com.lac.caixa.CaixaApplication;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.List;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -31,7 +33,7 @@ class SenhaObrigatoriaTest {
         assumeFalse(
                 perfil.equals("local") && Files.exists(Path.of("senha-local.properties")),
                 "senha-local.properties existe nesta pasta");
-        var args = new ArrayList<String>(java.util.List.of(
+        var args = new ArrayList<String>(List.of(
                 "--spring.profiles.active=" + perfil,
                 "--spring.datasource.url=jdbc:h2:mem:senha_" + perfil + "_" + senha.hashCode() + ";DB_CLOSE_DELAY=-1",
                 "--spring.datasource.driver-class-name=org.h2.Driver",
@@ -54,7 +56,7 @@ class SenhaObrigatoriaTest {
         if (senha.equals("Sete7ch")) assertFalse(saida.getAll().contains("Sete7ch"), "a senha apareceu no log");
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     void oitoCaracteresBastamEEspacosNaoContamComoSenha() {
         var oito = new SenhaDeAcesso(new MockEnvironment().withProperty("app.senha", "12345678"));
         assertTrue(oito.confere("12345678"));

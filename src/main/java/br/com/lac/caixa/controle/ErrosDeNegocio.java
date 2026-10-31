@@ -83,7 +83,7 @@ public class ErrosDeNegocio {
                         && !caminho.startsWith("//")) {
                     return caminho + (uri.getRawQuery() == null ? "" : "?" + uri.getRawQuery());
                 }
-            } catch (IllegalArgumentException refererMalFormado) {
+            } catch (IllegalArgumentException refererMalFormadoVoltaParaAListaDaArea) {
             }
         }
         String uri = request.getRequestURI();

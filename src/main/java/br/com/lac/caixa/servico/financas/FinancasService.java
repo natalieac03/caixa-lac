@@ -40,6 +40,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
@@ -226,7 +227,7 @@ public class FinancasService {
         for (DayOfWeek d : DayOfWeek.values()) {
             vendas.put(d, new long[24]);
             BigDecimal[] zeros = new BigDecimal[24];
-            java.util.Arrays.fill(zeros, BigDecimal.ZERO);
+            Arrays.fill(zeros, BigDecimal.ZERO);
             receita.put(d, zeros);
         }
         for (Balde b : consultas.porDiaEHora(f)) {

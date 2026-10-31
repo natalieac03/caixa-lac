@@ -190,7 +190,7 @@ public class MercadoPagoPix {
         if (valor != null) {
             try {
                 espera = Duration.ofSeconds(Long.parseLong(valor.trim()));
-            } catch (NumberFormatException ignorado) {
+            } catch (NumberFormatException retryAfterEmDataHttpUsaAEsperaPadrao) {
             }
         }
         return espera.compareTo(config.getEsperaMaximaRetry()) > 0 ? config.getEsperaMaximaRetry() : espera;

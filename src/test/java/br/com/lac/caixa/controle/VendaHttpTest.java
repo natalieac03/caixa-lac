@@ -29,6 +29,7 @@ import br.com.lac.caixa.repositorio.VendaRepository;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.RollbackException;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -237,7 +238,7 @@ class VendaHttpTest {
     @Test
     @DisplayName("Tela de venda tem o token e o histórico mostra o valor cobrado")
     void telasRenderizamEHistoricoExibeValorLegado() throws Exception {
-        var antiga = Venda.nova(java.time.LocalDateTime.now());
+        var antiga = Venda.nova(LocalDateTime.now());
         antiga.registrarValores(new BigDecimal("9.50"), BigDecimal.ZERO, new BigDecimal("9.50"), null);
         antiga.registrarPagamentos(List.of(pix("9.50")));
         vendas.save(antiga);
@@ -268,7 +269,7 @@ class VendaHttpTest {
     @Test
     @DisplayName("Cancelamento por HTTP risca a venda; fechamento e CSV do fechamento respondem")
     void fechamentoECancelamentoFuncionamPorHttp() throws Exception {
-        var v = Venda.nova(java.time.LocalDateTime.now());
+        var v = Venda.nova(LocalDateTime.now());
         v.adicionarItem(new ItemVenda(p, 1));
         v.registrarValores(new BigDecimal("6"), BigDecimal.ZERO, new BigDecimal("6"), null);
         v.registrarPagamentos(List.of(pix("6")));

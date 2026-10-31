@@ -13,6 +13,7 @@ import br.com.lac.caixa.modelo.TipoPromocao;
 import br.com.lac.caixa.modelo.Venda;
 import br.com.lac.caixa.repositorio.PromocaoRepository;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -130,7 +131,7 @@ class RateioVendaTest {
 
     @Test
     @DisplayName("Pacote: o desconto do pacote é rateado pelo bruto e guarda o id do pacote")
-    void pacote() {
+    void descontoDoPacoteERateadoPeloBrutoComOIdDoPacote() {
         Categoria boton = categoria("Bóton Pacote");
         Categoria adesivo = categoria("Adesivo Pacote");
         var b = estoque.criarNovo("Bóton Pacote", r("6"), 100, boton);
@@ -184,7 +185,7 @@ class RateioVendaTest {
 
     @Test
     @DisplayName("Dízima: R$ 1,00 de desconto em 3 itens iguais -> 0,34 + 0,33 + 0,33")
-    void dizima() {
+    void dizimaDaOCentavoQueSobraAoPrimeiroItem() {
         var x = estoque.criarNovo("Bóton Dízima X", r("6"), 100, null);
         var y = estoque.criarNovo("Bóton Dízima Y", r("6"), 100, null);
         var z = estoque.criarNovo("Bóton Dízima Z", r("6"), 100, null);
@@ -204,7 +205,7 @@ class RateioVendaTest {
 
     @Test
     @DisplayName("Propriedade: 300 vendas aleatórias (semente fixa), com promoções e ajustes, sempre fecham")
-    void propriedade() {
+    void vendasAleatoriasSempreFechamComOCobrado() {
         Random aleatorio = new Random(424242L);
         Categoria c1 = categoria("Bóton Prop");
         Categoria c2 = categoria("Adesivo Prop");
@@ -233,7 +234,7 @@ class RateioVendaTest {
                 case 2 ->
                     calculado
                             .multiply(BigDecimal.valueOf(aleatorio.nextInt(100), 2))
-                            .setScale(2, java.math.RoundingMode.DOWN);
+                            .setScale(2, RoundingMode.DOWN);
                 default -> null;
             };
             vendas.add(vender(carrinho, manual).getId());

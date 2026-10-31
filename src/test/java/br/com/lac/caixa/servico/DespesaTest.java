@@ -17,6 +17,9 @@ import br.com.lac.caixa.modelo.Despesa;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,10 +55,10 @@ class DespesaTest {
 
     @Test
     @DisplayName("As seis categorias iniciais existem; criar, renomear e apagar (só sem despesas)")
-    void categorias() {
+    void categoriasIniciaisExistemESoApagaSemDespesas() {
         assertEquals(
-                java.util.Set.of("Material", "Impressão", "Transporte", "Alimentação", "Taxa de espaço", "Outros"),
-                new java.util.HashSet<>(despesas.categorias().stream()
+                Set.of("Material", "Impressão", "Transporte", "Alimentação", "Taxa de espaço", "Outros"),
+                new HashSet<>(despesas.categorias().stream()
                         .map(CategoriaDespesa::getNome)
                         .filter(n -> !n.startsWith("Teste"))
                         .toList()));
@@ -72,7 +75,7 @@ class DespesaTest {
 
     @Test
     @DisplayName("Valor precisa ser maior que zero; data, descrição e categoria obrigatórias")
-    void validacoes() {
+    void despesaSemValorPositivoOuCampoObrigatorioERecusada() {
         Long material = categoria("Material");
         LocalDate dia = LocalDate.of(2025, 1, 3);
         assertThrows(RegraDeNegocioException.class, () -> despesas.criar(dia, "Zero", material, r("0"), null, null));
@@ -104,7 +107,7 @@ class DespesaTest {
                 despesas.filtrar(new DespesaService.Filtro(null, LocalDate.of(2025, 5, 10), LocalDate.of(2025, 5, 10)));
 
         assertEquals(
-                java.util.List.of("Mesa", "Lona (véspera)"),
+                List.of("Mesa", "Lona (véspera)"),
                 doEvento.stream().map(Despesa::getDescricao).toList());
         assertEquals(0, r("125.50").compareTo(despesas.total(new DespesaService.Filtro(feira.getId(), null, null))));
         assertEquals(2, doDia.size());
@@ -119,7 +122,7 @@ class DespesaTest {
 
     @Test
     @DisplayName("Tela: aviso sobre compras, criar, editar, apagar e filtrar")
-    void tela() throws Exception {
+    void telaCriaEditaApagaEFiltraDespesas() throws Exception {
         Long alimentacao = categoria("Alimentação");
         mvc.perform(get("/despesas").sessionAttr("autenticado", true))
                 .andExpect(status().isOk())

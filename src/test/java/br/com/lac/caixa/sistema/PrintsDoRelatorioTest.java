@@ -6,9 +6,12 @@ import br.com.lac.caixa.servico.EventoService;
 import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.AriaRole;
+import com.microsoft.playwright.options.ColorScheme;
 import com.microsoft.playwright.options.Media;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -32,7 +35,7 @@ class PrintsDoRelatorioTest {
 
     @Test
     @DisplayName("Prints do relatório do evento e do comparativo (só com -Dprints=true)")
-    void gerar() throws Exception {
+    void geraOsPrintsDoRelatorioEDoComparativo() throws Exception {
         Assumptions.assumeTrue(Boolean.getBoolean("prints"), "use -Dprints=true para gerar os prints");
         var massa = new MassaDeTeste(contexto).montar();
         var feira1 = massa.e.get("Feira 1");
@@ -43,8 +46,8 @@ class PrintsDoRelatorioTest {
                         feira1.getInicio(),
                         feira1.getFim(),
                         "Print gerado com a massa de teste",
-                        new java.math.BigDecimal("150"),
-                        new java.math.BigDecimal("20"));
+                        new BigDecimal("150"),
+                        new BigDecimal("20"));
         Path pasta = Path.of("docs", "prints");
         Files.createDirectories(pasta);
         var navegador = Navegador.browser().newContext(new Browser.NewContextOptions().setViewportSize(900, 1200));
@@ -88,17 +91,14 @@ class PrintsDoRelatorioTest {
         new MassaDeTeste(contexto).montar();
         var eventos = contexto.getBean(EventoService.class);
         if (eventos.aberto().isEmpty()) {
-            var inicio =
-                    java.time.LocalDateTime.now().withMinute(0).withSecond(0).withNano(0);
+            var inicio = LocalDateTime.now().withMinute(0).withSecond(0).withNano(0);
             eventos.criar("Feira de Outubro II", inicio, null, null);
         }
         Path pasta = Path.of("docs", "prints");
         Files.createDirectories(pasta);
-        for (var tema : new com.microsoft.playwright.options.ColorScheme[] {
-            com.microsoft.playwright.options.ColorScheme.LIGHT, com.microsoft.playwright.options.ColorScheme.DARK
-        }) {
+        for (var tema : new ColorScheme[] {ColorScheme.LIGHT, ColorScheme.DARK}) {
             for (int[] tela : new int[][] {{1280, 860}, {390, 844}}) {
-                String nome = (tema == com.microsoft.playwright.options.ColorScheme.LIGHT ? "claro" : "escuro") + "-"
+                String nome = (tema == ColorScheme.LIGHT ? "claro" : "escuro") + "-"
                         + (tela[0] > 600 ? "computador" : "celular");
                 var navegador = Navegador.browser()
                         .newContext(new Browser.NewContextOptions()

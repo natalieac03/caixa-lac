@@ -13,7 +13,7 @@ class QuantidadesTest {
 
     @Test
     @DisplayName("Teto de 9999 por produto: 9999 passa, 10000 é recusado com mensagem")
-    void teto() {
+    void tetoDe9999PorProdutoRecusa10000() {
         assertEquals(Map.of(7L, 9999), Quantidades.porProduto(Map.of("qtd_7", "9999")));
         var erro = assertThrows(RegraDeNegocioException.class, () -> Quantidades.porProduto(Map.of("qtd_7", "10000")));
         assertEquals("Quantidade máxima por produto: 9999", erro.getMessage());

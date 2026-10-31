@@ -46,7 +46,7 @@ class CustoProdutoTest {
 
     @Test
     @DisplayName("Custo é opcional e não pode ser negativo; compra exige quantidade >= 1 e custo >= 0")
-    void validacoes() {
+    void custoNegativoECompraInvalidaSaoRecusados() {
         var p = new Produto("Bóton", r("6"), 1);
         assertTrue(p.isSemCusto());
         p.setCustoUnitario(BigDecimal.ZERO);

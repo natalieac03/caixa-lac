@@ -177,7 +177,7 @@ class PixHttpTest {
 
     @Test
     @DisplayName("Pix expirado no Mercado Pago aparece como EXPIRADA")
-    void expirada() throws Exception {
+    void pixExpiradoNoMercadoPagoApareceComoExpirada() throws Exception {
         String order = gerar(0, "18,00");
         FAKE.expirar(order);
 
@@ -197,7 +197,7 @@ class PixHttpTest {
 
     @Test
     @DisplayName("Valor zero ou negativo é recusado; sem sessão, 401 em JSON")
-    void validacoes() throws Exception {
+    void valorZeroOuNegativoERecusadoESemSessaoDa401() throws Exception {
         mvc.perform(logado(post("/venda/pix"))
                         .param("token", token)
                         .param("parte", "0")

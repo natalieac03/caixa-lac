@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.pagamento.PagamentoFactory;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -23,7 +24,7 @@ class PagamentoVendaTest {
     }
 
     Venda venda(String cobrado, String motivo) {
-        var v = Venda.nova(java.time.LocalDateTime.now());
+        var v = Venda.nova(LocalDateTime.now());
         v.registrarValores(r("18"), BigDecimal.ZERO, r(cobrado), motivo);
         return v;
     }

@@ -113,7 +113,7 @@ class EventoRapidoNoNavegadorTest {
 
     @Test
     @DisplayName("Celular: selo de evento e sino no topo sem rolagem lateral")
-    void celular() {
+    void noCelularSeloESinoCabemSemRolagemLateral() {
         eventos.iniciar("Feira de Outubro II");
         var celular = Navegador.browser().newContext(new Browser.NewContextOptions().setViewportSize(390, 844));
         try {

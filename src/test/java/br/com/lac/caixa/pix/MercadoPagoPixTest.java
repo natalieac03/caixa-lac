@@ -13,6 +13,7 @@ import java.util.concurrent.TimeUnit;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -103,7 +104,7 @@ class MercadoPagoPixTest {
 
     @Test
     @DisplayName("Consultar: paga (processed/accredited) com valor pago; pendente; expirada")
-    void consultar() throws Exception {
+    void consultarDevolvePagaComValorPendenteEExpirada() throws Exception {
         servidor.enqueue(json(200, order("processed", "accredited", "12.50")));
         servidor.enqueue(json(200, order("action_required", "waiting_transfer", "0.00")));
         servidor.enqueue(json(200, order("canceled", "expired", "0.00")));
@@ -138,7 +139,7 @@ class MercadoPagoPixTest {
 
     @Test
     @DisplayName("Cancelar: POST /v1/orders/{id}/cancel com X-Idempotency-Key; 409 traz o código do erro")
-    void cancelar() throws Exception {
+    void cancelarMandaIdempotenciaE409TrazOCodigo() throws Exception {
         servidor.enqueue(json(200, order("canceled", "canceled_transaction", "0.00")));
         servidor.enqueue(json(409, "{\"errors\":[{\"code\":\"cannot_cancel_order\",\"message\":\"x\"}]}"));
 
@@ -184,7 +185,7 @@ class MercadoPagoPixTest {
 
     @Test
     @DisplayName("Timeout: sem resposta no prazo vira MercadoPagoException (status 0)")
-    void timeout() {
+    void semRespostaNoPrazoViraMercadoPagoExceptionComStatusZero() {
         servidor.enqueue(json(200, order("processed", "accredited", "12.50")).setHeadersDelay(3, TimeUnit.SECONDS));
 
         var erro = assertThrows(MercadoPagoException.class, () -> mp.consultar("ORD01TESTE"));
@@ -246,6 +247,6 @@ class MercadoPagoPixTest {
     void respostaQueNaoEJson() {
         servidor.enqueue(json(200, "<html>Bad gateway</html>"));
         var erro = assertThrows(MercadoPagoException.class, () -> mp.consultar("ORD01TESTE"));
-        org.junit.jupiter.api.Assertions.assertTrue(erro.getMessage().contains("consultar order"), erro.getMessage());
+        Assertions.assertTrue(erro.getMessage().contains("consultar order"), erro.getMessage());
     }
 }

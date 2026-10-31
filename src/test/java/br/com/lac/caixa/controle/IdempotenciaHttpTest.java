@@ -15,6 +15,7 @@ import br.com.lac.caixa.repositorio.ProdutoRepository;
 import br.com.lac.caixa.servico.CaixaService;
 import java.math.BigDecimal;
 import java.util.UUID;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,7 +42,7 @@ class IdempotenciaHttpTest {
 
     @Test
     @DisplayName("Mesmo token de novo: o serviço devolve a venda existente e a tela avisa que já estava registrada")
-    void tokenRepetido() throws Exception {
+    void vendaComTokenRepetidoDevolveAExistenteSemCriarOutra() throws Exception {
         var p = produtos.save(new Produto("Idempotente", new BigDecimal("6"), 10));
         String token = UUID.randomUUID().toString();
         var venda = post("/venda")
@@ -53,7 +54,7 @@ class IdempotenciaHttpTest {
 
         mvc.perform(venda)
                 .andExpect(redirectedUrl("/historico"))
-                .andExpect(flash().attribute("sucesso", org.hamcrest.Matchers.endsWith("já estava registrada.")));
+                .andExpect(flash().attribute("sucesso", Matchers.endsWith("já estava registrada.")));
     }
 
     @Test

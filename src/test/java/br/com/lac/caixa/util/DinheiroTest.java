@@ -13,6 +13,7 @@ import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.modelo.Venda;
 import br.com.lac.caixa.modelo.pagamento.PagamentoFactory;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -62,7 +63,7 @@ class DinheiroTest {
     @DisplayName("CSV usa vírgula decimal e escapa aspas nos nomes")
     void csvUsaVirgulaEEscapaNomes() {
         var p = new Produto("Produto \"especial\"", new BigDecimal("12.50"), 2);
-        var v = Venda.nova(java.time.LocalDateTime.now());
+        var v = Venda.nova(LocalDateTime.now());
         v.registrarValores(new BigDecimal("12.50"), BigDecimal.ZERO, new BigDecimal("12.50"), null);
         v.registrarPagamentos(List.of(parte(FormaPagamento.PIX, "12.50", null)));
 

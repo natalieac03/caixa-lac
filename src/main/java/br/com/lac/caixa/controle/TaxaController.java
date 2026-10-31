@@ -8,6 +8,7 @@ import br.com.lac.caixa.util.Dinheiro;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -55,7 +56,7 @@ public class TaxaController {
         flash.addFlashAttribute(
                 "sucesso",
                 "Taxa de " + forma.getRotulo() + " a partir de "
-                        + t.getVigenteDesde().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) + ": "
+                        + t.getVigenteDesde().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) + ": "
                         + t.getPercentual().stripTrailingZeros().toPlainString().replace('.', ',') + "% + "
                         + Dinheiro.reais(t.getValorFixo()) + ".");
         return "redirect:/taxas";

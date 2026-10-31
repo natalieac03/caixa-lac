@@ -13,6 +13,7 @@ import br.com.lac.caixa.repositorio.ProdutoRepository;
 import br.com.lac.caixa.repositorio.VendaRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,7 +36,7 @@ class HistoricoIntegracaoTest {
     ConsultaHistorico consulta;
 
     Venda venda(Produto p, FormaPagamento forma, LocalDate dia) {
-        var v = Venda.nova(java.time.LocalDateTime.now());
+        var v = Venda.nova(LocalDateTime.now());
         v.setDataHora(dia.atTime(12, 0));
         v.adicionarItem(new ItemVenda(p, 2));
         v.registrarValores(new BigDecimal("2"), BigDecimal.ZERO, new BigDecimal("2"), null);

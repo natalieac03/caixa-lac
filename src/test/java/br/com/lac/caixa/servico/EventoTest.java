@@ -74,7 +74,7 @@ class EventoTest {
 
     @Test
     @DisplayName("Sobreposição: cruzar, conter ou ficar dentro é recusado; encostar (fim = início) é aceito")
-    void sobreposicao() {
+    void cruzarEventosERecusadoEEncostarEAceito() {
         eventos.criar("Feira de março", t("2025-03-10T10:00"), t("2025-03-10T18:00"), null);
 
         var cruza = assertThrows(
@@ -155,7 +155,7 @@ class EventoTest {
 
     @Test
     @DisplayName("Telas: criar, recusar sobreposição com mensagem, filtrar histórico e fechamento pelo evento")
-    void telas() throws Exception {
+    void telasCriamEventoEFiltramPorEle() throws Exception {
         mvc.perform(post("/eventos")
                         .sessionAttr("autenticado", true)
                         .param("nome", "Encontro LAC")

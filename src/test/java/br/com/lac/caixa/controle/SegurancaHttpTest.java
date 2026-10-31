@@ -10,6 +10,7 @@ import br.com.lac.caixa.SenhaDeTeste;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockHttpSession;
@@ -29,7 +30,7 @@ class SegurancaHttpTest {
     MockMvc mvc;
 
     @Autowired
-    @org.springframework.beans.factory.annotation.Qualifier("requestMappingHandlerMapping")
+    @Qualifier("requestMappingHandlerMapping")
     RequestMappingHandlerMapping mapeamentos;
 
     MockHttpServletRequestBuilder doIp(MockHttpServletRequestBuilder req, String ip) {

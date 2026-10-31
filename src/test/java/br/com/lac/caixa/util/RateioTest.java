@@ -41,7 +41,7 @@ class RateioTest {
 
     @Test
     @DisplayName("Dízima: R$ 10,00 em 3 itens iguais -> 3,34 + 3,33 + 3,33 (o centavo vai para o primeiro)")
-    void dizima() {
+    void dizimaDaOCentavoQueSobraAoPrimeiroItem() {
         assertArrayEquals(c(334, 333, 333), Rateio.ratear(1000, c(600, 600, 600), null));
         assertArrayEquals(c(34, 33, 33), Rateio.ratear(100, c(1, 1, 1), null));
         assertArrayEquals(c(33, 67), Rateio.ratear(100, c(100, 200), null));
@@ -58,7 +58,7 @@ class RateioTest {
 
     @Test
     @DisplayName("Cortesia: o desconto é o bruto inteiro e cada item fica com líquido zero")
-    void cortesia() {
+    void cortesiaDeixaTodoLiquidoZero() {
         long[] brutos = c(600, 800, 333);
         long[] partes = Rateio.ratear(Arrays.stream(brutos).sum(), brutos, null);
         assertArrayEquals(brutos, partes);
@@ -73,7 +73,7 @@ class RateioTest {
 
     @Test
     @DisplayName("Propriedade: 500 rateios aleatórios (semente fixa), soma exata e parte a < 1 centavo da proporção")
-    void propriedade() {
+    void rateiosAleatoriosSomamExatoEFicamAMenosDeUmCentavo() {
         Random aleatorio = new Random(12345L);
         for (int caso = 0; caso < 500; caso++) {
             int n = 1 + aleatorio.nextInt(12);

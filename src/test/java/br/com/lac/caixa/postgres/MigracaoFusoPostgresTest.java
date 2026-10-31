@@ -114,7 +114,7 @@ class MigracaoFusoPostgresTest {
 
     @Test
     @DisplayName("Venda das 01:30 UTC vira 22:30 de 10/05 (dia certo); a V20 foi aplicada no Postgres")
-    void vendas() throws Exception {
+    void vendaGravadaEmUtcPassaParaBrasiliaNoDiaCerto() throws Exception {
         try (var s = c.createStatement();
                 var r = s.executeQuery("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '20' AND success")) {
             r.next();

@@ -24,6 +24,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -263,7 +264,7 @@ public class PainelFinancas {
     private List<LinhaMapa> mapa(FiltroFinancas f) {
         var celulas = financas.mapaDeCalor(f);
         long maximo = celulas.stream().mapToLong(Financas.Celula::vendas).max().orElse(0);
-        Map<DayOfWeek, List<CelulaMapa>> porDia = new java.util.EnumMap<>(DayOfWeek.class);
+        Map<DayOfWeek, List<CelulaMapa>> porDia = new EnumMap<>(DayOfWeek.class);
         for (var c : celulas) {
             int nivel = c.vendas() == 0 || maximo == 0 ? 0 : (int) Math.max(1, Math.ceil(4.0 * c.vendas() / maximo));
             porDia.computeIfAbsent(c.diaDaSemana(), d -> new ArrayList<>())

@@ -287,9 +287,9 @@ class PostgresLegadoTest {
         assertTrue(id > 2, "a identidade continua depois das vendas antigas");
         assertEquals(
                 0,
-                new java.math.BigDecimal("14")
+                new BigDecimal("14")
                         .compareTo(jdbc.queryForObject(
-                                "select valor_cobrado from venda where id = ?", java.math.BigDecimal.class, id)));
+                                "select valor_cobrado from venda where id = ?", BigDecimal.class, id)));
         assertEquals(antes - 2, jdbc.queryForObject("select quantidade from produto where id = 3", Integer.class));
         assertEquals(
                 0,

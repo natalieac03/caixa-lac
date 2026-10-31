@@ -18,6 +18,7 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -121,7 +122,6 @@ class VendaConcorrenteTest {
                 .andExpect(content().string(containsString("name=\"qtd_" + p.getId() + "\"")))
                 .andExpect(content().string(containsString("value=\"3\"")))
                 .andExpect(content().string(containsString("value=\"Desconto de amigo\"")))
-                .andExpect(content()
-                        .string(org.hamcrest.Matchers.matchesPattern("(?s).*value=\"DINHEIRO\"[^>]*checked.*")));
+                .andExpect(content().string(Matchers.matchesPattern("(?s).*value=\"DINHEIRO\"[^>]*checked.*")));
     }
 }

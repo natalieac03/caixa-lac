@@ -128,7 +128,7 @@ class SinoNoNavegadorTest {
 
     @Test
     @DisplayName("Celular: o painel ocupa a largura da tela, sem rolagem lateral")
-    void celular() {
+    void noCelularOPainelOcupaALarguraSemRolagem() {
         estoque.criarNovo("Bóton Sem Custo", new BigDecimal("6"), 5, null);
         var celular = Navegador.browser().newContext(new Browser.NewContextOptions().setViewportSize(390, 844));
         try {

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
+import br.com.lac.caixa.SenhaDeTeste;
 import br.com.lac.caixa.modelo.Categoria;
 import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.repositorio.CategoriaRepository;
@@ -14,7 +15,9 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -164,15 +167,13 @@ class AuditoriaHttpTest {
             r.setRemoteAddr("198.51.100.77");
             return r;
         }));
-        mvc.perform(post("/login")
-                .param("senha", br.com.lac.caixa.SenhaDeTeste.VALOR)
-                .with(r -> {
-                    r.setRemoteAddr("198.51.100.78");
-                    return r;
-                }));
+        mvc.perform(post("/login").param("senha", SenhaDeTeste.VALOR).with(r -> {
+            r.setRemoteAddr("198.51.100.78");
+            return r;
+        }));
 
         assertFalse(log.getAll().contains("senha-errada-secreta-123"));
-        assertFalse(log.getAll().contains(br.com.lac.caixa.SenhaDeTeste.VALOR));
+        assertFalse(log.getAll().contains(SenhaDeTeste.VALOR));
         assertTrue(linhas.list.stream().noneMatch(l -> l.getFormattedMessage().contains("senha")));
     }
 
@@ -185,8 +186,8 @@ class AuditoriaHttpTest {
         assertFalse(linha.contains("\n"));
     }
 
-    static java.util.Map<String, Object> mapa(Object... kv) {
-        var m = new java.util.LinkedHashMap<String, Object>();
+    static Map<String, Object> mapa(Object... kv) {
+        var m = new LinkedHashMap<String, Object>();
         for (int i = 0; i < kv.length; i += 2) m.put((String) kv[i], kv[i + 1]);
         return m;
     }

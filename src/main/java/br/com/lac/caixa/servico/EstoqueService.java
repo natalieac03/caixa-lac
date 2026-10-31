@@ -13,12 +13,15 @@ import br.com.lac.caixa.repositorio.CompraEstoqueRepository;
 import br.com.lac.caixa.repositorio.ItemVendaRepository;
 import br.com.lac.caixa.repositorio.MovimentoEstoqueRepository;
 import br.com.lac.caixa.repositorio.ProdutoRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,8 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class EstoqueService {
 
-    @jakarta.persistence.PersistenceContext
-    private jakarta.persistence.EntityManager em;
+    @PersistenceContext
+    private EntityManager em;
 
     private final ProdutoRepository produtos;
     private final ItemVendaRepository itensVenda;
@@ -236,7 +239,7 @@ public class EstoqueService {
         Integer antes = p.getEstoqueMinimo();
         p.setEstoqueMinimo(limite);
         Produto salvo = produtos.save(p);
-        if (!java.util.Objects.equals(antes, limite)) {
+        if (!Objects.equals(antes, limite)) {
             auditoria.registrar("estoque_minimo", "id", id, "antes", antes, "depois", limite);
         }
         return salvo;

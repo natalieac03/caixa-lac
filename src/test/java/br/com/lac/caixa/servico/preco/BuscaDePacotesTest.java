@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import br.com.lac.caixa.modelo.Categoria;
 import br.com.lac.caixa.modelo.Promocao;
 import br.com.lac.caixa.modelo.TipoPromocao;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -91,7 +92,7 @@ class BuscaDePacotesTest {
     @Test
     @DisplayName("50.000 unidades e pacote de 2: a busca exata não estoura a pilha (DP iterativa)")
     void muitasUnidadesSemStackOverflow() {
-        var precos = new java.util.ArrayList<Long>();
+        var precos = new ArrayList<Long>();
         for (int i = 0; i < 50_000; i++) precos.add(600L);
         var doisPor10 = pacote(1, "10.00", a, 2);
         var busca = new BuscaDePacotes(Map.of(1L, precos), List.of(doisPor10));

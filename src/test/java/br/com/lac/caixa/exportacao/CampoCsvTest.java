@@ -10,7 +10,7 @@ class CampoCsvTest {
 
     @Test
     @DisplayName("Campo de texto: aspas dobradas e apóstrofo antes de = + - @ tab e CR")
-    void campo() {
+    void campoDobraAspasEPoeApostrofoAntesDeFormula() {
         assertEquals("\"'=HYPERLINK(\"\"x\"\")\"", ExportadorCSV.campo("=HYPERLINK(\"x\")"));
         assertEquals("\"'+1\"", ExportadorCSV.campo("+1"));
         assertEquals("\"'-2+3\"", ExportadorCSV.campo("-2+3"));

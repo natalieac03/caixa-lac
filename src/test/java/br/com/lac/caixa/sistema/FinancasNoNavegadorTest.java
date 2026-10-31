@@ -4,12 +4,15 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
 
 import br.com.lac.caixa.SenhaDeTeste;
 import br.com.lac.caixa.financas.MassaDeTeste;
+import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.AriaRole;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -43,8 +46,7 @@ class FinancasNoNavegadorTest {
     @BeforeEach
     void abrir() {
         massa = new MassaDeTeste(contexto).montar();
-        navegador = Navegador.browser()
-                .newContext(new com.microsoft.playwright.Browser.NewContextOptions().setViewportSize(1280, 900));
+        navegador = Navegador.browser().newContext(new Browser.NewContextOptions().setViewportSize(1280, 900));
         pagina = navegador.newPage();
         pagina.navigate(url("/login"));
         pagina.locator("#senha").fill(SenhaDeTeste.VALOR);
@@ -91,7 +93,7 @@ class FinancasNoNavegadorTest {
         List<String> lidas = linhas.allInnerTexts().stream()
                 .map(t -> t.replaceAll("\\s+", " ").trim())
                 .toList();
-        org.junit.jupiter.api.Assertions.assertEquals(esperado, lidas);
+        Assertions.assertEquals(esperado, lidas);
 
         assertThat(pagina.locator("#financas")).hasAttribute("data-graficos", "prontos");
         pagina.screenshot(new Page.ScreenshotOptions()
@@ -116,9 +118,8 @@ class FinancasNoNavegadorTest {
 
     @Test
     @DisplayName("Celular: a página não rola na horizontal (as tabelas rolam dentro delas)")
-    void celular() {
-        var celular = Navegador.browser()
-                .newContext(new com.microsoft.playwright.Browser.NewContextOptions().setViewportSize(390, 844));
+    void noCelularAPaginaNaoRolaNaHorizontal() {
+        var celular = Navegador.browser().newContext(new Browser.NewContextOptions().setViewportSize(390, 844));
         try {
             var p = celular.newPage();
             p.navigate(url("/login"));
@@ -130,8 +131,7 @@ class FinancasNoNavegadorTest {
             assertThat(p.locator("#cartao-receita .indicador-valor")).hasText("R$ 229,00");
             Object largura =
                     p.evaluate("() => document.documentElement.scrollWidth - document.documentElement.clientWidth");
-            org.junit.jupiter.api.Assertions.assertEquals(
-                    0, ((Number) largura).intValue(), "rolagem horizontal da página");
+            Assertions.assertEquals(0, ((Number) largura).intValue(), "rolagem horizontal da página");
             p.screenshot(new Page.ScreenshotOptions()
                     .setPath(Path.of("target", "financas-celular.png"))
                     .setFullPage(true));
@@ -163,7 +163,7 @@ class FinancasNoNavegadorTest {
         menu.locator("summary").click();
         itens.getByText("Despesas").click();
         pagina.waitForURL(url("/despesas"));
-        assertThat(pagina.locator("details.menu-grupo summary")).hasClass(java.util.regex.Pattern.compile("ativo"));
+        assertThat(pagina.locator("details.menu-grupo summary")).hasClass(Pattern.compile("ativo"));
         pagina.locator("details.menu-grupo summary").click();
         assertThat(pagina.locator(".menu-grupo-itens a[aria-current='page']")).hasText("Despesas");
         pagina.locator("h1").click();
@@ -173,8 +173,7 @@ class FinancasNoNavegadorTest {
     @Test
     @DisplayName("Menu Finanças no celular: abre dentro da barra, sem rolagem horizontal")
     void menuNoCelular() {
-        var celular = Navegador.browser()
-                .newContext(new com.microsoft.playwright.Browser.NewContextOptions().setViewportSize(390, 844));
+        var celular = Navegador.browser().newContext(new Browser.NewContextOptions().setViewportSize(390, 844));
         try {
             var p = celular.newPage();
             p.navigate(url("/login"));
@@ -186,7 +185,7 @@ class FinancasNoNavegadorTest {
             assertThat(p.locator(".menu-grupo-itens")).isVisible();
             Object largura =
                     p.evaluate("() => document.documentElement.scrollWidth - document.documentElement.clientWidth");
-            org.junit.jupiter.api.Assertions.assertEquals(0, ((Number) largura).intValue(), "rolagem horizontal");
+            Assertions.assertEquals(0, ((Number) largura).intValue(), "rolagem horizontal");
             p.screenshot(new Page.ScreenshotOptions().setPath(Path.of("target", "menu-financas-celular.png")));
         } finally {
             celular.close();

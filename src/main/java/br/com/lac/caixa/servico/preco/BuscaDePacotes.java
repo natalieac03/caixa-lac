@@ -19,7 +19,7 @@ public final class BuscaDePacotes {
 
     private final List<Promocao> pacotes;
     private final List<Long> categorias = new ArrayList<>();
-    private final long[][] acumulado;
+    private final long[][] somaDasMaisCaras;
     private final int[] total;
     private final long[] base;
     private final int[][] usoPorPacote;
@@ -41,7 +41,7 @@ public final class BuscaDePacotes {
             }
         }
         int n = categorias.size();
-        acumulado = new long[n][];
+        somaDasMaisCaras = new long[n][];
         total = new int[n];
         base = new long[n];
         long produto = 1;
@@ -49,8 +49,8 @@ public final class BuscaDePacotes {
             List<Long> precos = new ArrayList<>(restantes.get(categorias.get(c)));
             precos.sort(Comparator.reverseOrder());
             total[c] = precos.size();
-            acumulado[c] = new long[precos.size() + 1];
-            for (int k = 0; k < precos.size(); k++) acumulado[c][k + 1] = acumulado[c][k] + precos.get(k);
+            somaDasMaisCaras[c] = new long[precos.size() + 1];
+            for (int k = 0; k < precos.size(); k++) somaDasMaisCaras[c][k + 1] = somaDasMaisCaras[c][k] + precos.get(k);
             base[c] = produto;
             produto = produto > Long.MAX_VALUE / (total[c] + 1) ? Long.MAX_VALUE : produto * (total[c] + 1);
         }
@@ -115,7 +115,7 @@ public final class BuscaDePacotes {
                         break;
                     }
                     int inicio = total[c] - resta;
-                    normal += acumulado[c][inicio + q] - acumulado[c][inicio];
+                    normal += somaDasMaisCaras[c][inicio + q] - somaDasMaisCaras[c][inicio];
                     proximo -= q * (int) base[c];
                 }
                 if (!cabe) continue;
@@ -160,7 +160,7 @@ public final class BuscaDePacotes {
                         break;
                     }
                     int inicio = total[c] - resta[c];
-                    normal += acumulado[c][inicio + q] - acumulado[c][inicio];
+                    normal += somaDasMaisCaras[c][inicio + q] - somaDasMaisCaras[c][inicio];
                     unidades += q;
                 }
                 if (!cabe) continue;

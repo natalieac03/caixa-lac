@@ -82,7 +82,7 @@ class FinancasHttpTest {
 
     @Test
     @DisplayName("Evento, categoria, forma e métrica nos filtros da URL")
-    void filtros() throws Exception {
+    void eventoCategoriaFormaNaUrlEAtalhoInvalidoDa400() throws Exception {
         long feira1 = massa.e.get("Feira 1").getId();
         mvc.perform(logado("/financas?evento=" + feira1))
                 .andExpect(content().string(containsString("Feira 1 (01/03/2025 09:00 a 01/03/2025 18:00)")))
@@ -119,7 +119,7 @@ class FinancasHttpTest {
 
     @Test
     @DisplayName("JSON dos gráficos com o mesmo filtro e a métrica do ranking")
-    void dados() throws Exception {
+    void jsonDosGraficosSegueOFiltroEAMetrica() throws Exception {
         mvc.perform(logado("/financas/dados" + MARCO).accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.vazio").value(false))
@@ -144,7 +144,7 @@ class FinancasHttpTest {
 
     @Test
     @DisplayName("CSV de cada tabela: BOM, ponto e vírgula e vírgula decimal")
-    void csv() throws Exception {
+    void csvDeCadaTabelaTemBomPontoEVirgulaEVirgulaDecimal() throws Exception {
         byte[] corpo = mvc.perform(logado("/financas/exportar/demonstrativo.csv" + MARCO))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Type", startsWith("text/csv")))

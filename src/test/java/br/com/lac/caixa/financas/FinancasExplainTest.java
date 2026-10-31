@@ -135,7 +135,7 @@ class FinancasExplainTest {
 
     @Test
     @DisplayName("EXPLAIN: um dia usa os índices de data, itens e pagamentos; parados de um ano usa o de produto")
-    void explain() throws Exception {
+    void consultasDeUmDiaUsamOsIndices() throws Exception {
         var dia = FiltroFinancas.doEvento(new PeriodoDoEvento(
                 0L, "Dia", LocalDateTime.of(2025, 3, 1, 9, 0), LocalDateTime.of(2025, 3, 1, 18, 0)));
         var ano = FiltroFinancas.periodo(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 12, 31));

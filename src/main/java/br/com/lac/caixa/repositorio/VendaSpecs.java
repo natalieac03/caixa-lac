@@ -11,6 +11,7 @@ import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -73,12 +74,11 @@ public final class VendaSpecs {
     }
 
     public static Specification<Venda> pagamentoDividido() {
-        return (v, consulta, cb) ->
-                cb.greaterThan(cb.size(v.<java.util.Collection<PagamentoVenda>>get("pagamentos")), 1);
+        return (v, consulta, cb) -> cb.greaterThan(cb.size(v.<Collection<PagamentoVenda>>get("pagamentos")), 1);
     }
 
     public static Specification<Venda> cortesia() {
-        return (v, consulta, cb) -> cb.isEmpty(v.<java.util.Collection<PagamentoVenda>>get("pagamentos"));
+        return (v, consulta, cb) -> cb.isEmpty(v.<Collection<PagamentoVenda>>get("pagamentos"));
     }
 
     public static Specification<Venda> naoCancelada() {

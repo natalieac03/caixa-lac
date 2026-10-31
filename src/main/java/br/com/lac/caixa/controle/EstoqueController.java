@@ -11,6 +11,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -117,7 +118,7 @@ public class EstoqueController {
         LocalDate dia;
         try {
             dia = data == null || data.isBlank() ? LocalDate.now(relogio) : LocalDate.parse(data.trim());
-        } catch (java.time.format.DateTimeParseException e) {
+        } catch (DateTimeParseException e) {
             throw new RegraDeNegocioException("Data da compra inválida.");
         }
         var compra = estoque.registrarCompra(produtoId, quantidade, custo, dia, observacao);

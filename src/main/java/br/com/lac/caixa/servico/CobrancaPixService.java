@@ -71,7 +71,7 @@ public class CobrancaPixService {
     private static void exigirToken(String token) {
         try {
             if (token != null && UUID.fromString(token).toString().equals(token)) return;
-        } catch (IllegalArgumentException naoEUuid) {
+        } catch (IllegalArgumentException naoEUuidCaiNaRecusaAbaixo) {
         }
         throw new RegraDeNegocioException("Token de venda inválido.");
     }

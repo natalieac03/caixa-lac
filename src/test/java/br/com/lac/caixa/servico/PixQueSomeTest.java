@@ -216,7 +216,7 @@ class PixQueSomeTest {
 
     @Test
     @DisplayName("Pix estornado (refunded) no Mercado Pago: a cobrança vira ESTORNADA")
-    void estornado() {
+    void pixEstornadoNoMercadoPagoViraEstornada() {
         String token = UUID.randomUUID().toString();
         String order = cobrancas.gerar(token, 0, new BigDecimal("6")).getOrderId();
         FAKE.estornar(order, "refunded");

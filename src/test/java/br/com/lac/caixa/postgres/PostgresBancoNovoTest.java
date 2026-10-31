@@ -5,23 +5,33 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.migracao.Migracoes;
 import br.com.lac.caixa.modelo.Categoria;
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.repositorio.CategoriaRepository;
+import br.com.lac.caixa.repositorio.FiltroFinancas;
+import br.com.lac.caixa.repositorio.FiltroHistorico;
 import br.com.lac.caixa.repositorio.MovimentoEstoqueRepository;
 import br.com.lac.caixa.repositorio.ProdutoRepository;
 import br.com.lac.caixa.repositorio.VendaRepository;
 import br.com.lac.caixa.servico.CaixaService;
 import br.com.lac.caixa.servico.ConsultaHistorico;
+import br.com.lac.caixa.servico.DespesaService;
 import br.com.lac.caixa.servico.EstoqueService;
+import br.com.lac.caixa.servico.EventoService;
 import br.com.lac.caixa.servico.FechamentoService;
 import br.com.lac.caixa.servico.PagamentoInformado;
+import br.com.lac.caixa.servico.TaxaService;
+import br.com.lac.caixa.servico.financas.FinancasService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import javax.sql.DataSource;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -181,35 +191,29 @@ class PostgresBancoNovoTest {
     }
 
     @Autowired
-    br.com.lac.caixa.servico.EventoService eventos;
+    EventoService eventos;
 
     @Autowired
-    br.com.lac.caixa.servico.DespesaService despesas;
+    DespesaService despesas;
 
     @Autowired
-    br.com.lac.caixa.servico.TaxaService taxas;
+    TaxaService taxas;
 
     @Test
     @DisplayName("Postgres: sobreposição de eventos, venda no evento, despesas por evento/período e taxa vigente")
     void eventosDespesasETaxas() {
         var e = eventos.criar(
-                "Feira PG",
-                java.time.LocalDateTime.of(2024, 6, 1, 9, 0),
-                java.time.LocalDateTime.of(2024, 6, 1, 18, 0),
-                null);
-        org.junit.jupiter.api.Assertions.assertThrows(
-                br.com.lac.caixa.dominio.RegraDeNegocioException.class,
+                "Feira PG", LocalDateTime.of(2024, 6, 1, 9, 0), LocalDateTime.of(2024, 6, 1, 18, 0), null);
+        Assertions.assertThrows(
+                RegraDeNegocioException.class,
                 () -> eventos.criar(
-                        "Cruza PG",
-                        java.time.LocalDateTime.of(2024, 6, 1, 17, 0),
-                        java.time.LocalDateTime.of(2024, 6, 1, 19, 0),
-                        null));
+                        "Cruza PG", LocalDateTime.of(2024, 6, 1, 17, 0), LocalDateTime.of(2024, 6, 1, 19, 0), null));
         eventos.editar(e.getId(), "Feira PG", e.getInicio(), e.getFim(), "ok");
-        var f = fechamento.consultar(br.com.lac.caixa.repositorio.FiltroHistorico.doEvento(eventos.periodo(e.getId())));
+        var f = fechamento.consultar(FiltroHistorico.doEvento(eventos.periodo(e.getId())));
         assertEquals(1, f.quantidade());
         assertEquals(
                 "Feira PG",
-                eventos.doMomento(java.time.LocalDateTime.of(2024, 6, 1, 10, 0))
+                eventos.doMomento(LocalDateTime.of(2024, 6, 1, 10, 0))
                         .orElseThrow()
                         .getNome());
 
@@ -217,19 +221,11 @@ class PostgresBancoNovoTest {
         despesas.criar(LocalDate.of(2024, 5, 31), "Lona", material, new BigDecimal("30"), e.getId(), null);
         despesas.criar(LocalDate.of(2024, 6, 1), "Avulsa", material, new BigDecimal("5"), null, null);
         assertEquals(
-                0,
-                new BigDecimal("30")
-                        .compareTo(despesas.total(
-                                new br.com.lac.caixa.servico.DespesaService.Filtro(e.getId(), null, null))));
-        assertEquals(
-                0,
-                new BigDecimal("35")
-                        .compareTo(
-                                despesas.total(new br.com.lac.caixa.servico.DespesaService.Filtro(null, null, null))));
+                0, new BigDecimal("30").compareTo(despesas.total(new DespesaService.Filtro(e.getId(), null, null))));
+        assertEquals(0, new BigDecimal("35").compareTo(despesas.total(new DespesaService.Filtro(null, null, null))));
         assertEquals(
                 1,
-                despesas.filtrar(new br.com.lac.caixa.servico.DespesaService.Filtro(
-                                null, LocalDate.of(2024, 6, 1), null))
+                despesas.filtrar(new DespesaService.Filtro(null, LocalDate.of(2024, 6, 1), null))
                         .size());
 
         taxas.definir(FormaPagamento.CREDITO, new BigDecimal("3.5"), null, LocalDate.now());
@@ -246,7 +242,7 @@ class PostgresBancoNovoTest {
     ConsultaHistorico consultaHistorico;
 
     @Autowired
-    br.com.lac.caixa.servico.financas.FinancasService financas;
+    FinancasService financas;
 
     @Test
     @DisplayName(
@@ -260,12 +256,11 @@ class PostgresBancoNovoTest {
                         null,
                         UUID.randomUUID().toString())
                 .venda();
-        antes.setDataHora(java.time.LocalDateTime.now().minusMinutes(10));
+        antes.setDataHora(LocalDateTime.now().minusMinutes(10));
         vendas.saveAndFlush(antes);
         var feira = eventos.iniciar("Feira PG aberta");
         try {
-            org.junit.jupiter.api.Assertions.assertThrows(
-                    br.com.lac.caixa.dominio.RegraDeNegocioException.class, () -> eventos.iniciar("Outra"));
+            Assertions.assertThrows(RegraDeNegocioException.class, () -> eventos.iniciar("Outra"));
             var durante = caixa.registrarVenda(
                             Map.of(p.getId(), 2),
                             List.of(PagamentoInformado.total(FormaPagamento.PIX)),
@@ -277,34 +272,33 @@ class PostgresBancoNovoTest {
                     feira.getId(),
                     eventos.doMomento(durante.getDataHora()).orElseThrow().getId());
             var hoje = LocalDate.now();
-            var agora = java.time.LocalDateTime.now();
+            var agora = LocalDateTime.now();
             var desde = antes.getDataHora().toLocalDate();
-            var diaADia = new br.com.lac.caixa.repositorio.FiltroHistorico(null, desde, hoje, "").comDiaADia(agora);
+            var diaADia = new FiltroHistorico(null, desde, hoje, "").comDiaADia(agora);
             var ids = consultaHistorico
                     .consultar(diaADia, 0)
                     .pagina()
                     .map(v -> v.getId())
                     .getContent();
             assertTrue(ids.contains(antes.getId()) && !ids.contains(durante.getId()), ids.toString());
-            var r = financas.resumo(br.com.lac.caixa.repositorio.FiltroFinancas.diaADia(desde, hoje, agora));
+            var r = financas.resumo(FiltroFinancas.diaADia(desde, hoje, agora));
             assertTrue(r.vendas() >= 1);
-            var doEvento = financas.resumo(
-                    br.com.lac.caixa.repositorio.FiltroFinancas.doEvento(eventos.periodo(feira.getId())));
+            var doEvento = financas.resumo(FiltroFinancas.doEvento(eventos.periodo(feira.getId())));
             assertEquals(1, doEvento.vendas());
             assertEquals(0, new BigDecimal("12.00").compareTo(doEvento.receitaLiquida()));
-            org.junit.jupiter.api.Assertions.assertThrows(
-                    br.com.lac.caixa.dominio.RegraDeNegocioException.class,
+            Assertions.assertThrows(
+                    RegraDeNegocioException.class,
                     () -> eventos.criar("Cruza PG", feira.getInicio().minusHours(1), agora.plusHours(1), null));
         } finally {
             jdbc.update(
                     "update evento set fim = ? where id = ?",
-                    java.time.LocalDateTime.now().plusSeconds(1),
+                    LocalDateTime.now().plusSeconds(1),
                     feira.getId());
         }
     }
 
     @Autowired
-    javax.sql.DataSource dataSource;
+    DataSource dataSource;
 
     @Test
     @DisplayName("Postgres: dois cliques em Iniciar ao mesmo tempo -> o banco recusa o segundo, com mensagem amigável")
@@ -325,8 +319,7 @@ class PostgresBancoNovoTest {
                 }
             });
             confirmar.start();
-            var erro = org.junit.jupiter.api.Assertions.assertThrows(
-                    br.com.lac.caixa.dominio.RegraDeNegocioException.class, () -> eventos.iniciar("Segundo clique"));
+            var erro = Assertions.assertThrows(RegraDeNegocioException.class, () -> eventos.iniciar("Segundo clique"));
             confirmar.join();
             assertTrue(erro.getMessage().contains("em andamento"), erro.getMessage());
             assertEquals(1, jdbc.queryForObject("select count(*) from evento where fim is null", Integer.class));

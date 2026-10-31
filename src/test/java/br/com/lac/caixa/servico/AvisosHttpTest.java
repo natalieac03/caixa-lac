@@ -64,7 +64,7 @@ class AvisosHttpTest {
 
     @Test
     @DisplayName("/avisos: 401 sem login; com login, total e seções com id, texto e link")
-    void json() throws Exception {
+    void avisosPedeLoginEDevolveSecoesComIdTextoELink() throws Exception {
         mvc.perform(get("/avisos").accept(MediaType.APPLICATION_JSON)).andExpect(status().isUnauthorized());
         mvc.perform(get("/avisos").sessionAttr("autenticado", true).accept(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.total").value(0))

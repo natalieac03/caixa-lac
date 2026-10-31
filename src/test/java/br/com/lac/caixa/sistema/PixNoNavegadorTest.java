@@ -8,9 +8,13 @@ import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.pix.FakeMercadoPago;
 import br.com.lac.caixa.repositorio.ProdutoRepository;
 import com.microsoft.playwright.BrowserContext;
+import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import com.microsoft.playwright.Route;
 import com.microsoft.playwright.options.AriaRole;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterAll;
@@ -131,7 +135,7 @@ class PixNoNavegadorTest {
         assertThat(painel.getByText("Gerar Pix")).isVisible();
         pagina.waitForCondition(() -> "canceled".equals(FAKE.order(order).status));
 
-        painel.getByText("Pix manual", new com.microsoft.playwright.Locator.GetByTextOptions().setExact(true))
+        painel.getByText("Pix manual", new Locator.GetByTextOptions().setExact(true))
                 .click();
         assertThat(pagina.locator("#botaoConfirmar")).isEnabled();
         pagina.locator("#botaoConfirmar").click();
@@ -171,13 +175,13 @@ class PixNoNavegadorTest {
     void semConsultasSobrepostas() {
         pagina.getByLabel("Quantidade de " + boton.getNome()).fill("2");
         var painel = pagina.locator("#pixUnico");
-        java.util.List<com.microsoft.playwright.Route> presas = new java.util.ArrayList<>();
+        List<Route> presas = new ArrayList<>();
         pagina.route(Pattern.compile(".*/venda/pix/[0-9a-f-]{36}/0$"), presas::add);
         painel.getByText("Gerar Pix").click();
         assertThat(painel.locator(".situacao-pix")).hasText("Aguardando pagamento...");
         pagina.waitForTimeout(7000);
         int disparadas = presas.size();
-        presas.forEach(com.microsoft.playwright.Route::resume);
+        presas.forEach(Route::resume);
         pagina.unroute(Pattern.compile(".*/venda/pix/[0-9a-f-]{36}/0$"));
         assertEquals(1, disparadas, "uma consulta por vez");
     }

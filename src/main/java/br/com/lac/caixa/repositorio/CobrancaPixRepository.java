@@ -2,6 +2,7 @@ package br.com.lac.caixa.repositorio;
 
 import br.com.lac.caixa.modelo.CobrancaPix;
 import br.com.lac.caixa.modelo.StatusCobranca;
+import jakarta.persistence.LockModeType;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -17,7 +18,7 @@ public interface CobrancaPixRepository extends JpaRepository<CobrancaPix, Long> 
 
     Optional<CobrancaPix> findByOrderId(String orderId);
 
-    @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from CobrancaPix c where c.id = :id")
     Optional<CobrancaPix> buscarPorIdParaAtualizar(@Param("id") Long id);
 

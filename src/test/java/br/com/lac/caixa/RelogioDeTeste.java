@@ -2,6 +2,7 @@ package br.com.lac.caixa;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 
@@ -9,7 +10,7 @@ import java.time.ZoneOffset;
 public class RelogioDeTeste extends Clock {
     private Instant agora = Instant.parse("2026-01-01T00:00:00Z");
 
-    public synchronized void definir(java.time.LocalDateTime quando) {
+    public synchronized void definir(LocalDateTime quando) {
         agora = quando.toInstant(ZoneOffset.UTC);
     }
 

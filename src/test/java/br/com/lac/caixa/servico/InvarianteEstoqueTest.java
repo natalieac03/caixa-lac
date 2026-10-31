@@ -135,7 +135,7 @@ class InvarianteEstoqueTest {
                     case 3 -> estoque.adicionarUnidades(p.getId(), qtd);
                     default -> estoque.removerUnidades(p.getId(), qtd);
                 }
-            } catch (RegraDeNegocioException recusada) {
+            } catch (RegraDeNegocioException recusadaSemMexerNoEstoque) {
             }
         }
 
