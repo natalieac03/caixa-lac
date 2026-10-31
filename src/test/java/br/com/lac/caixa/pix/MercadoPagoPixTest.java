@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
@@ -20,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import tools.jackson.databind.json.JsonMapper;
 
 /** Cliente do Mercado Pago contra um servidor HTTP falso. */
 @ExtendWith(OutputCaptureExtension.class)
@@ -86,20 +86,20 @@ class MercadoPagoPixTest {
         assertEquals("/v1/orders", req.getPath());
         assertEquals("Bearer " + TOKEN, req.getHeader("Authorization"));
         assertEquals("venda-abc-p0-1250", req.getHeader("X-Idempotency-Key"));
-        var corpo = new ObjectMapper().readTree(req.getBody().readUtf8());
-        assertEquals("online", corpo.path("type").asText());
-        assertEquals("automatic", corpo.path("processing_mode").asText());
-        assertEquals("12.50", corpo.path("total_amount").asText());
-        assertEquals("venda-abc-p0-1250", corpo.path("external_reference").asText());
-        assertEquals("caixa@lac.test", corpo.path("payer").path("email").asText());
+        var corpo = new JsonMapper().readTree(req.getBody().readUtf8());
+        assertEquals("online", corpo.path("type").asString());
+        assertEquals("automatic", corpo.path("processing_mode").asString());
+        assertEquals("12.50", corpo.path("total_amount").asString());
+        assertEquals("venda-abc-p0-1250", corpo.path("external_reference").asString());
+        assertEquals("caixa@lac.test", corpo.path("payer").path("email").asString());
         assertTrue(
                 corpo.path("payer").path("first_name").isMissingNode(), "sem MP_PAYER_FIRST_NAME, não vai first_name");
         var pagamento = corpo.path("transactions").path("payments").path(0);
-        assertEquals("12.50", pagamento.path("amount").asText());
-        assertEquals("PT30M", pagamento.path("expiration_time").asText());
-        assertEquals("pix", pagamento.path("payment_method").path("id").asText());
+        assertEquals("12.50", pagamento.path("amount").asString());
+        assertEquals("PT30M", pagamento.path("expiration_time").asString());
+        assertEquals("pix", pagamento.path("payment_method").path("id").asString());
         assertEquals(
-                "bank_transfer", pagamento.path("payment_method").path("type").asText());
+                "bank_transfer", pagamento.path("payment_method").path("type").asString());
     }
 
     @Test
@@ -238,8 +238,8 @@ class MercadoPagoPixTest {
 
         new MercadoPagoPix(c).criarPix(BigDecimal.TEN, "ref-apro");
 
-        var corpo = new ObjectMapper().readTree(servidor.takeRequest().getBody().readUtf8());
-        assertEquals("APRO", corpo.path("payer").path("first_name").asText());
+        var corpo = new JsonMapper().readTree(servidor.takeRequest().getBody().readUtf8());
+        assertEquals("APRO", corpo.path("payer").path("first_name").asString());
     }
 
     @Test

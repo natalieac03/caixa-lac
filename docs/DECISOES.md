@@ -8,6 +8,7 @@ Os porquês que o código não mostra. Uma linha por decisão, com a classe ou a
 - `RAILPACK_JDK_VERSION=21` (Variables do Railway): o Railpack não lê o `system.properties`; a versão do Java do build vem dessa variável.
 - `spring.threads.virtual.enabled` fica desligado: o `LimiteLogin` usa `synchronized` e as chamadas ao Mercado Pago seguram conexão do banco; ligar threads virtuais pede revisar os dois antes.
 - `server.forward-headers-strategy=native` (prod): o Tomcat só usa o X-Forwarded-For quando a conexão vem da rede privada (o proxy do Railway), então o limite de login conta o IP real de cada pessoa em vez de bloquear todo mundo pelo IP do proxy; cabeçalho vindo direto da internet é ignorado.
+- `management.endpoint.health.probes.enabled=false`: o Spring Boot 4 liga as sondas de liveness/readiness por padrão, o que acrescenta `"groups"` ao `/actuator/health` e abre `/actuator/health/liveness` e `/readiness` sem login; o Railway só precisa do status.
 - `management.endpoints` / actuator: só `/actuator/health`, sem detalhes e sem login, para o healthcheck do Railway; a página de descoberta `/actuator` fica desligada porque o actuator não passa pelo interceptor de login.
 - `RelogioConfig`: o relógio é sempre `America/Sao_Paulo`, porque o contêiner do Railway roda em UTC e as colunas de data são TIMESTAMP sem fuso guardando a hora de Brasília.
 - `CaixaApplication.fixarFuso`: a JVM vai para Brasília antes de o Spring subir, para logs e bibliotecas que usam o fuso padrão baterem com o relógio da aplicação.
@@ -105,6 +106,7 @@ Os porquês que o código não mostra. Uma linha por decisão, com a classe ou a
 
 ## Banco, Flyway e consultas
 
+- `h2.version=2.3.232` (pom.xml): o H2 2.4.240, que vem com o Spring Boot 4.1, tem uma regressão: uma CHECK com `IN (...)` criada numa conexão falha com "database has been closed" quando avaliada em outra depois que a primeira fecha (as migrações rodam numa conexão do pool e as vendas em outra). Fica na 2.3.232 até sair uma versão corrigida.
 - `spring.jpa.hibernate.ddl-auto=validate`: o Flyway é dono do DDL; o Hibernate só confere o modelo.
 - `spring.flyway.locations`: `db/migration` roda em todos os bancos e `db/migration-{vendor}` só no banco dele (V20 e V22 só existem no PostgreSQL).
 - Migrações já aplicadas não mudam nem em comentário: o Flyway confere o checksum e o deploy quebra.

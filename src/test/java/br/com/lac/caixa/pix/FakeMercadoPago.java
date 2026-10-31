@@ -1,7 +1,5 @@
 package br.com.lac.caixa.pix;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Map;
@@ -11,6 +9,9 @@ import okhttp3.mockwebserver.Dispatcher;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /** Mercado Pago falso para os testes, com as orders em memória. */
 public class FakeMercadoPago extends Dispatcher {
@@ -32,7 +33,7 @@ public class FakeMercadoPago extends Dispatcher {
         }
     }
 
-    private final ObjectMapper json = new ObjectMapper();
+    private final ObjectMapper json = new JsonMapper();
     private final Map<String, Order> orders = new ConcurrentHashMap<>();
     private final Map<String, String> porIdempotencia = new ConcurrentHashMap<>();
     private final AtomicInteger sequencia = new AtomicInteger();
@@ -132,8 +133,8 @@ public class FakeMercadoPago extends Dispatcher {
         String id = "ORD" + String.format("%04d", sequencia.incrementAndGet());
         Order o = new Order(
                 id,
-                new BigDecimal(corpo.path("total_amount").asText()),
-                corpo.path("external_reference").asText());
+                new BigDecimal(corpo.path("total_amount").asString()),
+                corpo.path("external_reference").asString());
         orders.put(id, o);
         if (chave != null) porIdempotencia.put(chave, id);
         return resposta(201, corpo(o));

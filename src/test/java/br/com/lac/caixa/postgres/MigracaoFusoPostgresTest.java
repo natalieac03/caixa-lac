@@ -13,12 +13,12 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /** A V20 converte os horários gravados em UTC para Brasília no banco legado. */
 @ExtendWith(ExigeDocker.class)
 class MigracaoFusoPostgresTest {
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:16-alpine");
     static final String[] PASTAS = {"classpath:db/migration", "classpath:db/migration-postgresql"};
 
     static Connection c;

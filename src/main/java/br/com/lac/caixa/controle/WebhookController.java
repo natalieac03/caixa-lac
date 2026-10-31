@@ -3,8 +3,6 @@ package br.com.lac.caixa.controle;
 import br.com.lac.caixa.pix.AssinaturaWebhook;
 import br.com.lac.caixa.pix.MercadoPagoConfig;
 import br.com.lac.caixa.servico.CobrancaPixService;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.util.concurrent.Executor;
 import org.slf4j.Logger;
@@ -16,6 +14,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /** Webhook do Mercado Pago: confere a assinatura e atualiza a cobrança em segundo plano. */
 @RestController
@@ -27,7 +28,7 @@ public class WebhookController {
     private final CobrancaPixService cobrancas;
     private final Executor avisos;
     private final Clock relogio;
-    private final ObjectMapper json = new ObjectMapper();
+    private final ObjectMapper json = new JsonMapper();
 
     public WebhookController(
             MercadoPagoConfig config,
@@ -81,6 +82,6 @@ public class WebhookController {
         JsonNode no = ler(corpo);
         return no == null || no.path("type").isMissingNode()
                 ? null
-                : no.path("type").asText();
+                : no.path("type").asString();
     }
 }

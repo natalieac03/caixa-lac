@@ -15,7 +15,6 @@ import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.pix.FakeMercadoPago;
 import br.com.lac.caixa.repositorio.ProdutoRepository;
 import br.com.lac.caixa.repositorio.VendaRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.util.UUID;
 import okhttp3.mockwebserver.MockWebServer;
@@ -24,14 +23,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /** Pix automático na venda, com o Mercado Pago falso. */
 @SpringBootTest(properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:pix;DB_CLOSE_DELAY=-1"})
@@ -65,7 +66,7 @@ class PixHttpTest {
     @Autowired
     JdbcTemplate jdbc;
 
-    final ObjectMapper json = new ObjectMapper();
+    final ObjectMapper json = new JsonMapper();
 
     Produto p;
 
@@ -90,7 +91,7 @@ class PixHttpTest {
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
-        return json.readTree(corpo).path("orderId").asText();
+        return json.readTree(corpo).path("orderId").asString();
     }
 
     MockHttpServletRequestBuilder venda(String... campos) {

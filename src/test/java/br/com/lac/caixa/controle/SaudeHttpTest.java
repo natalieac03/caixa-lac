@@ -11,8 +11,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
 
 /** /actuator/health aberto e sem detalhes; o resto do actuator fechado. */
@@ -40,5 +40,14 @@ class SaudeHttpTest {
             mvc.perform(get(url).sessionAttr("autenticado", true)).andExpect(status().isNotFound());
         }
         mvc.perform(get("/actuator")).andExpect(redirectedUrl("/login"));
+    }
+
+    @Test
+    @DisplayName("Health só com o status: sem grupos de liveness/readiness e sem os caminhos deles")
+    void healthSemSondasDeKubernetes() throws Exception {
+        mvc.perform(get("/actuator/health")).andExpect(content().string("{\"status\":\"UP\"}"));
+        for (String url : new String[] {"/actuator/health/liveness", "/actuator/health/readiness"}) {
+            mvc.perform(get(url)).andExpect(status().isNotFound());
+        }
     }
 }

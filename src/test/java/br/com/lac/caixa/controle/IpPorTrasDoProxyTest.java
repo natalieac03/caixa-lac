@@ -23,8 +23,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.boot.web.embedded.tomcat.TomcatWebServer;
-import org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext;
+import org.springframework.boot.tomcat.TomcatWebServer;
+import org.springframework.boot.web.server.servlet.context.ServletWebServerApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 
@@ -85,8 +85,7 @@ class IpPorTrasDoProxyTest {
                 visto[0] = request.getRemoteAddr();
             }
         });
-        var request = new Request(new Connector());
-        request.setCoyoteRequest(new org.apache.coyote.Request());
+        var request = new Request(new Connector(), new org.apache.coyote.Request());
         request.setRemoteAddr(remoto);
         request.setRemoteHost(remoto);
         if (xForwardedFor != null)
@@ -94,8 +93,7 @@ class IpPorTrasDoProxyTest {
                     .getMimeHeaders()
                     .addValue("X-Forwarded-For")
                     .setString(xForwardedFor);
-        var response = new Response();
-        response.setCoyoteResponse(new org.apache.coyote.Response());
+        var response = new Response(new org.apache.coyote.Response());
         copia.invoke(request, response);
         return visto[0];
     }

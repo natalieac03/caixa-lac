@@ -77,7 +77,7 @@ class PagadorNomeTest {
         assertEquals("APRO", config.getPayerFirstName());
         cobrancas.gerar(UUID.randomUUID().toString(), 0, new BigDecimal("12"));
         var corpo = FAKE.ultimaCriacao;
-        assertEquals("APRO", corpo.path("payer").path("first_name").asText());
-        assertEquals("caixa@lac.test", corpo.path("payer").path("email").asText());
+        assertEquals("APRO", corpo.path("payer").path("first_name").asString());
+        assertEquals("caixa@lac.test", corpo.path("payer").path("email").asString());
     }
 }

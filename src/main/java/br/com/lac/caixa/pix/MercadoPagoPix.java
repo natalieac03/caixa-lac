@@ -1,8 +1,5 @@
 package br.com.lac.caixa.pix;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.http.HttpClient;
@@ -19,6 +16,10 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 /** Cliente do Pix pela Orders API do Mercado Pago: criar, consultar e cancelar. */
 @Component
@@ -33,7 +34,7 @@ public class MercadoPagoPix {
 
     private final MercadoPagoConfig config;
     private final RestClient http;
-    private final ObjectMapper json = new ObjectMapper();
+    private final ObjectMapper json = new JsonMapper();
 
     public MercadoPagoPix(MercadoPagoConfig config) {
         this.config = config;
@@ -135,9 +136,9 @@ public class MercadoPagoPix {
     }
 
     private static BigDecimal decimal(JsonNode no) {
-        if (no.isMissingNode() || no.isNull() || no.asText().isBlank()) return null;
+        if (no.isMissingNode() || no.isNull() || no.asString().isBlank()) return null;
         try {
-            return new BigDecimal(no.asText());
+            return new BigDecimal(no.asString());
         } catch (NumberFormatException e) {
             return null;
         }
@@ -145,7 +146,7 @@ public class MercadoPagoPix {
 
     private static String texto(JsonNode no, String campo) {
         JsonNode v = no.path(campo);
-        return v.isMissingNode() || v.isNull() ? null : v.asText();
+        return v.isMissingNode() || v.isNull() ? null : v.asString();
     }
 
     private void exigirLigado() {

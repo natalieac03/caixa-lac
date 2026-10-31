@@ -37,7 +37,7 @@ class VendaConsultasImpl implements VendaConsultas {
 
         CriteriaQuery<Tuple> vendas = cb.createTupleQuery();
         Root<Venda> v = vendas.from(Venda.class);
-        vendas.multiselect(cb.count(v), cb.coalesce(cb.sum(cobrado(cb, v)), BigDecimal.ZERO))
+        vendas.select(cb.tuple(cb.count(v), cb.coalesce(cb.sum(cobrado(cb, v)), BigDecimal.ZERO)))
                 .where(filtro.toPredicate(v, vendas, cb));
         Tuple t = em.createQuery(vendas).getSingleResult();
 
@@ -56,10 +56,10 @@ class VendaConsultasImpl implements VendaConsultas {
         CriteriaQuery<Tuple> q = cb.createTupleQuery();
         Root<Venda> v = q.from(Venda.class);
         Join<Venda, PagamentoVenda> p = v.join("pagamentos");
-        q.multiselect(
+        q.select(cb.tuple(
                         p.get("forma"),
                         cb.countDistinct(v),
-                        cb.coalesce(cb.sum(p.<BigDecimal>get("valor")), BigDecimal.ZERO))
+                        cb.coalesce(cb.sum(p.<BigDecimal>get("valor")), BigDecimal.ZERO)))
                 .where(filtro.toPredicate(v, q, cb))
                 .groupBy(p.get("forma"))
                 .orderBy(cb.asc(p.get("forma")));
@@ -76,12 +76,12 @@ class VendaConsultasImpl implements VendaConsultas {
         Root<Venda> v = q.from(Venda.class);
         Expression<BigDecimal> cobrado = cobrado(cb, v);
         Expression<BigDecimal> calculado = cb.coalesce(v.<BigDecimal>get("valorCalculado"), cobrado);
-        q.multiselect(
+        q.select(cb.tuple(
                         cb.count(v),
                         cb.coalesce(cb.sum(cobrado), BigDecimal.ZERO),
                         cb.coalesce(
                                 cb.sum(cb.coalesce(v.<BigDecimal>get("desconto"), BigDecimal.ZERO)), BigDecimal.ZERO),
-                        cb.coalesce(cb.sum(cb.diff(cobrado, calculado)), BigDecimal.ZERO))
+                        cb.coalesce(cb.sum(cb.diff(cobrado, calculado)), BigDecimal.ZERO)))
                 .where(filtro.toPredicate(v, q, cb));
         Tuple t = em.createQuery(q).getSingleResult();
         return new TotaisDasVendas(
@@ -97,7 +97,7 @@ class VendaConsultasImpl implements VendaConsultas {
         CriteriaQuery<Tuple> q = cb.createTupleQuery();
         Root<Venda> v = q.from(Venda.class);
         Join<Venda, PagamentoVenda> p = v.join("pagamentos");
-        q.multiselect(p.get("origem"), cb.coalesce(cb.sum(p.<BigDecimal>get("valor")), BigDecimal.ZERO))
+        q.select(cb.tuple(p.get("origem"), cb.coalesce(cb.sum(p.<BigDecimal>get("valor")), BigDecimal.ZERO)))
                 .where(cb.and(filtro.toPredicate(v, q, cb), cb.equal(p.get("forma"), FormaPagamento.PIX)))
                 .groupBy(p.get("origem"));
         var porOrigem = new EnumMap<OrigemPagamento, BigDecimal>(OrigemPagamento.class);

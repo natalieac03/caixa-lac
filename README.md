@@ -1,6 +1,6 @@
 # Caixa LAC 🦫
 
-Caixa eletrônico da Liga Acadêmica de Computação, em **Java 21 + Spring Boot 3.5**, com
+Caixa eletrônico da Liga Acadêmica de Computação, em **Java 21 + Spring Boot 4.1**, com
 banco **PostgreSQL** e telas web (Thymeleaf). Tem três áreas: **Abrir caixa**
 (registrar vendas), **Estoque** (produtos e quantidades) e **Histórico** (todas
 as vendas, com filtro e exportação em CSV). A aba **Descontos** gerencia

@@ -3,7 +3,6 @@ package br.com.lac.caixa;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.TreeSet;
@@ -11,6 +10,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.json.JsonMapper;
 
 /** docs/DEPLOY.md e railway.json acompanham o código. */
 class DeployDocsTest {
@@ -61,13 +61,13 @@ class DeployDocsTest {
     @Test
     @DisplayName("railway.json: healthcheck em /actuator/health com 300 s, 1 réplica e restart em falha")
     void railwayJson() throws Exception {
-        var json = new ObjectMapper().readTree(Path.of("railway.json").toFile());
+        var json = new JsonMapper().readTree(Path.of("railway.json").toFile());
         assertEquals(
-                "https://railway.com/railway.schema.json", json.path("$schema").asText());
+                "https://railway.com/railway.schema.json", json.path("$schema").asString());
         var deploy = json.path("deploy");
-        assertEquals("/actuator/health", deploy.path("healthcheckPath").asText());
+        assertEquals("/actuator/health", deploy.path("healthcheckPath").asString());
         assertEquals(300, deploy.path("healthcheckTimeout").asInt());
         assertEquals(1, deploy.path("numReplicas").asInt());
-        assertEquals("ON_FAILURE", deploy.path("restartPolicyType").asText());
+        assertEquals("ON_FAILURE", deploy.path("restartPolicyType").asString());
     }
 }
