@@ -109,12 +109,13 @@ Postgres e no H2.
 | V19 `evento_aberto` | Fim do evento opcional (evento em andamento) e índice em `evento(inicio, fim)`. |
 | V20 `horarios_em_brasilia` | **Só no PostgreSQL** (`db/migration-postgresql`). Converte de UTC para Brasília os horários gravados pelo relógio (vendas, cancelamentos, movimentos, compras, Pix, despesas e taxas). Não mexe no que foi digitado (eventos do formulário, datas). As vendas corrigidas à mão também são convertidas e ficam 3 h adiantadas (decisão da LAC). |
 | V21 `pix_estornado_e_consulta` | Situação ESTORNADA do Pix (refunded ou charged_back no Mercado Pago) e hora da última consulta (`consultada_em`), para a tela não perguntar de novo em menos de 5 s. |
+| V22 `evento_aberto_unico` | **Só no PostgreSQL**. Índice único parcial `ux_evento_aberto`: no máximo um evento em andamento (sem fim), mesmo com dois cliques em "Iniciar" ao mesmo tempo. **Para** se já houver mais de um aberto. |
 
 **Quais vão rodar em produção** depende do que o banco já tem. A seção 3 do
 `scripts/conferir-producao.sql` mostra a última versão aplicada:
 
-- sem `flyway_schema_history`: baseline + **V2 a V21** (20 migrações);
-- na versão N: da **V(N+1) à V21**.
+- sem `flyway_schema_history`: baseline + **V2 a V22** (21 migrações);
+- na versão N: da **V(N+1) à V22**.
 
 O H2 local não roda a V20: as pastas são `db/migration` (todos os bancos) e
 `db/migration-{vendor}` (`spring.flyway.locations`).

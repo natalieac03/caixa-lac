@@ -26,11 +26,13 @@ public class ConsultasFinanceiras {
     }
 
     /**
-     * Dia a dia: a venda não está em nenhum evento (início incluído, fim excluído;
-     * o evento aberto vale até agora). Usa ix_evento_inicio_fim.
+     * Dia a dia: a venda não está em nenhum evento (início incluído, fim excluído).
+     * O evento aberto vale até agora, mas só até o início do próximo evento: a
+     * mesma regra do EventoService.fimEfetivo. Usa ix_evento_inicio_fim.
      */
     static final String DIA_A_DIA = " AND NOT EXISTS (SELECT 1 FROM evento ev WHERE ev.inicio <= v.data_hora"
-            + " AND (ev.fim > v.data_hora OR (ev.fim IS NULL AND v.data_hora <= :agora)))";
+            + " AND (ev.fim > v.data_hora OR (ev.fim IS NULL AND v.data_hora <= :agora"
+            + " AND NOT EXISTS (SELECT 1 FROM evento prox WHERE prox.inicio > ev.inicio AND prox.inicio <= v.data_hora))))";
 
     /** WHERE das vendas (alias v) e, se o filtro tem categoria, dos itens (alias p = produto do item). */
     private record Onde(String vendas, String itens, MapSqlParameterSource parametros) {}

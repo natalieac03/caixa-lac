@@ -315,4 +315,37 @@ class PostgresBancoNovoTest {
                     feira.getId());
         }
     }
+
+    @Autowired
+    javax.sql.DataSource dataSource;
+
+    @Test
+    @DisplayName("Postgres: dois cliques em Iniciar ao mesmo tempo -> o banco recusa o segundo, com mensagem amigável")
+    void doisAbertosAoMesmoTempo() throws Exception {
+        jdbc.update("update evento set fim = now() + interval '1 second' where fim is null");
+        try (var outra = dataSource.getConnection()) {
+            // Outra pessoa clicou junto: o evento dela ainda não foi confirmado quando o serviço confere.
+            outra.setAutoCommit(false);
+            try (var s = outra.createStatement()) {
+                s.execute(
+                        "INSERT INTO evento (nome, inicio) VALUES ('Clique simultâneo', now() - interval '1 minute')");
+            }
+            var confirmar = new Thread(() -> {
+                try {
+                    Thread.sleep(1000);
+                    outra.commit();
+                } catch (Exception e) {
+                    throw new IllegalStateException(e);
+                }
+            });
+            confirmar.start();
+            var erro = org.junit.jupiter.api.Assertions.assertThrows(
+                    br.com.lac.caixa.dominio.RegraDeNegocioException.class, () -> eventos.iniciar("Segundo clique"));
+            confirmar.join();
+            assertTrue(erro.getMessage().contains("em andamento"), erro.getMessage());
+            assertEquals(1, jdbc.queryForObject("select count(*) from evento where fim is null", Integer.class));
+        } finally {
+            jdbc.update("update evento set fim = now() + interval '1 second' where fim is null");
+        }
+    }
 }

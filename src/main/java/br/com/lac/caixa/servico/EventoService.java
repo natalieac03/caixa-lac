@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -154,7 +155,7 @@ public class EventoService {
         Evento e = new Evento(nome, inicio, fim, observacao);
         e.definirMetas(metaReceita, metaLucro);
         validar(e, null);
-        Evento salvo = eventos.save(e);
+        Evento salvo = salvar(e);
         auditoria.registrar("evento_criado", "id", salvo.getId(), "depois", descrever(salvo));
         return salvo;
     }
@@ -180,9 +181,23 @@ public class EventoService {
         e.alterar(nome, inicio, fim, observacao);
         e.definirMetas(metaReceita, metaLucro);
         validar(e, id);
-        Evento salvo = eventos.save(e);
+        Evento salvo = salvar(e);
         auditoria.registrar("evento_editado", "id", id, "antes", antes, "depois", descrever(salvo));
         return salvo;
+    }
+
+    /**
+     * Grava já conferindo no banco. Dois cliques ao mesmo tempo passam juntos pela
+     * validação; no Postgres o índice ux_evento_aberto (V22) recusa o segundo aberto.
+     */
+    private Evento salvar(Evento e) {
+        try {
+            return eventos.saveAndFlush(e);
+        } catch (DataIntegrityViolationException violacao) {
+            if (!e.isAberto()) throw violacao;
+            throw new RegraDeNegocioException(
+                    "Já há um evento em andamento (alguém iniciou outro agora mesmo). Atualize a tela para ver.");
+        }
     }
 
     private void validar(Evento e, Long ignorar) {

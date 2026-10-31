@@ -37,9 +37,16 @@ public final class VendaSpecs {
                 predicados.add(cb.lessThan(v.get("dataHora"), filtro.fimConsulta()));
             }
             if (filtro.diaADia()) {
-                // Dia a dia: nenhum evento contém a data e hora da venda (o aberto vale até agora).
+                // Dia a dia: nenhum evento contém a data e hora da venda. O aberto vale até
+                // agora, mas só até o início do próximo evento (a regra do EventoService.fimEfetivo).
                 Subquery<Long> ev = consulta.subquery(Long.class);
                 Root<Evento> e = ev.from(Evento.class);
+                Subquery<Long> proximo = consulta.subquery(Long.class);
+                Root<Evento> p = proximo.from(Evento.class);
+                proximo.select(p.get("id"))
+                        .where(
+                                cb.greaterThan(p.get("inicio"), e.get("inicio")),
+                                cb.lessThanOrEqualTo(p.get("inicio"), v.get("dataHora")));
                 ev.select(e.get("id"))
                         .where(
                                 cb.lessThanOrEqualTo(e.get("inicio"), v.get("dataHora")),
@@ -47,8 +54,8 @@ public final class VendaSpecs {
                                         cb.greaterThan(e.get("fim"), v.get("dataHora")),
                                         cb.and(
                                                 cb.isNull(e.get("fim")),
-                                                cb.lessThanOrEqualTo(
-                                                        v.<LocalDateTime>get("dataHora"), filtro.agora()))));
+                                                cb.lessThanOrEqualTo(v.<LocalDateTime>get("dataHora"), filtro.agora()),
+                                                cb.not(cb.exists(proximo)))));
                 predicados.add(cb.not(cb.exists(ev)));
             }
             if (!filtro.produto().isEmpty()) {

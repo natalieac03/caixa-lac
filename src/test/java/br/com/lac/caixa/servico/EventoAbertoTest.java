@@ -328,4 +328,46 @@ class EventoAbertoTest {
                 .andExpect(content().string(containsString("id=\"evento-aberto\"")))
                 .andExpect(content().string(containsString("em andamento")));
     }
+
+    @Test
+    @DisplayName(
+            "Feira aberta desde 10/10 e Palestra 12/10 14h-16h: venda de 13/10 10h é do dia a dia; eventos + dia a dia = total")
+    void abertoCortadoPeloProximoEvento() throws Exception {
+        // A Palestra foi marcada antes; a Feira começou em 10/10 e ficou aberta
+        irPara(LocalDateTime.of(2025, 10, 9, 12, 0));
+        Evento palestra = eventos.criar(
+                "Palestra", LocalDateTime.of(2025, 10, 12, 14, 0), LocalDateTime.of(2025, 10, 12, 16, 0), null);
+        irPara(LocalDateTime.of(2025, 10, 10, 9, 0));
+        Evento feira = eventos.iniciar("Feira");
+        irPara(LocalDateTime.of(2025, 10, 11, 15, 0));
+        Venda naFeira = vender(null);
+        irPara(LocalDateTime.of(2025, 10, 12, 15, 0));
+        Venda naPalestra = vender(null);
+        irPara(LocalDateTime.of(2025, 10, 13, 10, 0));
+        Venda depois = vender(null);
+        irPara(LocalDateTime.of(2025, 10, 14, 12, 0));
+
+        LocalDate de = LocalDate.of(2025, 10, 10);
+        LocalDate ate = LocalDate.of(2025, 10, 14);
+        LocalDateTime agora = LocalDateTime.now(relogio);
+        // A mesma regra em todo lugar: a Feira vale até o início da Palestra
+        assertEquals(List.of(naFeira.getId()), idsDoEvento(feira));
+        assertEquals(List.of(naPalestra.getId()), idsDoEvento(palestra));
+        assertEquals(List.of(depois.getId()), idsDoDiaADia(de, ate));
+        assertTrue(eventos.doMomento(depois.getDataHora()).isEmpty(), "13/10 10h não é de nenhum evento");
+        var diaADia = financas.resumo(FiltroFinancas.diaADia(de, ate, agora));
+        assertEquals(1, diaADia.vendas());
+        // Invariante: soma dos eventos + dia a dia = total do período
+        var total = financas.resumo(FiltroFinancas.periodo(de, ate));
+        BigDecimal soma = diaADia.receitaLiquida()
+                .add(financas.resumo(FiltroFinancas.doEvento(eventos.periodo(feira.getId())))
+                        .receitaLiquida())
+                .add(financas.resumo(FiltroFinancas.doEvento(eventos.periodo(palestra.getId())))
+                        .receitaLiquida());
+        assertEquals(total.receitaLiquida(), soma);
+        assertEquals(3, total.vendas());
+        // Relatório da Feira mostra o fim efetivo (início da Palestra), não o fim vazio
+        mvc.perform(get("/eventos/" + feira.getId() + "/relatorio").sessionAttr("autenticado", true))
+                .andExpect(content().string(containsString("10/10/2025 09:00 a 12/10/2025 14:00")));
+    }
 }

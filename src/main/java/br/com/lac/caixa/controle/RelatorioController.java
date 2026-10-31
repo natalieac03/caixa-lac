@@ -44,6 +44,8 @@ public class RelatorioController {
                 .toList();
         var filtroDespesas = new DespesaService.Filtro(id, null, null);
         model.addAttribute("evento", evento);
+        // O fim que vale nas contas (aberto: agora, ou o início do próximo evento).
+        model.addAttribute("periodo", eventos.periodo(evento));
         model.addAttribute("painel", p);
         model.addAttribute("top", top);
         model.addAttribute("despesas", despesas.filtrar(filtroDespesas));

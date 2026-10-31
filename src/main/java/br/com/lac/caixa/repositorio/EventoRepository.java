@@ -32,7 +32,10 @@ public interface EventoRepository extends JpaRepository<Evento, Long> {
     /** Os eventos que contêm a data e hora (aberto: até {@code fimDoAberto}); o mais recente primeiro. */
     @Query("""
             select e from Evento e
-            where e.inicio <= :quando and coalesce(e.fim, :agora) > :quando
+            where e.inicio <= :quando
+              and (e.fim > :quando
+                   or (e.fim is null and :agora > :quando
+                       and not exists (select p.id from Evento p where p.inicio > e.inicio and p.inicio <= :quando)))
             order by e.inicio desc
             """)
     List<Evento> doMomento(@Param("quando") LocalDateTime quando, @Param("agora") LocalDateTime agora);
