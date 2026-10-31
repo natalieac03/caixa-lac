@@ -2,7 +2,9 @@ package br.com.lac.caixa.servico.preco;
 
 import br.com.lac.caixa.modelo.Promocao;
 import br.com.lac.caixa.modelo.PromocaoItem;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -12,6 +14,8 @@ import java.util.function.ToDoubleBiFunction;
 
 /** Escolhe os pacotes de maior economia sobre as unidades que sobraram. */
 public final class BuscaDePacotes {
+
+    private static final long NAO_CABE = Long.MIN_VALUE;
 
     public record Resultado(long economia, Map<Promocao, Integer> usados, Map<Promocao, Long> economiaPorPacote) {
         static final Resultado NENHUM = new Resultado(0, Map.of(), Map.of());
@@ -25,6 +29,7 @@ public final class BuscaDePacotes {
     private final int[][] usoPorPacote;
     private final long[] precoPacote;
     private final long estados;
+    private long visitados;
 
     public BuscaDePacotes(Map<Long, List<Long>> restantes, List<Promocao> todos) {
         this.pacotes = todos.stream()
@@ -76,20 +81,25 @@ public final class BuscaDePacotes {
         long[] memo = new long[(int) estados];
         int[] escolha = new int[(int) estados];
         int inicial = inicial();
-        economia(inicial, memo, escolha);
+        BitSet alcancaveis = alcancaveis(inicial);
+        visitados = alcancaveis.cardinality();
+        economia(alcancaveis, memo, escolha);
 
         int[] vezes = new int[pacotes.size()];
         long[] ganhos = new long[pacotes.size()];
         int estado = inicial;
         while (escolha[estado] >= 0) {
             int p = escolha[estado];
-            int proximo = estado;
-            for (int c = 0; c < total.length; c++) proximo -= usoPorPacote[p][c] * (int) base[c];
+            int proximo = proximo(estado, p);
             vezes[p]++;
             ganhos[p] += memo[estado] - memo[proximo];
             estado = proximo;
         }
         return resultado(memo[inicial], vezes, ganhos);
+    }
+
+    long visitados() {
+        return visitados;
     }
 
     private int inicial() {
@@ -98,30 +108,52 @@ public final class BuscaDePacotes {
         return e;
     }
 
-    private void economia(int ultimo, long[] memo, int[] escolha) {
-        for (int estado = 0; estado <= ultimo; estado++) {
+    private long ganho(int estado, int p) {
+        long normal = 0;
+        for (int c = 0; c < total.length; c++) {
+            int q = usoPorPacote[p][c];
+            if (q == 0) continue;
+            int resta = (int) ((estado / base[c]) % (total[c] + 1));
+            if (resta < q) return NAO_CABE;
+            int inicio = total[c] - resta;
+            normal += somaDasMaisCaras[c][inicio + q] - somaDasMaisCaras[c][inicio];
+        }
+        return normal - precoPacote[p];
+    }
+
+    private int proximo(int estado, int p) {
+        int proximo = estado;
+        for (int c = 0; c < total.length; c++) proximo -= usoPorPacote[p][c] * (int) base[c];
+        return proximo;
+    }
+
+    private BitSet alcancaveis(int inicial) {
+        BitSet marcados = new BitSet(inicial + 1);
+        ArrayDeque<Integer> pilha = new ArrayDeque<>();
+        marcados.set(inicial);
+        pilha.push(inicial);
+        while (!pilha.isEmpty()) {
+            int estado = pilha.pop();
+            for (int p = 0; p < pacotes.size(); p++) {
+                if (ganho(estado, p) <= 0) continue;
+                int proximo = proximo(estado, p);
+                if (!marcados.get(proximo)) {
+                    marcados.set(proximo);
+                    pilha.push(proximo);
+                }
+            }
+        }
+        return marcados;
+    }
+
+    private void economia(BitSet alcancaveis, long[] memo, int[] escolha) {
+        for (int estado = alcancaveis.nextSetBit(0); estado >= 0; estado = alcancaveis.nextSetBit(estado + 1)) {
             long melhor = 0;
             int melhorPacote = -1;
             for (int p = 0; p < pacotes.size(); p++) {
-                long normal = 0;
-                int proximo = estado;
-                boolean cabe = true;
-                for (int c = 0; c < total.length; c++) {
-                    int q = usoPorPacote[p][c];
-                    if (q == 0) continue;
-                    int resta = (int) ((estado / base[c]) % (total[c] + 1));
-                    if (resta < q) {
-                        cabe = false;
-                        break;
-                    }
-                    int inicio = total[c] - resta;
-                    normal += somaDasMaisCaras[c][inicio + q] - somaDasMaisCaras[c][inicio];
-                    proximo -= q * (int) base[c];
-                }
-                if (!cabe) continue;
-                long ganho = normal - precoPacote[p];
+                long ganho = ganho(estado, p);
                 if (ganho <= 0) continue;
-                long candidato = ganho + memo[proximo];
+                long candidato = ganho + memo[proximo(estado, p)];
                 if (candidato > melhor) {
                     melhor = candidato;
                     melhorPacote = p;

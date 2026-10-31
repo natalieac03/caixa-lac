@@ -23,9 +23,15 @@ class CalculadoraDesempenhoTest {
     static final long LIMITE_MS = 300;
 
     long medir(CenariosDeDesempenho.Cenario c, Orcamento[] saida) {
+        new CalculadoraDePreco().calcular(c.carrinho(), c.promocoes());
         long inicio = System.nanoTime();
-        saida[0] = new CalculadoraDePreco().calcular(c.carrinho(), c.promocoes());
-        return (System.nanoTime() - inicio) / 1_000_000;
+        var medicao = new CalculadoraDePreco().calcularMedindo(c.carrinho(), c.promocoes());
+        long ms = (System.nanoTime() - inicio) / 1_000_000;
+        saida[0] = medicao.orcamento();
+        assertTrue(
+                medicao.estadosVisitados() * 20 < medicao.estadosPossiveis(),
+                "visitou " + medicao.estadosVisitados() + " de " + medicao.estadosPossiveis() + " estados");
+        return ms;
     }
 
     @Test

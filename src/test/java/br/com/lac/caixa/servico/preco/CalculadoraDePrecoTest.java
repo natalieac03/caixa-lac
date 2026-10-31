@@ -307,11 +307,16 @@ class CalculadoraDePrecoTest {
         var carrinho = new Carrinho(linhas);
         assertEquals(50, linhas.stream().mapToInt(Carrinho.Linha::quantidade).sum());
 
+        calcular(carrinho, promos);
         long inicio = System.nanoTime();
-        var o = calcular(carrinho, promos);
+        var medicao = new CalculadoraDePreco().calcularMedindo(carrinho, promos);
         long ms = (System.nanoTime() - inicio) / 1_000_000;
+        var o = medicao.orcamento();
 
         assertTrue(ms < 100, "levou " + ms + " ms");
+        assertTrue(
+                medicao.estadosVisitados() * 20 < medicao.estadosPossiveis(),
+                "visitou " + medicao.estadosVisitados() + " de " + medicao.estadosPossiveis() + " estados");
         assertTrue(o.total().signum() > 0);
         assertEquals(0, o.total().compareTo(calcular(carrinho, inverter(promos)).total()));
     }

@@ -1,10 +1,5 @@
 # Arquitetura do Caixa LAC
 
-Como o sistema é construído: as tecnologias, a organização do código, o
-domínio, os fluxos principais, a persistência, a segurança, os testes e as
-regras de negócio em detalhe. Para o que o caixa faz e como rodar, veja o
-[README](../README.md); para os porquês de cada decisão, o
-[DECISOES.md](DECISOES.md).
 
 ## 1. Visão geral
 
@@ -34,8 +29,8 @@ flowchart LR
 
 | Camada | Tecnologia | Versão |
 |---|---|---|
-| Linguagem | Java (no Railway, pelo Railpack com `RAILPACK_JDK_VERSION`) | 21 |
-| Framework | Spring Boot (parent `spring-boot-starter-parent`) | 4.1.2 |
+| Linguagem | Java | 21 |
+| Framework | Spring Boot | 4.1.2 |
 | | Spring Framework (MVC, transações, `RestClient`) | 7.0.10 |
 | Servidor HTTP | Tomcat embutido | 11.0.27 |
 | Telas | Thymeleaf (+ `thymeleaf-spring6`) | 3.1.5 |
@@ -43,9 +38,9 @@ flowchart LR
 | Persistência | Spring Data JPA / Hibernate ORM / Jakarta Persistence | 4.1.2 / 7.4.13 / 3.2 |
 | Pool de conexões | HikariCP | 7.0.2 |
 | Validação | Hibernate Validator (Bean Validation) | 9.1.5 |
-| Migrações | Flyway (`spring-boot-starter-flyway` + `flyway-database-postgresql`) | 12.4.0 |
+| Migrações | Flyway | 12.4.0 |
 | Banco em produção | PostgreSQL (driver JDBC) | 16 nos testes / driver 42.7.14 |
-| Banco no computador | H2 em arquivo (fixado; veja DECISOES) | 2.3.232 |
+| Banco no computador | H2 em arquivo | 2.3.232 |
 | Saúde | Spring Boot Actuator (só `/actuator/health`) | 4.1.2 |
 | Gráficos | Chart.js, embutido em `static/js/vendor/` | 4.4.1 |
 | Testes | JUnit Jupiter / Mockito / MockMvc | 6.0.3 / 5.23.0 |

@@ -48,11 +48,24 @@ public class CalculadoraDePreco {
     private record Cenarios(
             List<Preparo> preparos, Map<TreeMap<Long, List<Long>>, BuscaDePacotes> buscas, boolean aproximado) {}
 
+    record Medicao(Orcamento orcamento, long estadosVisitados, long estadosPossiveis) {}
+
     public Orcamento calcular(Carrinho carrinho, List<Promocao> ativas) {
+        return calcularMedindo(carrinho, ativas).orcamento();
+    }
+
+    Medicao calcularMedindo(Carrinho carrinho, List<Promocao> ativas) {
         Itens itens = ler(carrinho);
         Subconjuntos subconjuntos = escolherSubconjuntos(ativas, itens);
         Cenarios cenarios = prepararCenarios(itens, subconjuntos);
-        return orcamento(itens.linhas(), escolherMelhor(cenarios), cenarios.aproximado());
+        Orcamento orcamento = orcamento(itens.linhas(), escolherMelhor(cenarios), cenarios.aproximado());
+        long visitados = 0;
+        long possiveis = 0;
+        for (BuscaDePacotes b : cenarios.buscas().values()) {
+            visitados += b.visitados();
+            possiveis = Math.min(Long.MAX_VALUE / 2, possiveis + b.estados());
+        }
+        return new Medicao(orcamento, visitados, possiveis);
     }
 
     private static Itens ler(Carrinho carrinho) {
