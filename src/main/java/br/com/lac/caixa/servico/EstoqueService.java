@@ -113,11 +113,6 @@ public class EstoqueService {
     }
 
     @Transactional
-    public Produto criarNovo(String nome, BigDecimal preco, int quantidade, Categoria categoria) {
-        return criarNovo(nome, preco, quantidade, categoria, null);
-    }
-
-    @Transactional
     public Produto criarNovo(String nome, BigDecimal preco, int quantidade, Categoria categoria, BigDecimal custo) {
         Produto p = new Produto(nome.trim(), preco, quantidade);
         p.setCategoria(categoria);
@@ -136,11 +131,6 @@ public class EstoqueService {
         auditoria.registrar(
                 "produto_criado", "id", salvo.getId(), "depois", descrever(salvo), "quantidade", quantidade);
         return salvo;
-    }
-
-    @Transactional
-    public Produto editar(Long id, String nome, BigDecimal preco, Categoria categoria) {
-        return editar(id, nome, preco, categoria, buscar(id).getCustoUnitario());
     }
 
     @Transactional

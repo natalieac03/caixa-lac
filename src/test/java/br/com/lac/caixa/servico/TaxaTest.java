@@ -105,7 +105,7 @@ class TaxaTest {
     }
 
     Venda vender(BigDecimal preco, int qtd, List<PagamentoInformado> pagamentos) {
-        var p = estoque.criarNovo("Produto Taxa " + System.nanoTime(), preco, 100, null);
+        var p = estoque.criarNovo("Produto Taxa " + System.nanoTime(), preco, 100, null, null);
         return caixa.registrarVenda(
                         Map.of(p.getId(), qtd),
                         pagamentos,
@@ -202,12 +202,12 @@ class TaxaTest {
                 r("6"),
                 3,
                 List.of(
-                        new PagamentoInformado(FormaPagamento.DEBITO, r("10"), null, null),
-                        new PagamentoInformado(FormaPagamento.DINHEIRO, r("8"), null, null)));
+                        new PagamentoInformado(FormaPagamento.DEBITO, r("10"), null, null, null, 0),
+                        new PagamentoInformado(FormaPagamento.DINHEIRO, r("8"), null, null, null, 0)));
         String token = UUID.randomUUID().toString();
         String order = cobrancas.gerar(token, 0, r("12")).getOrderId();
         FAKE.pagar(order, "12.00");
-        var p = estoque.criarNovo("Produto Pix MP " + System.nanoTime(), r("6"), 10, null);
+        var p = estoque.criarNovo("Produto Pix MP " + System.nanoTime(), r("6"), 10, null, null);
         Venda pixMp = caixa.registrarVenda(
                         Map.of(p.getId(), 2),
                         List.of(new PagamentoInformado(

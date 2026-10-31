@@ -86,7 +86,7 @@ class VendaConcorrenteTest {
     @Test
     @DisplayName("10 vendas ao mesmo tempo com 10 em estoque: todas entram e o estoque zera")
     void todasEntramEnquantoHaEstoque() throws Exception {
-        var p = estoque.criarNovo("Bóton Disputado " + System.nanoTime(), new BigDecimal("6"), 10, null);
+        var p = estoque.criarNovo("Bóton Disputado " + System.nanoTime(), new BigDecimal("6"), 10, null, null);
         int[] r = venderJuntos(p.getId(), 10);
         assertEquals(10, r[0]);
         assertEquals(0, produtos.findById(p.getId()).orElseThrow().getQuantidade());
@@ -96,7 +96,7 @@ class VendaConcorrenteTest {
     @Test
     @DisplayName("10 vendas ao mesmo tempo com 7 em estoque: 7 entram, 3 recebem \"estoque insuficiente\"")
     void soOQueHaNoEstoque() throws Exception {
-        var p = estoque.criarNovo("Caneca Disputada " + System.nanoTime(), new BigDecimal("30"), 7, null);
+        var p = estoque.criarNovo("Caneca Disputada " + System.nanoTime(), new BigDecimal("30"), 7, null, null);
         int[] r = venderJuntos(p.getId(), 10);
         assertEquals(7, r[0]);
         assertEquals(3, r[1]);
@@ -107,7 +107,7 @@ class VendaConcorrenteTest {
     @Test
     @DisplayName("Venda recusada (estoque insuficiente): a tela volta com o mesmo carrinho e o mesmo token")
     void naoDescartaOCarrinho() throws Exception {
-        var p = estoque.criarNovo("Adesivo Raro " + System.nanoTime(), new BigDecimal("8"), 2, null);
+        var p = estoque.criarNovo("Adesivo Raro " + System.nanoTime(), new BigDecimal("8"), 2, null, null);
         String token = UUID.randomUUID().toString();
         mvc.perform(post("/venda")
                         .sessionAttr("autenticado", true)

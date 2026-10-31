@@ -116,7 +116,7 @@ class FusoHorarioTest {
     @Test
     @DisplayName("Estoque: a data sugerida da compra é o dia de Brasília, pelo relógio da aplicação")
     void hojeDoEstoque() throws Exception {
-        estoque.criarNovo("Adesivo do Fuso", new BigDecimal("8"), 5, null);
+        estoque.criarNovo("Adesivo do Fuso", new BigDecimal("8"), 5, null, null);
         mvc.perform(get("/estoque").sessionAttr("autenticado", true))
                 .andExpect(content().string(containsString("name=\"data\" value=\"2026-03-07\"")));
     }

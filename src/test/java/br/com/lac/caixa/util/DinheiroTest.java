@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test;
 class DinheiroTest {
 
     static PagamentoVenda parte(FormaPagamento forma, String valor, String descricao) {
-        return new PagamentoVenda(forma, new BigDecimal(valor), descricao, null);
+        return new PagamentoVenda(forma, new BigDecimal(valor), descricao, null, null, null);
     }
 
     @Test

@@ -89,7 +89,7 @@ class InvarianteEstoqueTest {
     @Test
     @DisplayName("Produto com movimentos é arquivado, não apagado; operação recusada não grava movimento")
     void arquivaERecusaSemMovimento() {
-        var p = estoque.criarNovo("Bóton Arquivo", new BigDecimal("6"), 2, null);
+        var p = estoque.criarNovo("Bóton Arquivo", new BigDecimal("6"), 2, null, null);
 
         assertThrows(RegraDeNegocioException.class, () -> estoque.removerUnidades(p.getId(), 5));
         assertEquals(1, movimentos.findByProdutoIdOrderByIdAsc(p.getId()).size());

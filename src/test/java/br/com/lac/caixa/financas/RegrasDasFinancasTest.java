@@ -298,8 +298,8 @@ class RegrasDasFinancasTest {
                 "10.00",
                 null,
                 List.of(
-                        new PagamentoInformado(FormaPagamento.PIX, r("4"), null, null),
-                        new PagamentoInformado(FormaPagamento.CREDITO, r("6"), null, null)));
+                        new PagamentoInformado(FormaPagamento.PIX, r("4"), null, null, null, 0),
+                        new PagamentoInformado(FormaPagamento.CREDITO, r("6"), null, null, null, 0)));
         var dia = FiltroFinancas.periodo(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 1));
         assertValor("0.64", resumos.resumo(dia).taxas());
         assertValor("0.04", resumos.resumo(dia.comForma(FormaPagamento.PIX)).taxas());

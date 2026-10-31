@@ -90,7 +90,7 @@ class VendaHttpTest {
     }
 
     static PagamentoVenda pix(String valor) {
-        return new PagamentoVenda(FormaPagamento.PIX, new BigDecimal(valor), null, null);
+        return new PagamentoVenda(FormaPagamento.PIX, new BigDecimal(valor), null, null, null, null);
     }
 
     @Test

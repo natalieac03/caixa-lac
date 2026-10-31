@@ -102,11 +102,11 @@ class PostgresBancoNovoTest {
         produtosAntes = produtos.count();
         var boton = categorias.save(new Categoria("Bóton"));
         var adesivo = categorias.save(new Categoria("Adesivo Grande"));
-        long capivara = estoque.criarNovo("Bóton Capivara", new BigDecimal("6.00"), 30, boton)
+        long capivara = estoque.criarNovo("Bóton Capivara", new BigDecimal("6.00"), 30, boton, null)
                 .getId();
-        long logo = estoque.criarNovo("Bóton Logo LAC", new BigDecimal("6.00"), 30, boton)
+        long logo = estoque.criarNovo("Bóton Logo LAC", new BigDecimal("6.00"), 30, boton, null)
                 .getId();
-        long grande = estoque.criarNovo("Adesivo Capivara Grande", new BigDecimal("8.00"), 25, adesivo)
+        long grande = estoque.criarNovo("Adesivo Capivara Grande", new BigDecimal("8.00"), 25, adesivo, null)
                 .getId();
         var a = caixa.registrarVenda(
                         Map.of(capivara, 2),
@@ -160,7 +160,7 @@ class PostgresBancoNovoTest {
     @Test
     @DisplayName("Invariante no Postgres: soma dos movimentos = quantidade, com venda, cancelamento, compra e ajustes")
     void invarianteDosMovimentos() {
-        var p = estoque.criarNovo("Bóton Invariante PG", new BigDecimal("6.00"), 10, null);
+        var p = estoque.criarNovo("Bóton Invariante PG", new BigDecimal("6.00"), 10, null, null);
         var v = caixa.registrarVenda(
                         Map.of(p.getId(), 3),
                         List.of(PagamentoInformado.total(FormaPagamento.DINHEIRO)),
@@ -248,7 +248,7 @@ class PostgresBancoNovoTest {
     @DisplayName(
             "Postgres: evento aberto (fim nulo) nas consultas; Dia a dia com NOT EXISTS; iniciar com outro aberto recusado")
     void eventoAbertoEDiaADia() {
-        var p = estoque.criarNovo("Bóton Aberto PG", new BigDecimal("6.00"), 50, null);
+        var p = estoque.criarNovo("Bóton Aberto PG", new BigDecimal("6.00"), 50, null, null);
         var antes = caixa.registrarVenda(
                         Map.of(p.getId(), 1),
                         List.of(PagamentoInformado.total(FormaPagamento.PIX)),

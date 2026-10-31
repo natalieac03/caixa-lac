@@ -95,7 +95,7 @@ class PixQueSomeTest {
 
     @BeforeEach
     void produto() {
-        boton = estoque.criarNovo("Bóton Pix " + System.nanoTime(), new BigDecimal("6"), 100, null);
+        boton = estoque.criarNovo("Bóton Pix " + System.nanoTime(), new BigDecimal("6"), 100, null, null);
     }
 
     @AfterEach

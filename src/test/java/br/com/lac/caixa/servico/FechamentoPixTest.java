@@ -69,7 +69,7 @@ class FechamentoPixTest {
                 List.of(
                         new PagamentoInformado(
                                 FormaPagamento.PIX, new BigDecimal("10"), null, null, OrigemPagamento.MERCADO_PAGO, 7),
-                        new PagamentoInformado(FormaPagamento.DINHEIRO, new BigDecimal("8"), null, null)),
+                        new PagamentoInformado(FormaPagamento.DINHEIRO, new BigDecimal("8"), null, null, null, 0)),
                 null,
                 null,
                 t1);

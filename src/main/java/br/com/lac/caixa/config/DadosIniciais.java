@@ -24,9 +24,9 @@ public class DadosIniciais {
             Categoria boton = categorias.save(new Categoria("Bóton"));
             Categoria adesivo = categorias.save(new Categoria("Adesivo Grande"));
 
-            estoque.criarNovo("Bóton Capivara", new BigDecimal("6.00"), 30, boton);
-            estoque.criarNovo("Bóton Logo LAC", new BigDecimal("6.00"), 30, boton);
-            estoque.criarNovo("Adesivo Capivara Grande", new BigDecimal("8.00"), 25, adesivo);
+            estoque.criarNovo("Bóton Capivara", new BigDecimal("6.00"), 30, boton, null);
+            estoque.criarNovo("Bóton Logo LAC", new BigDecimal("6.00"), 30, boton, null);
+            estoque.criarNovo("Adesivo Capivara Grande", new BigDecimal("8.00"), 25, adesivo, null);
         };
     }
 }

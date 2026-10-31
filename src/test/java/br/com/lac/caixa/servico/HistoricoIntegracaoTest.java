@@ -40,7 +40,7 @@ class HistoricoIntegracaoTest {
         v.setDataHora(dia.atTime(12, 0));
         v.adicionarItem(new ItemVenda(p, 2));
         v.registrarValores(new BigDecimal("2"), BigDecimal.ZERO, new BigDecimal("2"), null);
-        v.registrarPagamentos(List.of(new PagamentoVenda(forma, new BigDecimal("2"), null, null)));
+        v.registrarPagamentos(List.of(new PagamentoVenda(forma, new BigDecimal("2"), null, null, null, null)));
         return vendas.saveAndFlush(v);
     }
 
@@ -87,7 +87,8 @@ class HistoricoIntegracaoTest {
         var v = venda(p, FormaPagamento.PIX, dia);
         v.adicionarItem(new ItemVenda(outro, 3));
         v.registrarValores(new BigDecimal("5"), BigDecimal.ZERO, new BigDecimal("5"), null);
-        v.registrarPagamentos(List.of(new PagamentoVenda(FormaPagamento.PIX, new BigDecimal("5"), null, null)));
+        v.registrarPagamentos(
+                List.of(new PagamentoVenda(FormaPagamento.PIX, new BigDecimal("5"), null, null, null, null)));
         vendas.saveAndFlush(v);
 
         var r = consulta.consultar(new FiltroHistorico(null, dia, dia, "buscado"), 0);

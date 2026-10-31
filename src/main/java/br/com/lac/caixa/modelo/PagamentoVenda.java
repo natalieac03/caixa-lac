@@ -53,10 +53,6 @@ public class PagamentoVenda {
 
     protected PagamentoVenda() {}
 
-    public PagamentoVenda(FormaPagamento forma, BigDecimal valor, String descricao, BigDecimal valorRecebido) {
-        this(forma, valor, descricao, valorRecebido, null, null);
-    }
-
     public PagamentoVenda(
             FormaPagamento forma,
             BigDecimal valor,

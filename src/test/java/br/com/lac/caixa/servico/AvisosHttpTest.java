@@ -70,7 +70,7 @@ class AvisosHttpTest {
                 .andExpect(jsonPath("$.total").value(0))
                 .andExpect(jsonPath("$.secoes", hasSize(0)));
 
-        var p = estoque.criarNovo("Caneca Sem Custo", new BigDecimal("30"), 5, null);
+        var p = estoque.criarNovo("Caneca Sem Custo", new BigDecimal("30"), 5, null, null);
         caixa.registrarVenda(
                 Map.of(p.getId(), 1),
                 List.of(PagamentoInformado.total(FormaPagamento.PIX)),
@@ -105,7 +105,7 @@ class AvisosHttpTest {
     @Test
     @DisplayName("O sino está no topo de todas as telas logadas; a tela inicial não tem mais o cartão Atenção")
     void sinoEmTodasAsTelas() throws Exception {
-        estoque.criarNovo("Pôster Sem Custo", new BigDecimal("12"), 5, null);
+        estoque.criarNovo("Pôster Sem Custo", new BigDecimal("12"), 5, null, null);
         for (String url : new String[] {
             "/",
             "/estoque",

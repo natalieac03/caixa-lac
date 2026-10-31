@@ -13,11 +13,7 @@ public record PagamentoInformado(
         OrigemPagamento origem,
         int parte) {
 
-    public PagamentoInformado(FormaPagamento forma, BigDecimal valor, String descricao, BigDecimal recebido) {
-        this(forma, valor, descricao, recebido, null, 0);
-    }
-
     public static PagamentoInformado total(FormaPagamento forma) {
-        return new PagamentoInformado(forma, null, null, null);
+        return new PagamentoInformado(forma, null, null, null, null, 0);
     }
 }

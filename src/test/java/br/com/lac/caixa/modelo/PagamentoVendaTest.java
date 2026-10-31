@@ -21,7 +21,7 @@ class PagamentoVendaTest {
     }
 
     static PagamentoVenda parte(FormaPagamento f, String valor) {
-        return new PagamentoVenda(f, r(valor), null, null);
+        return new PagamentoVenda(f, r(valor), null, null, null, null);
     }
 
     Venda venda(String cobrado, String motivo) {
@@ -53,30 +53,35 @@ class PagamentoVendaTest {
 
     @Test
     void trocoDoDinheiro() {
-        var dinheiro = new PagamentoVenda(FormaPagamento.DINHEIRO, r("8"), null, r("10"));
+        var dinheiro = new PagamentoVenda(FormaPagamento.DINHEIRO, r("8"), null, r("10"), null, null);
         assertEquals(0, r("2").compareTo(dinheiro.getTroco()));
         assertEquals("Dinheiro R$ 8,00 (troco R$ 2,00)", dinheiro.getTexto());
         assertNull(parte(FormaPagamento.DINHEIRO, "8").getTroco());
         assertEquals(
                 0,
                 BigDecimal.ZERO.compareTo(
-                        new PagamentoVenda(FormaPagamento.DINHEIRO, r("8"), null, r("8")).getTroco()));
+                        new PagamentoVenda(FormaPagamento.DINHEIRO, r("8"), null, r("8"), null, null).getTroco()));
         var menor = assertThrows(
                 RegraDeNegocioException.class,
-                () -> new PagamentoVenda(FormaPagamento.DINHEIRO, r("8"), null, r("7.99")));
+                () -> new PagamentoVenda(FormaPagamento.DINHEIRO, r("8"), null, r("7.99"), null, null));
         assertTrue(menor.getMessage().contains("menor"));
         assertThrows(
-                RegraDeNegocioException.class, () -> new PagamentoVenda(FormaPagamento.PIX, r("8"), null, r("10")));
+                RegraDeNegocioException.class,
+                () -> new PagamentoVenda(FormaPagamento.PIX, r("8"), null, r("10"), null, null));
     }
 
     @Test
     void partesInvalidas() {
-        assertThrows(RegraDeNegocioException.class, () -> new PagamentoVenda(null, r("1"), null, null));
+        assertThrows(RegraDeNegocioException.class, () -> new PagamentoVenda(null, r("1"), null, null, null, null));
         assertThrows(RegraDeNegocioException.class, () -> parte(FormaPagamento.PIX, "0"));
         assertThrows(RegraDeNegocioException.class, () -> parte(FormaPagamento.PIX, "-1"));
-        assertThrows(RegraDeNegocioException.class, () -> new PagamentoVenda(FormaPagamento.OUTRO, r("1"), "  ", null));
-        assertEquals("Vale R$ 1,00", new PagamentoVenda(FormaPagamento.OUTRO, r("1"), " Vale ", null).getTexto());
-        assertNull(new PagamentoVenda(FormaPagamento.PIX, r("1"), "ignorada", null).getDescricao());
+        assertThrows(
+                RegraDeNegocioException.class,
+                () -> new PagamentoVenda(FormaPagamento.OUTRO, r("1"), "  ", null, null, null));
+        assertEquals(
+                "Vale R$ 1,00",
+                new PagamentoVenda(FormaPagamento.OUTRO, r("1"), " Vale ", null, null, null).getTexto());
+        assertNull(new PagamentoVenda(FormaPagamento.PIX, r("1"), "ignorada", null, null, null).getDescricao());
         var muitas = new ArrayList<PagamentoVenda>();
         for (int i = 0; i < 11; i++) muitas.add(parte(FormaPagamento.PIX, "1"));
         var v = venda("11", null);
@@ -101,7 +106,8 @@ class PagamentoVendaTest {
     @Test
     void mensagemUmaPartePorLinha() {
         var partes = List.of(
-                parte(FormaPagamento.PIX, "10"), new PagamentoVenda(FormaPagamento.DINHEIRO, r("8"), null, r("10")));
+                parte(FormaPagamento.PIX, "10"),
+                new PagamentoVenda(FormaPagamento.DINHEIRO, r("8"), null, r("10"), null, null));
         assertEquals(
                 "Recebido R$ 10,00 via Pix + R$ 8,00 em dinheiro (troco R$ 2,00).",
                 PagamentoFactory.mensagem(dados(partes)));
@@ -113,7 +119,7 @@ class PagamentoVendaTest {
                 PagamentoFactory.mensagem(dados(List.of(
                         parte(FormaPagamento.DEBITO, "5"),
                         parte(FormaPagamento.CREDITO, "1"),
-                        new PagamentoVenda(FormaPagamento.OUTRO, r("2"), "Vale", null)))));
+                        new PagamentoVenda(FormaPagamento.OUTRO, r("2"), "Vale", null, null, null)))));
     }
 
     static List<DadosDaParte> dados(List<PagamentoVenda> partes) {

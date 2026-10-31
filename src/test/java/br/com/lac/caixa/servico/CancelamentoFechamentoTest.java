@@ -143,7 +143,7 @@ class CancelamentoFechamentoTest {
         var credito = registrar(p, 1, FormaPagamento.CREDITO, null);
         credito.registrarValores(new BigDecimal("8"), new BigDecimal("2"), new BigDecimal("8"), null);
         credito.registrarPagamentos(
-                List.of(new PagamentoVenda(FormaPagamento.CREDITO, new BigDecimal("8"), null, null)));
+                List.of(new PagamentoVenda(FormaPagamento.CREDITO, new BigDecimal("8"), null, null, null, null)));
         vendas.saveAndFlush(credito);
         var cancelada = registrar(p, 1, FormaPagamento.DINHEIRO, null);
         caixa.cancelarVenda(cancelada.getId(), "Cancelada");
@@ -153,7 +153,8 @@ class CancelamentoFechamentoTest {
         var legado = Venda.nova(LocalDateTime.now());
         legado.setDataHora(dia.atStartOfDay());
         legado.registrarValores(new BigDecimal("4"), BigDecimal.ZERO, new BigDecimal("4"), null);
-        legado.registrarPagamentos(List.of(new PagamentoVenda(FormaPagamento.DEBITO, new BigDecimal("4"), null, null)));
+        legado.registrarPagamentos(
+                List.of(new PagamentoVenda(FormaPagamento.DEBITO, new BigDecimal("4"), null, null, null, null)));
         vendas.saveAndFlush(legado);
 
         var r = fechamento.consultar(dia, dia);
@@ -178,13 +179,14 @@ class CancelamentoFechamentoTest {
         dividida(
                 p,
                 3,
-                new PagamentoInformado(FormaPagamento.PIX, new BigDecimal("10"), null, null),
-                new PagamentoInformado(FormaPagamento.DINHEIRO, new BigDecimal("8"), null, new BigDecimal("10")));
+                new PagamentoInformado(FormaPagamento.PIX, new BigDecimal("10"), null, null, null, 0),
+                new PagamentoInformado(
+                        FormaPagamento.DINHEIRO, new BigDecimal("8"), null, new BigDecimal("10"), null, 0));
         dividida(
                 p,
                 2,
-                new PagamentoInformado(FormaPagamento.PIX, new BigDecimal("5"), null, null),
-                new PagamentoInformado(FormaPagamento.OUTRO, new BigDecimal("7"), "Vale", null));
+                new PagamentoInformado(FormaPagamento.PIX, new BigDecimal("5"), null, null, null, 0),
+                new PagamentoInformado(FormaPagamento.OUTRO, new BigDecimal("7"), "Vale", null, null, 0));
         registrar(p, 1, FormaPagamento.DINHEIRO, null);
         var cortesia = caixa.registrarVenda(
                         Map.of(p.getId(), 1),
@@ -198,8 +200,8 @@ class CancelamentoFechamentoTest {
         var cancelada = dividida(
                 p,
                 2,
-                new PagamentoInformado(FormaPagamento.CREDITO, new BigDecimal("6"), null, null),
-                new PagamentoInformado(FormaPagamento.DEBITO, new BigDecimal("6"), null, null));
+                new PagamentoInformado(FormaPagamento.CREDITO, new BigDecimal("6"), null, null, null, 0),
+                new PagamentoInformado(FormaPagamento.DEBITO, new BigDecimal("6"), null, null, null, 0));
         int antes = p.getQuantidade();
 
         caixa.cancelarVenda(cancelada.getId(), "Desistiu");

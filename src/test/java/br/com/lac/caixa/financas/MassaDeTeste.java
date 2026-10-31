@@ -140,8 +140,8 @@ public class MassaDeTeste {
                 "2025-03-01T10:30",
                 itens("Camiseta 1", 1, "Caneca 1", 1),
                 List.of(
-                        new PagamentoInformado(FormaPagamento.CREDITO, r("50"), null, null),
-                        new PagamentoInformado(FormaPagamento.DINHEIRO, r("30"), null, null)),
+                        new PagamentoInformado(FormaPagamento.CREDITO, r("50"), null, null, null, 0),
+                        new PagamentoInformado(FormaPagamento.DINHEIRO, r("30"), null, null, null, 0)),
                 null);
         vender("2025-03-01T12:15", itens("Adesivo 1", 2), total(FormaPagamento.DINHEIRO), "0");
         var v4 = vender("2025-03-01T14:00", itens("Pôster 1", 2), total(FormaPagamento.PIX), null);

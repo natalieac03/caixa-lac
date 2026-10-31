@@ -85,8 +85,8 @@ class SinoNoNavegadorTest {
         assertThat(pagina.locator("#selo-avisos")).isHidden();
         assertThat(pagina.locator("#texto-avisos-novos")).hasText("nenhum aviso novo");
 
-        estoque.criarNovo("Caneca A", new BigDecimal("30"), 5, null);
-        estoque.criarNovo("Caneca B", new BigDecimal("30"), 5, null);
+        estoque.criarNovo("Caneca A", new BigDecimal("30"), 5, null, null);
+        estoque.criarNovo("Caneca B", new BigDecimal("30"), 5, null, null);
         pagina.navigate(url("/estoque"));
         assertThat(pagina.locator("#selo-avisos")).hasText("2");
         assertThat(pagina.locator("#texto-avisos-novos")).hasText("2 avisos novos");
@@ -109,7 +109,7 @@ class SinoNoNavegadorTest {
         assertThat(pagina.locator("#selo-avisos")).isHidden();
         assertThat(pagina.locator("#painel-avisos li")).hasCount(2);
 
-        estoque.criarNovo("Caneca C", new BigDecimal("30"), 5, null);
+        estoque.criarNovo("Caneca C", new BigDecimal("30"), 5, null, null);
         pagina.reload();
         assertThat(pagina.locator("#selo-avisos")).hasText("1");
         assertThat(pagina.locator("#texto-avisos-novos")).hasText("1 aviso novo");
@@ -120,7 +120,7 @@ class SinoNoNavegadorTest {
     void consultaAtualiza() {
         pagina.navigate(url("/historico"));
         assertThat(pagina.locator("#selo-avisos")).isHidden();
-        estoque.criarNovo("Ecobag Sem Custo", new BigDecimal("30"), 5, null);
+        estoque.criarNovo("Ecobag Sem Custo", new BigDecimal("30"), 5, null, null);
         pagina.evaluate("() => document.dispatchEvent(new Event('visibilitychange'))");
         assertThat(pagina.locator("#selo-avisos")).hasText("1");
         assertThat(pagina.locator("#painel-avisos li")).containsText("Ecobag Sem Custo");
@@ -129,7 +129,7 @@ class SinoNoNavegadorTest {
     @Test
     @DisplayName("Celular: o painel ocupa a largura da tela, sem rolagem lateral")
     void noCelularOPainelOcupaALarguraSemRolagem() {
-        estoque.criarNovo("Bóton Sem Custo", new BigDecimal("6"), 5, null);
+        estoque.criarNovo("Bóton Sem Custo", new BigDecimal("6"), 5, null, null);
         var celular = Navegador.browser().newContext(new Browser.NewContextOptions().setViewportSize(390, 844));
         try {
             Page p = entrar(celular);
@@ -148,7 +148,7 @@ class SinoNoNavegadorTest {
     @Test
     @DisplayName("Sem localStorage (bloqueado): nada quebra e todos os avisos continuam contando como novos")
     void semLocalStorage() {
-        estoque.criarNovo("Adesivo Sem Custo", new BigDecimal("8"), 5, null);
+        estoque.criarNovo("Adesivo Sem Custo", new BigDecimal("8"), 5, null, null);
         var bloqueado = Navegador.browser().newContext(new Browser.NewContextOptions().setViewportSize(1280, 900));
         bloqueado.addInitScript(
                 "Object.defineProperty(window, 'localStorage', { get() { throw new Error('bloqueado'); } });");

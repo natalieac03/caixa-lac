@@ -227,7 +227,7 @@ class EdicaoCadastroHttpTest {
     @DisplayName("Serviço de estoque: editar produto inexistente é regra de negócio com mensagem")
     void editarInexistente() {
         var erro = assertThrows(
-                RegraDeNegocioException.class, () -> estoque.editar(999_999L, "Nome", BigDecimal.ONE, cat));
+                RegraDeNegocioException.class, () -> estoque.editar(999_999L, "Nome", BigDecimal.ONE, cat, null));
         assertEquals("Produto não encontrado: 999999", erro.getMessage());
     }
 }

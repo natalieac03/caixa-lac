@@ -66,14 +66,10 @@ public class Produto {
         this.nome = nome.trim();
     }
 
-    public void editar(String nome, BigDecimal preco, Categoria categoria) {
+    public void editar(String nome, BigDecimal preco, Categoria categoria, BigDecimal custo) {
         setNome(nome);
         setPreco(preco);
         setCategoria(categoria);
-    }
-
-    public void editar(String nome, BigDecimal preco, Categoria categoria, BigDecimal custo) {
-        editar(nome, preco, categoria);
         setCustoUnitario(custo);
     }
 

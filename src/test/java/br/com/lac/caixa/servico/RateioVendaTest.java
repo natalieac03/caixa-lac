@@ -94,8 +94,8 @@ class RateioVendaTest {
     @DisplayName("A_PARTIR_DE: desconto rateado pelo bruto, soma dos líquidos = cobrado, desconto com id da promoção")
     void aPartirDe() {
         Categoria boton = categoria("Bóton Rateio");
-        var b = estoque.criarNovo("Bóton Rateio", r("6"), 100, boton);
-        var a = estoque.criarNovo("Adesivo Rateio", r("8"), 100, categoria("Adesivo Rateio"));
+        var b = estoque.criarNovo("Bóton Rateio", r("6"), 100, boton, null);
+        var a = estoque.criarNovo("Adesivo Rateio", r("8"), 100, categoria("Adesivo Rateio"), null);
         promocoes.criar(Map.of(boton.getId(), 3), TipoPromocao.A_PARTIR_DE, r("5"));
         Promocao promo = ultimaPromocao();
 
@@ -134,8 +134,8 @@ class RateioVendaTest {
     void descontoDoPacoteERateadoPeloBrutoComOIdDoPacote() {
         Categoria boton = categoria("Bóton Pacote");
         Categoria adesivo = categoria("Adesivo Pacote");
-        var b = estoque.criarNovo("Bóton Pacote", r("6"), 100, boton);
-        var a = estoque.criarNovo("Adesivo Pacote", r("8"), 100, adesivo);
+        var b = estoque.criarNovo("Bóton Pacote", r("6"), 100, boton, null);
+        var a = estoque.criarNovo("Adesivo Pacote", r("8"), 100, adesivo, null);
         promocoes.criar(Map.of(boton.getId(), 2, adesivo.getId(), 1), TipoPromocao.PACOTE, r("15"));
         Promocao pacote = ultimaPromocao();
 
@@ -155,8 +155,8 @@ class RateioVendaTest {
     @Test
     @DisplayName("Ajuste manual para menos e para mais entra no rateio, com sinal; cortesia zera os líquidos")
     void ajustesECortesia() {
-        var p6 = estoque.criarNovo("Caneca Ajuste", r("6"), 100, null);
-        var p12 = estoque.criarNovo("Camiseta Ajuste", r("12"), 100, null);
+        var p6 = estoque.criarNovo("Caneca Ajuste", r("6"), 100, null, null);
+        var p12 = estoque.criarNovo("Camiseta Ajuste", r("12"), 100, null, null);
         Map<Long, Integer> carrinho = Map.of(p6.getId(), 1, p12.getId(), 1);
 
         Venda menos = vender(carrinho, r("17"));
@@ -186,9 +186,9 @@ class RateioVendaTest {
     @Test
     @DisplayName("Dízima: R$ 1,00 de desconto em 3 itens iguais -> 0,34 + 0,33 + 0,33")
     void dizimaDaOCentavoQueSobraAoPrimeiroItem() {
-        var x = estoque.criarNovo("Bóton Dízima X", r("6"), 100, null);
-        var y = estoque.criarNovo("Bóton Dízima Y", r("6"), 100, null);
-        var z = estoque.criarNovo("Bóton Dízima Z", r("6"), 100, null);
+        var x = estoque.criarNovo("Bóton Dízima X", r("6"), 100, null, null);
+        var y = estoque.criarNovo("Bóton Dízima Y", r("6"), 100, null, null);
+        var z = estoque.criarNovo("Bóton Dízima Z", r("6"), 100, null, null);
 
         Venda v = vender(Map.of(x.getId(), 1, y.getId(), 1, z.getId(), 1), r("17"));
 
@@ -213,7 +213,7 @@ class RateioVendaTest {
         for (int i = 0; i < 7; i++) {
             String preco =
                     String.valueOf(1 + aleatorio.nextInt(30)) + "." + String.format("%02d", aleatorio.nextInt(100));
-            lista.add(estoque.criarNovo("Prop " + i, r(preco), 100_000, i % 2 == 0 ? c1 : c2));
+            lista.add(estoque.criarNovo("Prop " + i, r(preco), 100_000, i % 2 == 0 ? c1 : c2, null));
         }
         promocoes.criar(Map.of(c1.getId(), 3), TipoPromocao.A_PARTIR_DE, r("2.50"));
         Long aPartirDe = ultimaPromocao().getId();

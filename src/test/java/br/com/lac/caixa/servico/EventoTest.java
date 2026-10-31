@@ -60,7 +60,7 @@ class EventoTest {
     }
 
     Venda vendaEm(LocalDateTime quando) {
-        var p = estoque.criarNovo("Bóton Evento " + System.nanoTime(), new BigDecimal("6"), 10, null);
+        var p = estoque.criarNovo("Bóton Evento " + System.nanoTime(), new BigDecimal("6"), 10, null, null);
         var v = caixa.registrarVenda(
                         Map.of(p.getId(), 1),
                         List.of(PagamentoInformado.total(FormaPagamento.PIX)),

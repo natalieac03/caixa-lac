@@ -102,7 +102,7 @@ class AlertasTest {
     @Test
     @DisplayName("Produto ativo sem custo: aparece e some ao informar o custo (ou arquivar)")
     void semCusto() throws Exception {
-        var p = estoque.criarNovo("Caneca Sem Custo", r("30"), 5, null);
+        var p = estoque.criarNovo("Caneca Sem Custo", r("30"), 5, null, null);
         String html = inicio();
         assertTrue(html.contains("id=\"alerta-sem-custo\"") && html.contains("Caneca Sem Custo"), html);
 

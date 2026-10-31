@@ -41,10 +41,10 @@ class CsvInjecaoHttpTest {
 
     @BeforeEach
     void produtoComFormula() {
-        var p = estoque.criarNovo(FORMULA + " " + System.nanoTime(), new BigDecimal("6"), 10, null);
+        var p = estoque.criarNovo(FORMULA + " " + System.nanoTime(), new BigDecimal("6"), 10, null, null);
         caixa.registrarVenda(
                 Map.of(p.getId(), 1),
-                List.of(new PagamentoInformado(FormaPagamento.OUTRO, null, "@SUM(1+1)", null)),
+                List.of(new PagamentoInformado(FormaPagamento.OUTRO, null, "@SUM(1+1)", null, null, 0)),
                 null,
                 null,
                 UUID.randomUUID().toString());
