@@ -40,4 +40,12 @@ public interface CobrancaPixRepository extends JpaRepository<CobrancaPix, Long> 
             where v.cancelada = true and p.mpOrderId in :orders
             """)
     List<String> ordersDeVendaCancelada(@Param("orders") List<String> orders);
+
+    @Query("""
+            select new br.com.lac.caixa.repositorio.PixEstornadoDeVenda(c.orderId, c.valor, v.id, v.dataHora)
+            from Venda v join v.pagamentos p join CobrancaPix c on c.orderId = p.mpOrderId
+            where c.status = br.com.lac.caixa.modelo.StatusCobranca.ESTORNADA and v.cancelada = false
+            order by v.dataHora desc, v.id desc
+            """)
+    List<PixEstornadoDeVenda> estornadosDeVendaAtiva();
 }

@@ -6,6 +6,7 @@ import br.com.lac.caixa.modelo.StatusCobranca;
 import br.com.lac.caixa.pix.MercadoPagoException;
 import br.com.lac.caixa.pix.MercadoPagoPix;
 import br.com.lac.caixa.repositorio.CobrancaPixRepository;
+import br.com.lac.caixa.repositorio.PixEstornadoDeVenda;
 import br.com.lac.caixa.repositorio.VendaRepository;
 import br.com.lac.caixa.util.Dinheiro;
 import java.math.BigDecimal;
@@ -209,6 +210,8 @@ public class CobrancaPixService {
         return c.getOrderId();
     }
 
+    static final String ESTORNADO_NO_MERCADO_PAGO = "estornado no Mercado Pago";
+
     static final Duration CARENCIA_SEM_VENDA = Duration.ofMinutes(10);
 
     static final Duration ABANDONADA_APOS = Duration.ofMinutes(20);
@@ -221,7 +224,7 @@ public class CobrancaPixService {
             return false;
         }
         CobrancaPix c = cobranca.get();
-        if (c.getStatus() != StatusCobranca.PENDENTE) return false;
+        if (c.getStatus() != StatusCobranca.PENDENTE && c.getStatus() != StatusCobranca.PAGA) return false;
         StatusCobranca antes = c.getStatus();
         BigDecimal pagoAntes = c.getValorPago();
         CobrancaPix depois = atualizarPeloMercadoPago(c);
@@ -282,7 +285,9 @@ public class CobrancaPixService {
             CobrancaPix alvo = cobrancas.buscarPorIdParaAtualizar(c.getId()).orElseThrow();
             if (!c.getOrderId().equals(alvo.getOrderId())) return alvo;
             alvo.marcarConsultada(agora());
+            boolean estavaPaga = alvo.getStatus() == StatusCobranca.PAGA;
             if (alvo.atualizar(s.status(), s.statusDetail(), s.valorPago(), agora())) {
+                if (estavaPaga) tratarEstornoDePixPago(alvo);
                 auditoria.registrar(
                         "pix_" + alvo.getStatus().name().toLowerCase(),
                         "order",
@@ -294,6 +299,36 @@ public class CobrancaPixService {
             }
             return alvo;
         });
+    }
+
+    private void tratarEstornoDePixPago(CobrancaPix c) {
+        List<Long> vendasAtivas = vendas.ativasComOrder(c.getOrderId());
+        if (!vendasAtivas.isEmpty()) {
+            auditoria.registrar(
+                    "pix_estornado_de_venda_ativa",
+                    "order",
+                    c.getOrderId(),
+                    "venda",
+                    vendasAtivas.getFirst(),
+                    "valor",
+                    c.getValor());
+            return;
+        }
+        if (c.getResolvidaEm() != null) return;
+        c.resolver(ESTORNADO_NO_MERCADO_PAGO, agora());
+        auditoria.registrar(
+                "pix_sem_venda_resolvido",
+                "order",
+                c.getOrderId(),
+                "valor",
+                c.getValorPago(),
+                "resolucao",
+                c.getResolucao());
+    }
+
+    @Transactional(readOnly = true)
+    public List<PixEstornadoDeVenda> estornadosDeVendaAtiva() {
+        return cobrancas.estornadosDeVendaAtiva();
     }
 
     CobrancaPix cancelarNoMercadoPago(CobrancaPix c) {

@@ -111,6 +111,21 @@ class WebhookHttpTest {
     }
 
     @Test
+    @DisplayName("Pix já pago e depois estornado (refunded): o webhook consulta a cobrança PAGA e ela vira ESTORNADA")
+    void pagoEDepoisEstornadoPeloWebhook() throws Exception {
+        String order = gerarPix();
+        FAKE.pagar(order, "18.00");
+        long agora = Instant.now().getEpochSecond();
+        mvc.perform(avisoAssinado(order, UUID.randomUUID().toString(), agora)).andExpect(status().isOk());
+        assertEquals("PAGA", situacao(order));
+
+        FAKE.estornar(order, "refunded");
+        mvc.perform(avisoAssinado(order, UUID.randomUUID().toString(), agora)).andExpect(status().isOk());
+
+        assertEquals("ESTORNADA", situacao(order));
+    }
+
+    @Test
     @DisplayName("Assinatura válida: 200 sem login, consulta a order no Mercado Pago e marca PAGA")
     void assinaturaValida() throws Exception {
         String order = gerarPix();
@@ -194,7 +209,10 @@ class WebhookHttpTest {
                 pagaEm,
                 jdbc.queryForObject(
                         "select cast(paga_em as varchar) from cobranca_pix where order_id = ?", String.class, order));
-        assertEquals(consultas, FAKE.consultas.get(), "já PAGA: não pergunta de novo ao Mercado Pago");
+        assertEquals(
+                consultas + 1,
+                FAKE.consultas.get(),
+                "já PAGA: pergunta de novo (pode ter sido estornada), mas nada muda");
     }
 
     @Test

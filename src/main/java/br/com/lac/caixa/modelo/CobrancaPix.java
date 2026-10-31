@@ -110,7 +110,13 @@ public class CobrancaPix {
     }
 
     public boolean atualizar(String statusMp, String detalheMp, BigDecimal pagoMp, LocalDateTime agora) {
-        if (status != StatusCobranca.PENDENTE || statusMp == null) return false;
+        if (statusMp == null) return false;
+        if (status == StatusCobranca.PAGA) {
+            if (!"refunded".equals(statusMp) && !"charged_back".equals(statusMp)) return false;
+            status = StatusCobranca.ESTORNADA;
+            return true;
+        }
+        if (status != StatusCobranca.PENDENTE) return false;
         switch (statusMp) {
             case "processed" -> {
                 if (pagoMp != null && pagoMp.compareTo(valor) == 0) {

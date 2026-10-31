@@ -4,6 +4,7 @@ import br.com.lac.caixa.consulta.FiltroFinancas;
 import br.com.lac.caixa.consulta.PeriodoDoEvento;
 import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.repositorio.EventoRepository;
+import br.com.lac.caixa.repositorio.PixEstornadoDeVenda;
 import br.com.lac.caixa.servico.financas.EstoqueFinanceiro;
 import br.com.lac.caixa.servico.financas.Financas.LinhaAjuste;
 import br.com.lac.caixa.servico.financas.Financas.LinhaGiro;
@@ -32,6 +33,7 @@ public class AlertasService {
     private final FechamentoService fechamento;
     private final Clock relogio;
     private final EventoService servicoDeEventos;
+    private final CobrancaPixService cobrancasPix;
 
     public AlertasService(
             EstoqueService estoque,
@@ -40,7 +42,8 @@ public class AlertasService {
             OcorrenciasFinanceiras ocorrencias,
             FechamentoService fechamento,
             Clock relogio,
-            EventoService servicoDeEventos) {
+            EventoService servicoDeEventos,
+            CobrancaPixService cobrancasPix) {
         this.estoque = estoque;
         this.eventos = eventos;
         this.estoqueFinanceiro = estoqueFinanceiro;
@@ -48,6 +51,7 @@ public class AlertasService {
         this.fechamento = fechamento;
         this.relogio = relogio;
         this.servicoDeEventos = servicoDeEventos;
+        this.cobrancasPix = cobrancasPix;
     }
 
     public record EstoqueAcabando(Long produtoId, String nome, int estoque, String motivo) {}
@@ -70,7 +74,8 @@ public class AlertasService {
             BigDecimal totalHoje,
             BigDecimal formasHoje,
             LocalDate dia,
-            List<EventoEsquecido> eventosAbertos) {
+            List<EventoEsquecido> eventosAbertos,
+            List<PixEstornadoDeVenda> pixEstornados) {
 
         public boolean isTemAlgo() {
             return total() > 0;
@@ -148,6 +153,21 @@ public class AlertasService {
                                         "Encerrar"))
                                 .toList()));
             }
+            if (!pixEstornados.isEmpty()) {
+                secoes.add(new Secao(
+                        "alerta-pix-estornado",
+                        "Pix estornado de venda ativa",
+                        pixEstornados.stream()
+                                .map(x -> new Aviso(
+                                        "pix-estornado-" + x.orderId(),
+                                        "Venda #" + x.vendaId() + " ("
+                                                + x.dataHora().format(DateTimeFormatter.ofPattern("dd/MM 'às' HH:mm"))
+                                                + "): o Pix de " + Dinheiro.reais(x.valor())
+                                                + " foi devolvido no Mercado Pago. Confira e cancele a venda se for o caso.",
+                                        "/historico?dia=" + x.dataHora().toLocalDate() + "#venda-" + x.vendaId(),
+                                        "Ver a venda"))
+                                .toList()));
+            }
             return secoes;
         }
     }
@@ -171,7 +191,8 @@ public class AlertasService {
                 fechado.total(),
                 fechado.totalFormas(),
                 hoje,
-                eventosEsquecidos(agora));
+                eventosEsquecidos(agora),
+                cobrancasPix.estornadosDeVendaAtiva());
     }
 
     private record GiroDoUltimoEvento(Map<Long, LinhaGiro> porProduto, long dias, String evento) {}

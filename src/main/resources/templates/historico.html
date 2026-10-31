@@ -132,7 +132,7 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr th:each="v : ${vendas}" th:classappend="${v.cancelada} ? 'venda-cancelada'">
+                <tr th:each="v : ${vendas}" th:id="'venda-' + ${v.id}" th:classappend="${v.cancelada} ? 'venda-cancelada'">
                     <td class="num suave" th:text="${v.id}">1</td>
                     <td>
                         <span class="leitura">

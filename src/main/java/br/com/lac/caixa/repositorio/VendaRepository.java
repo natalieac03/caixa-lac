@@ -33,4 +33,7 @@ public interface VendaRepository extends JpaRepository<Venda, Long>, JpaSpecific
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select v from Venda v where v.id = :id")
     Optional<Venda> buscarParaCancelar(@Param("id") Long id);
+
+    @Query("select v.id from Venda v join v.pagamentos p where v.cancelada = false and p.mpOrderId = :order")
+    List<Long> ativasComOrder(@Param("order") String order);
 }

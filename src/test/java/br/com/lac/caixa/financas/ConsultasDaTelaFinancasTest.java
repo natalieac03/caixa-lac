@@ -92,7 +92,7 @@ class ConsultasDaTelaFinancasTest {
         int tela = consultas("/financas?" + MARCO, MediaType.TEXT_HTML);
         int dados = consultas("/financas/dados?" + MARCO, MediaType.APPLICATION_JSON);
         int csv = consultas("/financas/exportar/produtos.csv?" + MARCO, MediaType.ALL);
-        assertTrue(tela <= 31, "a tela fez " + tela + " consultas (antes: 34)");
+        assertTrue(tela <= 32, "a tela fez " + tela + " consultas (antes: 34; +1 do aviso de Pix estornado no sino)");
         assertTrue(dados <= 4, "o JSON dos gráficos fez " + dados + " consultas (antes: 5)");
         assertTrue(csv <= 1, "o CSV de produtos fez " + csv + " consultas (antes: 21)");
     }

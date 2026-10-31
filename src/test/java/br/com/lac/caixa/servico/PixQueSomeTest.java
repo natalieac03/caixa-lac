@@ -19,6 +19,7 @@ import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.modelo.StatusCobranca;
 import br.com.lac.caixa.pix.FakeMercadoPago;
 import br.com.lac.caixa.repositorio.CobrancaPixRepository;
+import br.com.lac.caixa.repositorio.VendaRepository;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.util.List;
@@ -292,5 +293,63 @@ class PixQueSomeTest {
         FAKE.estornar(order, "refunded");
         avancarSegundos(10);
         assertEquals("ESTORNADA", cobrancas.consultar(token, 0).getStatus().name());
+    }
+
+    @Autowired
+    AlertasService alertas;
+
+    @Autowired
+    VendaRepository vendas;
+
+    @Test
+    @DisplayName("Pix pago sem venda e depois estornado: sai sozinho de Pix recebido sem venda, resolvido")
+    void pagoSemVendaEstornadoSaiDaLista() {
+        String token = UUID.randomUUID().toString();
+        String order = cobrancas.gerar(token, 0, new BigDecimal("7")).getOrderId();
+        FAKE.pagar(order, "7.00");
+        cobrancas.atualizarPorOrder(order);
+        avancarSegundos(11 * 60);
+        assertTrue(cobrancas.pixSemVenda().stream().anyMatch(c -> c.getOrderId().equals(order)));
+
+        FAKE.estornar(order, "refunded");
+        cobrancas.atualizarPorOrder(order);
+
+        assertFalse(
+                cobrancas.pixSemVenda().stream().anyMatch(c -> c.getOrderId().equals(order)));
+        var linha = repositorio.findByTokenAndParte(token, 0).orElseThrow();
+        assertEquals(StatusCobranca.ESTORNADA, linha.getStatus());
+        assertEquals("estornado no Mercado Pago", linha.getResolucao());
+    }
+
+    @Test
+    @DisplayName("Pix estornado de uma venda ativa: a venda continua e o sino avisa, com link para ela")
+    void estornoDeVendaAtivaGeraAviso() {
+        String token = UUID.randomUUID().toString();
+        String order = cobrancas.gerar(token, 0, new BigDecimal("6")).getOrderId();
+        FAKE.pagar(order, "6.00");
+        var venda = caixa.registrarVenda(
+                        Map.of(boton.getId(), 1),
+                        List.of(new PagamentoInformado(
+                                FormaPagamento.PIX, null, null, null, OrigemPagamento.MERCADO_PAGO, 0)),
+                        null,
+                        null,
+                        token)
+                .venda();
+
+        FAKE.estornar(order, "charged_back");
+        cobrancas.atualizarPorOrder(order);
+
+        assertEquals(
+                StatusCobranca.ESTORNADA,
+                repositorio.findByTokenAndParte(token, 0).orElseThrow().getStatus());
+        assertFalse(vendas.findById(venda.getId()).orElseThrow().isCancelada(), "a venda não é mexida");
+        var aviso = alertas.calcular().secoes().stream()
+                .filter(x -> x.id().equals("alerta-pix-estornado"))
+                .flatMap(x -> x.avisos().stream())
+                .filter(a -> a.id().equals("pix-estornado-" + order))
+                .findFirst()
+                .orElseThrow();
+        assertTrue(aviso.link().endsWith("#venda-" + venda.getId()), aviso.link());
+        assertTrue(aviso.texto().contains("#" + venda.getId()), aviso.texto());
     }
 }
