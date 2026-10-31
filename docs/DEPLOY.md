@@ -27,6 +27,7 @@ Lidas pelo Railway ou pela JVM (não pelas properties do app):
 
 | Variável | Valor | Para quê |
 |---|---|---|
+| `RAILPACK_JDK_VERSION` | `21` | Fixa o Java 21 no build do Railway: o Railpack não lê o `system.properties`, e o projeto exige Java 21+. |
 | `TZ` | `America/Sao_Paulo` | Fuso da máquina. O app já usa o horário de Brasília sozinho (relógio fixo e `TimeZone.setDefault` no `main`); `TZ` deixa logs e ferramentas do contêiner no mesmo horário. |
 | `RAILWAY_HEALTHCHECK_TIMEOUT_SEC` | `300` | Tempo máximo do healthcheck no deploy. Recomendo criar: vale mesmo sem o `railway.json` (veja a seção 2). |
 

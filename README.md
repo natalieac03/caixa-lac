@@ -1,6 +1,6 @@
 # Caixa LAC 🦫
 
-Caixa eletrônico da Liga Acadêmica de Computação, em **Java 17 + Spring Boot 3.5**, com
+Caixa eletrônico da Liga Acadêmica de Computação, em **Java 21 + Spring Boot 3.5**, com
 banco **PostgreSQL** e telas web (Thymeleaf). Tem três áreas: **Abrir caixa**
 (registrar vendas), **Estoque** (produtos e quantidades) e **Histórico** (todas
 as vendas, com filtro e exportação em CSV). A aba **Descontos** gerencia
@@ -36,7 +36,7 @@ valor, descrição e troco, em `DadosDaParte`), e cada `@Service` é um **Single
 
 ## Rodar no seu computador
 
-Precisa de **Java 17+**. O Maven vem junto pelo Maven Wrapper.
+Precisa de **Java 21+**. O Maven vem junto pelo Maven Wrapper.
 
 ```bash
 ./mvnw spring-boot:run        # Windows: mvnw.cmd spring-boot:run
@@ -312,7 +312,7 @@ A suíte de testes nunca chama o Mercado Pago: usa um servidor HTTP falso.
 
 ## Verificação e dados
 
-Execute a suíte normal com `./mvnw -B verify` (Java 17). Os testes HTTP usam um H2
+Execute a suíte normal com `./mvnw -B verify` (Java 21). Os testes HTTP usam um H2
 em memória, separado do banco local. Com Docker disponível, `PostgresLegadoTest`
 e `PostgresBancoNovoTest` sobem um PostgreSQL 16 (Testcontainers) e repetem a
 migração da produção e a de um banco vazio. No computador, sem Docker, eles são
@@ -417,7 +417,7 @@ nome com a versão nova, e o `<script>` em `templates/financas.html`.
 
 ## CI e Maven Wrapper
 
-O GitHub Actions executa `./mvnw -B verify` com Java 17 em pushes e pull requests
+O GitHub Actions executa `./mvnw -B verify` com Java 21 em pushes e pull requests
 para `main`, sem banco externo nem segredos de produção. A suíte integra Flyway,
 JPA e HTTP usando H2 em memória, e PostgreSQL via Testcontainers (o runner do
 GitHub tem Docker); o H2 local em arquivo é preservado. No CI os testes com

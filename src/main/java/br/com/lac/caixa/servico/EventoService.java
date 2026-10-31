@@ -189,7 +189,7 @@ public class EventoService {
         LocalDateTime fim = e.isAberto() ? agora : e.getFim();
         var conflitos = eventos.sobrepostos(e.getInicio(), fim, agora, ignorar);
         if (!conflitos.isEmpty()) {
-            Evento outro = conflitos.get(0);
+            Evento outro = conflitos.getFirst();
             throw new RegraDeNegocioException("O período cruza o evento \"" + outro.getNome() + "\" ("
                     + outro.getInicio().format(DIA_E_HORA) + " até "
                     + (outro.isAberto() ? "agora, em andamento" : outro.getFim().format(DIA_E_HORA))

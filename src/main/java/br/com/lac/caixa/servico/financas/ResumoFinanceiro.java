@@ -175,7 +175,7 @@ public class ResumoFinanceiro {
             lista.add(new ResumoDoEvento(p.id(), p.nome(), p.inicio(), p.fim(), resumo(FiltroFinancas.doEvento(p))));
         }
         if (!periodos.isEmpty()) {
-            LocalDate de = periodos.get(0).inicio().toLocalDate();
+            LocalDate de = periodos.getFirst().inicio().toLocalDate();
             LocalDate ate = periodos.stream()
                     .map(p -> p.fim().minusNanos(1).toLocalDate())
                     .max(Comparator.naturalOrder())

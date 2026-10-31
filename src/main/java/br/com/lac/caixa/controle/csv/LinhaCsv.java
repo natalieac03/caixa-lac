@@ -21,10 +21,12 @@ public final class LinhaCsv {
     }
 
     private static String formatar(Object campo) {
-        if (campo == null) return "";
-        if (campo instanceof Cru c) return c.texto();
-        if (campo instanceof String s) return ExportadorCSV.campo(s);
-        if (campo instanceof BigDecimal v) return Dinheiro.numero(v);
-        return String.valueOf(campo);
+        return switch (campo) {
+            case null -> "";
+            case Cru c -> c.texto();
+            case String s -> ExportadorCSV.campo(s);
+            case BigDecimal v -> Dinheiro.numero(v);
+            default -> String.valueOf(campo);
+        };
     }
 }

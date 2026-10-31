@@ -197,8 +197,8 @@ public class CaixaService {
 
     private List<PagamentoVenda> partes(List<PagamentoInformado> informados, BigDecimal total, String token) {
         if (informados == null || informados.isEmpty()) return List.of();
-        if (informados.size() == 1 && informados.get(0).valor() == null) {
-            PagamentoInformado unico = informados.get(0);
+        if (informados.size() == 1 && informados.getFirst().valor() == null) {
+            PagamentoInformado unico = informados.getFirst();
             if (total.signum() == 0) return List.of();
             return List.of(parte(unico, total, token));
         }

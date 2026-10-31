@@ -5,6 +5,8 @@ Os porquês que o código não mostra. Uma linha por decisão, com a classe ou a
 ## Railway e implantação
 
 - `server.port=${PORT:8080}`: o Railway define a porta na variável PORT; localmente fica 8080.
+- `RAILPACK_JDK_VERSION=21` (Variables do Railway): o Railpack não lê o `system.properties`; a versão do Java do build vem dessa variável.
+- `spring.threads.virtual.enabled` fica desligado: o `LimiteLogin` usa `synchronized` e as chamadas ao Mercado Pago seguram conexão do banco; ligar threads virtuais pede revisar os dois antes.
 - `server.forward-headers-strategy=native` (prod): o Tomcat só usa o X-Forwarded-For quando a conexão vem da rede privada (o proxy do Railway), então o limite de login conta o IP real de cada pessoa em vez de bloquear todo mundo pelo IP do proxy; cabeçalho vindo direto da internet é ignorado.
 - `management.endpoints` / actuator: só `/actuator/health`, sem detalhes e sem login, para o healthcheck do Railway; a página de descoberta `/actuator` fica desligada porque o actuator não passa pelo interceptor de login.
 - `RelogioConfig`: o relógio é sempre `America/Sao_Paulo`, porque o contêiner do Railway roda em UTC e as colunas de data são TIMESTAMP sem fuso guardando a hora de Brasília.
