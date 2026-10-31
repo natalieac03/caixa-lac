@@ -1,8 +1,6 @@
 package br.com.lac.caixa.modelo;
 
-/**
- * Formas de pagamento aceitas. OUTRO permite digitar uma descricao livre.
- */
+/** Formas de pagamento aceitas no caixa. */
 public enum FormaPagamento {
     PIX("Pix"),
     DEBITO("Débito"),

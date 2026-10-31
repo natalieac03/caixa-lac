@@ -16,10 +16,7 @@ import java.time.LocalDateTime;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/**
- * Um movimento do estoque. quantidade tem sinal (saídas negativas): a soma dos
- * movimentos de um produto é o estoque dele. Imutável depois de criado.
- */
+/** Um movimento do estoque, com sinal: a soma dos movimentos é o estoque do produto. */
 @Entity
 public class MovimentoEstoque {
 
@@ -57,9 +54,6 @@ public class MovimentoEstoque {
 
     protected MovimentoEstoque() {}
 
-    /**
-     * @param unidades quantas unidades (sempre positivo; o sinal vem do tipo)
-     */
     public MovimentoEstoque(
             Produto produto,
             TipoMovimento tipo,
@@ -98,7 +92,6 @@ public class MovimentoEstoque {
         return tipo;
     }
 
-    /** Com sinal: saídas negativas. */
     public int getQuantidade() {
         return quantidade;
     }

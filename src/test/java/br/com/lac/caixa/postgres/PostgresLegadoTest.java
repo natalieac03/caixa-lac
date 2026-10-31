@@ -39,20 +39,14 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-/**
- * O caminho da produção: banco criado pelo Hibernate da versão original,
- * Flyway faz baseline e aplica V2-V5, Hibernate valida. Depois as telas
- * rodam no Postgres de verdade (o H2 aceita SQL que o Postgres recusa).
- */
+/** O caminho da produção: banco da versão original migrado no Postgres sem perder dados. */
 @ExtendWith(ExigeDocker.class)
 @SpringBootTest(properties = {"spring.profiles.active=test"})
 @AutoConfigureMockMvc
 class PostgresLegadoTest {
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
-    /** Total por forma do fechamento antigo (V5), calculado antes da V6 e da V7. */
     static final Map<FormaPagamento, BigDecimal> ANTES = new EnumMap<>(FormaPagamento.class);
 
-    /** Cada venda antiga como estava na V5: forma e valor (as colunas somem na V7). */
     record VendaAntiga(long id, String forma, BigDecimal valor, boolean cancelada) {}
 
     static final List<VendaAntiga> VENDAS_ANTES = new ArrayList<>();
@@ -70,9 +64,6 @@ class PostgresLegadoTest {
                 var s = c.createStatement()) {
             s.execute(sql);
         }
-        // Até a V5, como estava em produção antes do pagamento dividido; o app aplica
-        // depois a V6 e a V7. Mais duas
-        // vendas antigas: uma de valor zero e uma cancelada.
         Flyway.configure()
                 .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
                 .baselineOnMigrate(true)
@@ -87,7 +78,6 @@ class PostgresLegadoTest {
             s.execute(
                     "insert into venda(data_hora, forma_pagamento, valor_total, cancelada, data_cancelamento, motivo_cancelamento)"
                             + " values ('2024-05-10 19:00', 'PIX', 7, true, '2024-05-10 19:05', 'Teste')");
-            // Fechamento como a versão anterior calculava: pela forma da venda, sem canceladas.
             try (var r = s.executeQuery(
                     "select forma_pagamento, count(*), sum(coalesce(valor_cobrado, valor_total)) from venda"
                             + " where not cancelada group by forma_pagamento")) {
@@ -121,33 +111,22 @@ class PostgresLegadoTest {
     @Autowired
     MovimentoEstoqueRepository movimentos;
 
-    /**
-     * Vendas antigas, todas em 10/05/2024: #1 Pix R$ 23 (Bóton Capivara x3,
-     * Adesivo Capivara Grande x1), #2 Outro "Vale" R$ 5 (Bóton Logo LAC x1),
-     * #3 valor zero sem itens (cortesia) e #4 cancelada.
-     */
     @ParameterizedTest(name = "forma={0} inicio={1} fim={2} produto={3}")
     @CsvSource({
-        // vazio
         ",,,,                                  3, 5, 28",
-        // só data
         ",2024-05-10,2024-05-10,,              3, 5, 28",
         ",2024-05-11,,,                        0, 0, 0",
         ",,2024-05-09,,                        0, 0, 0",
-        // só forma
         "PIX,,,,                               1, 4, 23",
         "OUTRO,,,,                             1, 1, 5",
         "DEBITO,,,,                            0, 0, 0",
-        // só produto (trecho, sem diferenciar maiúsculas)
         ",,,CAPIVARA,                          1, 4, 23",
         ",,,logo,                              1, 1, 5",
         ",,,bóton,                             2, 5, 28",
-        // sem diferenciar acento: o banco tira os acentos do nome e o filtro, do termo
         ",,,boton,                             2, 5, 28",
         ",,,BOTON LOGO,                        1, 1, 5",
         ",,,adesivo capivára,                  1, 4, 23",
         ",,,%,                                 0, 0, 0",
-        // todos juntos
         "PIX,2024-05-10,2024-05-10,capivara,   1, 4, 23",
         "PIX,2024-05-10,2024-05-10,logo,       0, 0, 0",
         "OUTRO,2024-05-01,2024-05-31,lac,      1, 1, 5"
@@ -178,13 +157,11 @@ class PostgresLegadoTest {
                 jdbc.queryForObject(
                         "select count(*) from information_schema.tables where table_name in ('venda_itens', 'promocao_itens')",
                         Integer.class));
-        // V10: vendas antigas ficam sem custo (não se inventa custo).
         assertEquals(
                 0,
                 jdbc.queryForObject(
                         "select count(*) from item_venda where venda_id <= 4 and custo_unitario is not null",
                         Integer.class));
-        // V12: rateio retroativo nas vendas antigas com itens; soma dos líquidos = cobrado.
         assertEquals(
                 0,
                 jdbc.queryForObject(
@@ -199,13 +176,11 @@ class PostgresLegadoTest {
                 new BigDecimal("23.00")
                         .compareTo(jdbc.queryForObject(
                                 "select sum(valor_liquido) from item_venda where venda_id = 1", BigDecimal.class)));
-        // V15: partes de pagamento antigas com taxa zero e "sem taxa registrada".
         assertEquals(
                 0,
                 jdbc.queryForObject(
                         "select count(*) from pagamento_venda where venda_id <= 4 and (taxa_registrada or taxa_estimada <> 0)",
                         Integer.class));
-        // V7: a venda antiga (só valor_total) passa a ter cobrado e calculado iguais ao total.
         assertEquals(
                 0,
                 new BigDecimal("23.00")
@@ -222,23 +197,19 @@ class PostgresLegadoTest {
     @DisplayName(
             "Depois da V7: mesmas vendas, uma linha de pagamento por venda antiga e fechamento por forma igual ao de antes")
     void v7MantemVendasEFechamentoDeAntes() {
-        // Arrange: o que havia na V5 (VENDAS_ANTES, ANTES) e o que há agora
         var idsAntigos = VENDAS_ANTES.stream().map(VendaAntiga::id).toList();
         long maiorId = idsAntigos.stream().mapToLong(Long::longValue).max().orElseThrow();
         var depois = fechamento.consultar(null, LocalDate.of(2024, 12, 31));
 
-        // Assert: as colunas legadas sumiram
         assertEquals(
                 0,
                 jdbc.queryForObject(
                         "select count(*) from information_schema.columns where table_name = 'venda'"
                                 + " and column_name in ('forma_pagamento', 'forma_pagamento_outro', 'valor_total')",
                         Integer.class));
-        // Assert: mesma contagem de vendas antigas
         assertEquals(
                 VENDAS_ANTES.size(),
                 jdbc.queryForObject("select count(*) from venda where id <= ?", Integer.class, maiorId));
-        // Assert: cada venda antiga com o mesmo valor cobrado e, se tem valor, uma linha com a forma de antes
         for (VendaAntiga antes : VENDAS_ANTES) {
             BigDecimal cobrado =
                     jdbc.queryForObject("select valor_cobrado from venda where id = ?", BigDecimal.class, antes.id());
@@ -260,7 +231,6 @@ class PostgresLegadoTest {
         }
         assertEquals(
                 "Vale", jdbc.queryForObject("select descricao from pagamento_venda where venda_id = 2", String.class));
-        // Assert: fechamento por forma e total cobrado iguais aos de antes
         for (FormaPagamento forma : FormaPagamento.values()) {
             BigDecimal antes = ANTES.getOrDefault(forma, BigDecimal.ZERO);
             BigDecimal agora = depois.formas().stream()
@@ -321,7 +291,6 @@ class PostgresLegadoTest {
                         .compareTo(jdbc.queryForObject(
                                 "select valor_cobrado from venda where id = ?", java.math.BigDecimal.class, id)));
         assertEquals(antes - 2, jdbc.queryForObject("select quantidade from produto where id = 3", Integer.class));
-        // Venda nova no Postgres: rateio na hora (não retroativo) e líquidos = cobrado.
         assertEquals(
                 0,
                 new BigDecimal("14")
@@ -334,7 +303,6 @@ class PostgresLegadoTest {
                 .andExpect(redirectedUrl("/historico"));
         assertEquals(antes, jdbc.queryForObject("select quantidade from produto where id = 3", Integer.class));
         assertTrue(jdbc.queryForObject("select cancelada from venda where id = ?", Boolean.class, id));
-        // V11: saldo inicial + venda + devolução batem com a quantidade.
         mvc.perform(post("/estoque/compra")
                         .sessionAttr("autenticado", true)
                         .param("produtoId", "3")

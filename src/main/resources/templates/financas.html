@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Painel de Finanças: filtros, cartões, demonstrativo, gráficos, rankings e estoque. -->
 <html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head('Finanças')}"></head>
 <body>
@@ -58,7 +59,6 @@
     <div th:if="${painel.vazio}" th:replace="~{fragments/financas :: metas(${painel})}"></div>
 
     <th:block th:unless="${painel.vazio}" th:with="R=${T(br.com.lac.caixa.util.Dinheiro)}">
-    <!--/* 4. Cartões */-->
     <section aria-labelledby="titulo-indicadores">
         <h2 id="titulo-indicadores" class="sr-only">Indicadores</h2>
         <div th:replace="~{fragments/financas :: cartoes(${painel})}"></div>
@@ -66,7 +66,6 @@
         <div th:replace="~{fragments/financas :: metas(${painel})}"></div>
     </section>
 
-    <!--/* 5. Demonstrativo */-->
     <section class="cartao tabela-area" aria-labelledby="titulo-demonstrativo">
         <div class="cabecalho-secao"><h2 id="titulo-demonstrativo">Demonstrativo</h2>
         <a class="botao botao-secundario botao-pequeno exportar-csv" th:href="@{/financas/exportar/demonstrativo.csv} + '?' + ${f.consulta()} + '&metrica=' + ${metrica}">Exportar CSV</a></div>
@@ -74,7 +73,6 @@
         <p class="ajuda" id="regra-despesas">Despesas: a ligada a um evento conta no evento e no dia em que ele começa; a sem evento, na data dela.</p>
     </section>
 
-    <!--/* 6. Série */-->
     <section class="cartao" aria-labelledby="titulo-serie">
         <div class="cabecalho-secao"><h2 id="titulo-serie" th:text="'Receita líquida e lucro bruto ' + ${painel.serie.granularidade.rotulo}">Receita e lucro por dia</h2>
         <a class="botao botao-secundario botao-pequeno exportar-csv" th:href="@{/financas/exportar/serie.csv} + '?' + ${f.consulta()} + '&metrica=' + ${metrica}">Exportar CSV</a></div>
@@ -92,7 +90,6 @@
         </table></div>
     </section>
 
-    <!--/* 7. Produtos */-->
     <section class="cartao" aria-labelledby="titulo-produtos" id="secao-produtos">
         <div class="cabecalho-secao"><h2 id="titulo-produtos">Ranking de produtos</h2>
         <a class="botao botao-secundario botao-pequeno exportar-csv" th:href="@{/financas/exportar/produtos.csv} + '?' + ${f.consulta()} + '&metrica=' + ${metrica}">Exportar CSV</a></div>
@@ -152,7 +149,6 @@
         <p class="ajuda">Curva ABC por receita líquida: A são os produtos que somam os primeiros 80% da receita; B, até 95%; C, o resto.</p>
     </section>
 
-    <!--/* 8. Categorias com drill-down */-->
     <section class="cartao" aria-labelledby="titulo-categorias" id="secao-categorias">
         <div class="cabecalho-secao"><h2 id="titulo-categorias">Categorias</h2>
         <a class="botao botao-secundario botao-pequeno exportar-csv" th:href="@{/financas/exportar/categorias.csv} + '?' + ${f.consulta()} + '&metrica=' + ${metrica}">Exportar CSV</a></div>
@@ -213,7 +209,6 @@
         </div>
     </section>
 
-    <!--/* 9. Formas de pagamento */-->
     <section class="cartao" aria-labelledby="titulo-formas">
         <div class="cabecalho-secao"><h2 id="titulo-formas">Formas de pagamento</h2>
         <a class="botao botao-secundario botao-pequeno exportar-csv" th:unless="${painel.formas.isEmpty()}" th:href="@{/financas/exportar/formas.csv} + '?' + ${f.consulta()} + '&metrica=' + ${metrica}">Exportar CSV</a></div>
@@ -250,7 +245,6 @@
         </th:block>
     </section>
 
-    <!--/* 10. Mapa de calor */-->
     <section class="cartao" aria-labelledby="titulo-mapa">
         <div class="cabecalho-secao"><h2 id="titulo-mapa">Vendas por dia da semana e hora</h2>
         <a class="botao botao-secundario botao-pequeno exportar-csv" th:href="@{/financas/exportar/mapa.csv} + '?' + ${f.consulta()} + '&metrica=' + ${metrica}">Exportar CSV</a></div>
@@ -270,7 +264,6 @@
         <p class="ajuda">O número em cada célula é a quantidade de vendas; a cor mais forte só reforça as horas de maior movimento.</p>
     </section>
 
-    <!--/* 11. Promoções */-->
     <section class="cartao tabela-area" aria-labelledby="titulo-promocoes">
         <div class="cabecalho-secao"><h2 id="titulo-promocoes">Promoções</h2>
         <a class="botao botao-secundario botao-pequeno exportar-csv" th:href="@{/financas/exportar/promocoes.csv} + '?' + ${f.consulta()} + '&metrica=' + ${metrica}">Exportar CSV</a></div>
@@ -290,7 +283,6 @@
     </section>
     </th:block>
 
-    <!--/* 12. Estoque (aparece mesmo sem vendas: os parados importam) */-->
     <section class="cartao" aria-labelledby="titulo-estoque" th:with="R=${T(br.com.lac.caixa.util.Dinheiro)}">
         <h2 id="titulo-estoque">Estoque</h2>
         <div class="indicadores">

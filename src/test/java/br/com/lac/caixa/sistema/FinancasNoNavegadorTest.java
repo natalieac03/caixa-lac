@@ -19,7 +19,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.ApplicationContext;
 
-/** A tela de Finanças num Chromium, com a massa fixa: cartões e demonstrativo com os números calculados à mão. */
+/** A tela de Finanças num Chromium, com a massa fixa. */
 @ExtendWith(Navegador.class)
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -67,7 +67,6 @@ class FinancasNoNavegadorTest {
     void cartoesEDemonstrativo() {
         pagina.navigate(url(MARCO));
 
-        // Cartões (comparados com 14/02 a 28/02, sem vendas)
         assertThat(pagina.locator("#cartao-receita .indicador-valor")).hasText("R$ 229,00");
         assertThat(pagina.locator("#cartao-lucro .indicador-valor")).hasText("R$ 26,42");
         assertThat(pagina.locator("#cartao-margem .indicador-valor")).hasText("63,54%");
@@ -77,7 +76,6 @@ class FinancasNoNavegadorTest {
         assertThat(pagina.locator("#cartao-receita .variacao")).containsText("antes era zero");
         assertThat(pagina.locator("#aviso-parcial")).containsText("R$ 46,00");
 
-        // Demonstrativo: valor e % da receita líquida
         var linhas = pagina.locator("#demonstrativo tbody tr");
         List<String> esperado = List.of(
                 "Receita bruta R$ 257,00 112,23%",
@@ -95,7 +93,6 @@ class FinancasNoNavegadorTest {
                 .toList();
         org.junit.jupiter.api.Assertions.assertEquals(esperado, lidas);
 
-        // Gráficos desenhados a partir do JSON
         assertThat(pagina.locator("#financas")).hasAttribute("data-graficos", "prontos");
         pagina.screenshot(new Page.ScreenshotOptions()
                 .setPath(Path.of("target", "financas-marco.png"))
@@ -150,7 +147,6 @@ class FinancasNoNavegadorTest {
         var menu = pagina.locator("details.menu-grupo");
         var itens = menu.locator(".menu-grupo-itens");
         assertThat(itens).isHidden();
-        // Só um item no topo para as quatro telas
         assertThat(
                         pagina.locator(
                                 ".nav-links > a[href='/eventos'], .nav-links > a[href='/despesas'], .nav-links > a[href='/taxas']"))
@@ -167,11 +163,9 @@ class FinancasNoNavegadorTest {
         menu.locator("summary").click();
         itens.getByText("Despesas").click();
         pagina.waitForURL(url("/despesas"));
-        // Numa tela do grupo, o item Finanças fica marcado e a tela atual também
         assertThat(pagina.locator("details.menu-grupo summary")).hasClass(java.util.regex.Pattern.compile("ativo"));
         pagina.locator("details.menu-grupo summary").click();
         assertThat(pagina.locator(".menu-grupo-itens a[aria-current='page']")).hasText("Despesas");
-        // Clicar fora fecha
         pagina.locator("h1").click();
         assertThat(pagina.locator(".menu-grupo-itens")).isHidden();
     }

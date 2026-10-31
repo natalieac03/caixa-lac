@@ -1,12 +1,5 @@
-/* ============================================================
-   Caixa LAC — design system da Liga (cores do brasão).
-   roxo = estrutura e ação principal · laranja = destaque de uma
-   ação por tela · verde = confirmação · coral = erro · céu e ipê
-   = identidade. Tema claro por padrão; escuro segue o sistema.
-   ============================================================ */
-
+/* Estilo do Caixa LAC: tokens de cor da Liga, temas claro e escuro e o layout de cada tela. */
 :root {
-    /* superfícies e texto */
     --fundo: #f6f2fb;
     --papel: #ffffff;
     --papel-hover: #faf7fd;
@@ -15,7 +8,6 @@
     --tinta: #231a38;
     --tinta-suave: #625878;
 
-    /* marca */
     --roxo: #8a00f4;
     --roxo-forte: #6a00bd;
     --roxo-fundo: #f0e4ff;
@@ -46,7 +38,6 @@
     --petroleo: #40727b;
     --foco: var(--roxo);
 
-    /* espaço, raio, sombra */
     --espaco-1: 4px;  --espaco-2: 8px;  --espaco-3: 12px; --espaco-4: 16px;
     --espaco-5: 20px; --espaco-6: 24px; --espaco-8: 32px; --espaco-10: 40px;
     --raio-xs: 4px; --raio-sm: 10px; --raio-md: 12px; --raio-lg: 14px; --raio-pill: 999px;
@@ -55,12 +46,10 @@
     --sombra-destaque-forte: 0 6px 28px rgba(244, 141, 0, 0.7);
     --sombra-menu: 0 8px 24px rgba(35, 26, 56, 0.14);
 
-    /* tipografia */
     --font-display: "Baloo 2", "Nunito Sans", system-ui, sans-serif;
     --font-texto: "Nunito Sans", system-ui, sans-serif;
     --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
-    /* compatibilidade com estilos inline antigos */
     --suave: var(--tinta-suave);
     --borda: var(--linha);
     --raio: var(--raio-lg);
@@ -68,7 +57,6 @@
     color-scheme: light;
 }
 
-/* Tema escuro: escolhido no botão (data-tema="escuro") ou, sem escolha, seguindo o sistema. */
 :root[data-tema="escuro"] {
     --fundo: #140e1f;
     --papel: #1d1530;
@@ -159,7 +147,6 @@
     }
 }
 
-/* ---------- Base ---------- */
 * { box-sizing: border-box; }
 
 html { -webkit-text-size-adjust: 100%; }
@@ -201,7 +188,6 @@ p { margin: 0 0 0.6em; }
 
 .icone { width: 18px; height: 18px; flex: none; }
 
-/* ---------- Barra superior ---------- */
 .topo {
     background: var(--papel);
     border-bottom: 1px solid var(--linha);
@@ -259,13 +245,11 @@ p { margin: 0 0 0.6em; }
 .nav-links button.sair:hover { background: var(--roxo-fundo); }
 .nav-links a.ativo { background: var(--roxo); color: var(--on-roxo); }
 .nav-links a.ativo .icone { color: var(--on-roxo); }
-/* Sair é um botão de formulário (logout por POST), com cara de link. */
 .nav-links .form-sair { display: inline-flex; margin: 0; }
 .nav-links button.sair { border: 0; background: none; font-family: inherit; cursor: pointer; }
 .nav-links .sair { color: var(--tinta-suave); margin-left: 6px; }
 .nav-links .sair .icone { color: var(--tinta-suave); }
 
-/* ---------- Botão de tema (sol / lua) ---------- */
 .botao-tema {
     order: 3;
     display: inline-grid;
@@ -292,7 +276,6 @@ p { margin: 0 0 0.6em; }
 .nav-links { order: 2; }
 .botao-tema-flutuante { position: fixed; top: 16px; right: 16px; z-index: 30; }
 
-/* ---------- Layout ---------- */
 .conteudo {
     max-width: 1120px;
     margin: 0 auto;
@@ -310,7 +293,6 @@ p { margin: 0 0 0.6em; }
 .cabecalho-pagina h1 { margin: 0; }
 .cabecalho-pagina p { margin: 2px 0 0; color: var(--tinta-suave); font-size: 15px; }
 
-/* ---------- Cartões ---------- */
 .cartao {
     background: var(--papel);
     border: 1px solid var(--linha);
@@ -330,7 +312,6 @@ p { margin: 0 0 0.6em; }
 }
 .cartao-cabecalho h2 { margin: 0; }
 
-/* Card destacado ("Produto novo", "Nova promoção") */
 .cartao-lac {
     background: var(--roxo-fundo);
     border-color: var(--roxo-suave);
@@ -346,7 +327,6 @@ p { margin: 0 0 0.6em; }
 }
 .cartao-lac .corpo { padding: 22px 24px; }
 
-/* ---------- Indicadores ---------- */
 .indicadores {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
@@ -381,7 +361,6 @@ p { margin: 0 0 0.6em; }
 .indicador-valor.alerta { color: var(--coral-texto); }
 .indicador-rodape { font-size: 13px; color: var(--tinta-suave); margin-top: 2px; }
 
-/* ---------- Botões ---------- */
 .botao {
     display: inline-flex;
     align-items: center;
@@ -429,7 +408,6 @@ p { margin: 0 0 0.6em; }
     transform: none;
 }
 
-/* ---------- Formulários ---------- */
 label { font-weight: 600; font-size: 14px; color: var(--roxo-forte); }
 input[type=text], input[type=number], input[type=date], input[type=time],
 input[type=password], input[type=search], select, textarea {
@@ -476,7 +454,6 @@ input[type=checkbox], input[type=radio] { accent-color: var(--roxo); width: 18px
 }
 .busca input { padding-left: 38px; }
 
-/* Seletor de quantidade: − [ n ] + */
 .passo {
     display: inline-flex;
     align-items: stretch;
@@ -513,7 +490,6 @@ input[type=checkbox], input[type=radio] { accent-color: var(--roxo); width: 18px
 .passo input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .passo input:focus { outline-offset: -2px; }
 
-/* Escolha em pílulas (forma de pagamento) */
 .pilulas { display: flex; flex-wrap: wrap; gap: 8px; border: none; padding: 0; margin: 0; }
 .pilulas legend { font-weight: 600; font-size: 14px; color: var(--roxo-forte); margin-bottom: 8px; padding: 0; }
 .pilula { position: relative; }
@@ -533,7 +509,6 @@ input[type=checkbox], input[type=radio] { accent-color: var(--roxo); width: 18px
 .pilula input:checked + span { background: var(--roxo); border-color: var(--roxo); color: var(--on-roxo); }
 .pilula input:focus-visible + span { outline: 2px solid var(--foco); outline-offset: 2px; }
 
-/* ---------- Tabelas ---------- */
 .tabela-area { overflow-x: auto; }
 table.dados {
     width: 100%;
@@ -576,7 +551,6 @@ table.dados th.num, table.dados td.num { text-align: right; }
 .ajuste-estoque input[type=number] { width: 72px; min-height: 34px; padding: 5px 8px; text-align: center; font-family: var(--font-mono); }
 .ajuste-estoque .botao { min-width: 92px; }
 
-/* ---------- Selos ---------- */
 .selo {
     display: inline-block;
     padding: 3px 11px;
@@ -599,7 +573,6 @@ table.dados th.num, table.dados td.num { text-align: right; }
 
 .esgotado { color: var(--coral-texto); font-weight: 700; }
 
-/* ---------- Avisos (flash) ---------- */
 .aviso {
     border-radius: var(--raio-lg);
     padding: 14px 18px;
@@ -627,7 +600,6 @@ table.dados th.num, table.dados td.num { text-align: right; }
     margin-bottom: 2px;
 }
 
-/* ---------- Imagens ---------- */
 .midia {
     width: 280px;
     max-width: 80%;
@@ -639,7 +611,6 @@ table.dados th.num, table.dados td.num { text-align: right; }
 .midia img { width: 100%; height: auto; object-fit: contain; }
 .emoji-fallback { font-size: 120px; line-height: 1; }
 
-/* ---------- Início ---------- */
 .hero-caixa { text-align: center; padding: 30px 20px 10px; }
 .hero-caixa p { color: var(--tinta-suave); margin-top: 4px; }
 .hero-inicio { padding-top: 16px; }
@@ -678,9 +649,6 @@ table.dados th.num, table.dados td.num { text-align: right; }
 .atalho .atalho-icone .icone { width: 22px; height: 22px; }
 .atalho strong { font-family: var(--font-display); font-size: 19px; color: var(--roxo-forte); line-height: 1.2; }
 .atalho span { font-size: 14px; color: var(--tinta-suave); }
-/* O cartão principal (Nova venda) é o único preenchido: roxo do tema com texto on-roxo
-   (contraste AA: 6,2:1 no claro e 6,4:1 no escuro). O laranja fica só no acento da
-   borda de baixo e no foco, como nos outros destaques pequenos. */
 .atalho-destaque {
     background: var(--roxo); border-color: var(--roxo); color: var(--on-roxo);
     border-bottom: 4px solid var(--laranja);
@@ -690,7 +658,6 @@ table.dados th.num, table.dados td.num { text-align: right; }
 .atalho-destaque .atalho-icone { background: var(--on-roxo); color: var(--roxo); }
 .atalho-destaque strong, .atalho-destaque span { color: var(--on-roxo); }
 
-/* ---------- Tela "Abrir caixa" ---------- */
 .palco-caixa {
     text-align: center;
     padding: 36px 20px 40px;
@@ -737,7 +704,6 @@ table.dados th.num, table.dados td.num { text-align: right; }
     color: var(--tinta-suave);
 }
 
-/* ---------- Nova venda: duas colunas ---------- */
 .venda-grade {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 360px;
@@ -782,7 +748,6 @@ table.dados th.num, table.dados td.num { text-align: right; }
 .barra-inferior { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
 .barra-inferior .botao-principal { flex: 1; }
 
-/* ---------- Descontos ---------- */
 .explica-tipos {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -839,7 +804,6 @@ table.dados th.num, table.dados td.num { text-align: right; }
     font-family: var(--font-mono);
 }
 
-/* ---------- Histórico: editar dia e hora ---------- */
 .editavel {
     font: inherit;
     font-family: var(--font-mono);
@@ -867,7 +831,6 @@ table.dados th.num, table.dados td.num { text-align: right; }
 .edicao input[type=date] { min-width: 150px; }
 .edicao-data input[type=time] { width: auto; min-width: 100px; }
 
-/* ---------- Login / erro ---------- */
 .tela-centro {
     min-height: 100vh;
     display: grid;
@@ -892,13 +855,9 @@ table.dados th.num, table.dados td.num { text-align: right; }
     min-height: 50px;
 }
 
-/* ============================================================
-   Responsivo
-   ============================================================ */
 @media (max-width: 960px) {
     .venda-grade { grid-template-columns: 1fr; }
     .venda-lateral { position: static; }
-    /* No celular/tablet o botão de confirmar (que mostra o total) fica preso no rodapé. */
     .barra-fixa {
         position: fixed;
         left: 0; right: 0; bottom: 0;
@@ -967,15 +926,12 @@ table.dados th.num, table.dados td.num { text-align: right; }
     .atalho span { display: none; }
 }
 
-/* Vendas canceladas continuam visíveis para auditoria. */
 .dados tr.venda-cancelada td { text-decoration: line-through; opacity: .65; }
 
-/* Pagamento dividido no histórico: um selo por parte. */
 td.pagamento { white-space: normal; }
 td.pagamento .selo { margin: 1px 0; }
 .mais-pagamento { margin: 0 4px; color: var(--tinta-suave); font-weight: 700; }
 
-/* Pagamento dividido na tela de venda. */
 .linha-pagamento {
     display: flex;
     flex-wrap: wrap;
@@ -993,13 +949,11 @@ td.pagamento .selo { margin: 1px 0; }
 .saldo-falta { color: var(--coral-texto); }
 .saldo-ok { color: var(--verde-texto); }
 
-/* Edição inline no estoque e lista de categorias. */
 tr.linha-edicao td { background: var(--roxo-fundo); }
 tr.linha-edicao.oculto { display: none; }
 .form-edicao .acoes-linha { margin-top: 8px; }
 .linha-categoria { align-items: flex-end; margin-top: 8px; }
 
-/* Pix automático (Mercado Pago) na tela de venda. */
 .painel-pix { display: flex; flex-direction: column; gap: 6px; }
 .painel-pix .qr-area { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .painel-pix .qr-area.oculto, .painel-pix .acoes-linha.oculto { display: none; }
@@ -1009,19 +963,15 @@ tr.linha-edicao.oculto { display: none; }
 .linha-pagamento .campo-pix { flex: 1 1 100%; }
 .linha-pagamento .campo-pix.oculto { display: none; }
 
-/* Custo no estoque. */
 .selo-sem-custo { background: var(--coral-fundo); color: var(--coral-texto); }
 .selo-retroativo { background: var(--coral-fundo); color: var(--coral-texto); margin-left: 4px; }
 .check-inline { display: flex; align-items: center; gap: 6px; font-weight: 400; margin-top: 4px; }
 
-/* Eventos: nome do evento sob a data da venda no histórico. */
 .evento-da-venda { display: block; font-size: .8rem; color: var(--tinta-suave); }
 
-/* Aviso informativo em texto corrido (Despesas, Taxas). */
 .aviso-info { display: block; background: var(--ceu-fundo); color: var(--ceu-texto); font-weight: 400; }
 .aviso-info a { color: inherit; font-weight: 700; }
 
-/* ---------- Finanças ---------- */
 .atalhos-periodo { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
 .atalhos-periodo a {
     padding: 6px 14px; border-radius: 999px; border: 1px solid var(--linha);
@@ -1065,7 +1015,6 @@ table.ordenavel th[aria-sort="descending"] button::after { content: " ▼"; }
 .cabecalho-secao { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
 .cabecalho-secao h2, .cabecalho-secao h3 { margin: 0; }
 
-/* ---------- Relatório do evento (tela e impressão A4) ---------- */
 .relatorio { max-width: 980px; margin: 0 auto; padding: 20px 16px 40px; }
 .barra-relatorio { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 .cabecalho-relatorio { border-bottom: 3px solid var(--roxo); margin-bottom: 16px; padding-bottom: 8px; }
@@ -1100,14 +1049,11 @@ table.ordenavel th[aria-sort="descending"] button::after { content: " ▼"; }
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
-
-/* Metas do evento */
 .metas { display: grid; gap: 12px; margin: 0 0 20px; }
 .meta-texto { margin-bottom: 4px; }
 .barra-meta { height: 14px; border-radius: 999px; background: var(--linha); overflow: hidden; border: 1px solid var(--linha-forte); }
 .barra-meta-cheia { height: 100%; background: var(--verde); }
 
-/* Menu Finanças (agrupa painel, eventos, despesas e taxas) */
 .menu-grupo { position: relative; }
 .menu-grupo summary {
     list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
@@ -1126,7 +1072,6 @@ table.ordenavel th[aria-sort="descending"] button::after { content: " ▼"; }
 }
 .nav-links .menu-grupo-itens a { border-radius: var(--raio-sm); padding: 8px 12px; }
 @media (max-width: 640px) {
-    /* No celular a barra rola de lado: o grupo abre como uma folha presa ao pé da tela. */
     .menu-grupo { flex: none; }
     .menu-grupo summary { padding: 6px 11px; font-size: 14px; }
     .menu-grupo summary .icone:not(.seta-menu) { display: none; }
@@ -1137,7 +1082,6 @@ table.ordenavel th[aria-sort="descending"] button::after { content: " ▼"; }
     .nav-links .menu-grupo-itens a { padding: 12px 14px; font-size: 16px; }
 }
 
-/* ---------- Sininho de avisos ---------- */
 .avisos { order: 3; position: relative; flex: none; }
 .botao-sino {
     position: relative; display: inline-grid; place-items: center; width: 38px; height: 38px;
@@ -1165,11 +1109,9 @@ table.ordenavel th[aria-sort="descending"] button::after { content: " ▼"; }
     .avisos { order: 2; margin-left: auto; }
     .avisos + .botao-tema { margin-left: 0; }
     .botao-sino { width: 36px; height: 36px; }
-    /* No celular o painel ocupa a largura da tela, logo abaixo da barra. */
     .painel-avisos { position: fixed; left: 0; right: 0; width: auto; top: var(--topo-avisos, 96px); border-radius: 0 0 var(--raio-md) var(--raio-md); max-height: calc(100vh - var(--topo-avisos, 96px)); }
 }
 
-/* ---------- Evento em andamento (topo e tela inicial) ---------- */
 .evento-topo { order: 3; display: inline-flex; align-items: center; gap: 6px; position: relative; flex: none; }
 .selo-evento {
     display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px;

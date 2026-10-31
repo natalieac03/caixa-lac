@@ -13,12 +13,7 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Taxas por forma de pagamento com vigência. Uma taxa nova vale de uma data em
- * diante (hoje ou no futuro); vigência no passado é recusada, porque as vendas
- * já gravaram a taxa da época e não mudariam. Na mesma forma e data, a nova
- * substitui a anterior.
- */
+/** Taxas por forma de pagamento com vigência de uma data em diante. */
 @Service
 public class TaxaService {
     private final TaxaPagamentoRepository taxas;

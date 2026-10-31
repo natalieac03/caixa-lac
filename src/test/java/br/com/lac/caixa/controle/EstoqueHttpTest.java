@@ -44,7 +44,6 @@ class EstoqueHttpTest {
         p = produtos.save(p);
     }
 
-    /** POST logado com os campos; espera redirect com a mensagem de erro no flash. */
     void assertRecusa(String url, String mensagem, String... campos) throws Exception {
         var req = post(url).sessionAttr("autenticado", true);
         for (int i = 0; i < campos.length; i += 2) req.param(campos[i], campos[i + 1]);
@@ -58,10 +57,8 @@ class EstoqueHttpTest {
     @Test
     @DisplayName("Adicionar e remover unidades exigem pelo menos 1 unidade, sem mudar o estoque")
     void adicionarERemoverExigemPeloMenosUmaUnidade() throws Exception {
-        // Arrange
         String base = "/estoque/" + p.getId();
 
-        // Act / Assert
         assertRecusa(base + "/adicionar", "Quantidade deve ser maior que zero.", "quantidade", "0");
         assertRecusa(base + "/adicionar", "Quantidade deve ser maior que zero.", "quantidade", "-3");
         assertRecusa(base + "/remover-unidades", "Quantidade deve ser maior que zero.", "quantidade", "0");
@@ -71,7 +68,6 @@ class EstoqueHttpTest {
     @Test
     @DisplayName("A validação dos parâmetros roda antes de buscar o produto ou a categoria")
     void validacaoRodaAntesDeBuscarOProduto() throws Exception {
-        // Sem @Min a mensagem seria "Produto não encontrado"; sem @PositiveOrZero, "Escolha uma categoria".
         assertRecusa("/estoque/999999/adicionar", "Quantidade deve ser maior que zero.", "quantidade", "0");
         assertRecusa("/estoque/999999/remover-unidades", "Quantidade deve ser maior que zero.", "quantidade", "0");
         assertRecusa(
@@ -88,11 +84,9 @@ class EstoqueHttpTest {
     @Test
     @DisplayName("Cadastro recusa quantidade negativa e preço zero, sem criar produto")
     void cadastroRecusaQuantidadeNegativaEPrecoZero() throws Exception {
-        // Arrange
         long antes = produtos.count();
         String categoria = cat.getId().toString();
 
-        // Act / Assert
         assertRecusa(
                 "/estoque/novo",
                 "Quantidade não pode ser negativa.",

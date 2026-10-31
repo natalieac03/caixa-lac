@@ -23,7 +23,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
-/** Fechamento: o total Pix separado em Mercado Pago e manual, para conferir com cada extrato. */
+/** Fechamento com o Pix separado em Mercado Pago e manual. */
 @SpringBootTest(
         properties = {
             "spring.profiles.active=test",
@@ -60,9 +60,7 @@ class FechamentoPixTest {
     @Test
     @DisplayName("Pix do Mercado Pago e Pix manual somam separados e batem com o total Pix; cancelada fica fora")
     void pixSeparadoPorOrigem() {
-        // Arrange: produto de R$ 6,00
         var p = produtos.save(new Produto("Bóton Fechamento", new BigDecimal("6"), 100));
-        // Venda 1: dividida, Pix MP R$ 10 + dinheiro R$ 8
         String t1 = UUID.randomUUID().toString();
         String order = cobrancas.gerar(t1, 7, new BigDecimal("10")).getOrderId();
         FAKE.pagar(order, "10.00");
@@ -75,14 +73,12 @@ class FechamentoPixTest {
                 null,
                 null,
                 t1);
-        // Venda 2: Pix manual R$ 12
         caixa.registrarVenda(
                 Map.of(p.getId(), 2),
                 List.of(new PagamentoInformado(FormaPagamento.PIX, null, null, null, OrigemPagamento.MANUAL, 0)),
                 null,
                 null,
                 UUID.randomUUID().toString());
-        // Venda 3: Pix manual R$ 6, cancelada
         var cancelada = caixa.registrarVenda(
                         Map.of(p.getId(), 1),
                         List.of(PagamentoInformado.total(FormaPagamento.PIX)),
@@ -92,11 +88,9 @@ class FechamentoPixTest {
                 .venda();
         caixa.cancelarVenda(cancelada.getId(), "Teste");
 
-        // Act
         var hoje = LocalDate.now();
         var r = fechamento.consultar(hoje, hoje);
 
-        // Assert
         assertEquals(0, new BigDecimal("10").compareTo(r.pixMercadoPago()));
         assertEquals(0, new BigDecimal("12").compareTo(r.pixManual()));
         assertTrue(r.isPixConfere());

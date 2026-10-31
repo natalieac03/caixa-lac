@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+/** Tela do histórico: filtros, CSV, correção de data, cancelamento e Pix sem venda. */
 @Controller
 public class HistoricoController {
     private static final DateTimeFormatter DIA_E_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm");
@@ -51,7 +52,6 @@ public class HistoricoController {
         this.relogio = relogio;
     }
 
-    /** Evento (vale como período), Dia a dia (dentro das datas) ou Todos. */
     private FiltroHistorico filtro(
             FormaPagamento forma, String inicio, String fim, String dia, String produto, SeletorDeEvento sel) {
         PeriodoDoEvento periodo = sel.id() == null ? null : eventos.periodo(sel.id());
@@ -85,7 +85,6 @@ public class HistoricoController {
         model.addAttribute("fim", filtro.fim());
         model.addAttribute("evento", sel.valor());
         model.addAttribute("eventos", eventos.listar());
-        // Evento de cada venda, calculado pela data e hora (não há vínculo gravado).
         model.addAttribute("eventoDaVenda", new EventosDaVenda(eventos.periodos()));
         return "historico";
     }
@@ -131,7 +130,6 @@ public class HistoricoController {
         return "redirect:/historico";
     }
 
-    /** Pix recebido sem venda: alguém resolveu à mão (estornou, lançou a venda...). */
     @PostMapping("/historico/pix/{id}/resolver")
     public String resolverPix(@PathVariable Long id, @RequestParam String como, RedirectAttributes flash) {
         cobrancasPix.resolver(id, como);

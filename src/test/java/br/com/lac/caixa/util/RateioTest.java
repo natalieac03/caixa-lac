@@ -11,6 +11,7 @@ import java.util.Random;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+/** Rateio pelo maior resto: soma exata, sinais e pesos zero. */
 class RateioTest {
 
     static long[] c(long... centavos) {
@@ -42,9 +43,7 @@ class RateioTest {
     @DisplayName("Dízima: R$ 10,00 em 3 itens iguais -> 3,34 + 3,33 + 3,33 (o centavo vai para o primeiro)")
     void dizima() {
         assertArrayEquals(c(334, 333, 333), Rateio.ratear(1000, c(600, 600, 600), null));
-        // Maior resto: 100 x (1, 1, 1) / 3 = 33,33... cada; o resto empata e o primeiro leva.
         assertArrayEquals(c(34, 33, 33), Rateio.ratear(100, c(1, 1, 1), null));
-        // Restos diferentes: quem tem o maior resto leva o centavo, não o primeiro.
         assertArrayEquals(c(33, 67), Rateio.ratear(100, c(100, 200), null));
         assertArrayEquals(c(1, 1, 0), Rateio.ratear(2, c(300, 400, 300), null));
     }
@@ -52,10 +51,8 @@ class RateioTest {
     @Test
     @DisplayName("Ajuste para mais (desconto negativo) sai negativo; para menos soma ao desconto")
     void ajusteComSinal() {
-        // Calculado 18,00, cobrado 20,00: desconto de -2,00.
         assertArrayEquals(c(-67, -133), Rateio.ratear(-200, c(600, 1200), null));
         assertArrayEquals(c(-34, -33, -33), Rateio.ratear(-100, c(1, 1, 1), null));
-        // Calculado 18,00, cobrado 17,00: desconto de 1,00.
         assertArrayEquals(c(33, 67), Rateio.ratear(100, c(600, 1200), null));
     }
 
@@ -83,7 +80,6 @@ class RateioTest {
             long[] brutos = new long[n];
             for (int i = 0; i < n; i++) brutos[i] = 1 + aleatorio.nextInt(20_000);
             long soma = Arrays.stream(brutos).sum();
-            // De ajuste para mais (até -50%) até cortesia (o bruto inteiro).
             long valor = -soma / 2 + (long) (aleatorio.nextDouble() * (soma + soma / 2 + 1));
             valor = Math.min(valor, soma);
 
@@ -95,7 +91,6 @@ class RateioTest {
         }
     }
 
-    /** |parte - valor x bruto / soma| < 1 centavo. */
     static void conferirProporcao(long valor, long[] brutos, long[] partes) {
         BigDecimal soma = BigDecimal.valueOf(Arrays.stream(brutos).sum());
         for (int i = 0; i < brutos.length; i++) {

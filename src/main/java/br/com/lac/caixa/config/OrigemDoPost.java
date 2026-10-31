@@ -12,15 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/**
- * Recusa (403) POST que veio de outra página da internet: Sec-Fetch-Site
- * cross-site, ou Origin de outro host (ou "null"). Reforço do cookie
- * SameSite contra um formulário de outro site que manda o navegador do caixa
- * registrar ou cancelar venda. Sem os cabeçalhos (navegador antigo, curl), passa.
- * Compara só o host: atrás do proxy do Railway a porta e o esquema que o app
- * vê podem não ser os do navegador. O webhook do Mercado Pago fica de fora:
- * vem do servidor deles e tem a própria assinatura.
- */
+/** Recusa com 403 o POST vindo de outro site (Sec-Fetch-Site ou Origin). */
 @Component
 public class OrigemDoPost extends OncePerRequestFilter {
     static final String WEBHOOK = "/webhooks/mercadopago";

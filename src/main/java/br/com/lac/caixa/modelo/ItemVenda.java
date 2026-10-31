@@ -9,11 +9,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import java.math.BigDecimal;
 
-/**
- * Liga um Produto a uma quantidade dentro de uma Venda.
- * Guarda o preco no momento da venda (precoUnitario), para que
- * mudancas de preco no estoque nao alterem o historico.
- */
+/** Um produto e a quantidade dentro de uma venda, com preço, custo e desconto congelados. */
 @Entity
 public class ItemVenda {
 
@@ -29,23 +25,12 @@ public class ItemVenda {
 
     private BigDecimal precoUnitario;
 
-    /**
-     * Custo unitário do produto no momento da venda, congelado como o preço
-     * (mudar o custo depois não altera vendas feitas). null = produto sem custo.
-     */
     @Column(precision = 38, scale = 4)
     private BigDecimal custoUnitario;
 
-    /**
-     * Preço normal do produto x quantidade, sem promoção. O desconto da venda
-     * (promoções + ajuste manual) é rateado entre os itens proporcional a este
-     * valor: valorLiquido = valorBruto - descontoRateado, e a soma dos líquidos
-     * é exatamente o valor cobrado. Vendas antigas: preenchido pela V12.
-     */
     @Column(precision = 38, scale = 2)
     private BigDecimal valorBruto;
 
-    /** Pode ser negativo (ajuste para mais). */
     @Column(precision = 38, scale = 2)
     private BigDecimal descontoRateado;
 
@@ -58,7 +43,6 @@ public class ItemVenda {
         this(produto, quantidade, produto.getPreco());
     }
 
-    /** Permite informar o preço unitário (por exemplo, já com promoção aplicada). */
     public ItemVenda(Produto produto, int quantidade, BigDecimal precoUnitario) {
         this.produto = produto;
         this.quantidade = quantidade;
@@ -68,7 +52,6 @@ public class ItemVenda {
                 produto.getPreco().multiply(BigDecimal.valueOf(quantidade)).setScale(2);
     }
 
-    /** Recebe a parte do desconto da venda (Venda.ratearDesconto). */
     void registrarRateio(BigDecimal desconto) {
         this.descontoRateado = desconto;
         this.valorLiquido = valorBruto.subtract(desconto);

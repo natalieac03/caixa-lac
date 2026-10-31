@@ -14,6 +14,7 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/** Promoções: criar, editar, listar e remover. */
 @Service
 public class PromocaoService {
 
@@ -46,16 +47,12 @@ public class PromocaoService {
                 .toList();
     }
 
-    /**
-     * @param qtdPorCategoria mapa catId -> quantidade exigida no combo (> 0)
-     */
     @Transactional
     public void criar(Map<Long, Integer> qtdPorCategoria, TipoPromocao tipo, BigDecimal preco) {
         Promocao salva = promocoes.save(new Promocao(itens(qtdPorCategoria), tipo, preco));
         auditoria.registrar("promocao_criada", "id", salva.getId(), "depois", descrever(salva));
     }
 
-    /** Edição: mesmo formulário da criação; troca preço e quantidades, mantém o tipo. */
     @Transactional
     public Promocao editar(Long id, Map<Long, Integer> qtdPorCategoria, BigDecimal preco) {
         Promocao p = buscar(id);
@@ -69,7 +66,6 @@ public class PromocaoService {
     @Transactional(readOnly = true)
     public Promocao buscar(Long id) {
         Promocao p = promocoes.findById(id).orElseThrow(() -> new RegraDeNegocioException("Promoção não encontrada."));
-        // O formulário de edição lê as categorias fora da transação.
         p.getItens().forEach(i -> i.getCategoria().getNome());
         return p;
     }

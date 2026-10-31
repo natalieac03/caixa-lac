@@ -9,15 +9,7 @@ import jakarta.persistence.Id;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/**
- * Um evento (feira, encontro) com início e fim. O intervalo é [inicio, fim):
- * uma venda às 18:00 de um evento que vai até 18:00 já não é dele. Vendas não
- * guardam o evento; ele é calculado pela data e hora da venda.
- *
- * <p>Sem fim = em andamento (aberto): vale até agora, ou até o início do
- * próximo evento se ele já começou (EventoService.periodo), e se encerra com
- * {@link #encerrar}. Só pode haver um aberto.
- */
+/** Um evento com início e fim [inicio, fim); sem fim, está em andamento. */
 @Entity
 public class Evento {
 
@@ -31,12 +23,10 @@ public class Evento {
     @Column(nullable = false)
     private LocalDateTime inicio;
 
-    /** null = em andamento. */
     private LocalDateTime fim;
 
     private String observacao;
 
-    /** Metas opcionais (maiores que zero): receita líquida e lucro líquido do evento. */
     @Column(precision = 38, scale = 2)
     private BigDecimal metaReceita;
 
@@ -64,7 +54,6 @@ public class Evento {
         this.observacao = obs;
     }
 
-    /** null = sem meta. */
     public void definirMetas(BigDecimal receita, BigDecimal lucro) {
         this.metaReceita = meta(receita, "receita");
         this.metaLucro = meta(lucro, "lucro");
@@ -90,7 +79,6 @@ public class Evento {
         return fim == null;
     }
 
-    /** Grava o fim (o serviço passa agora, ou o início do próximo evento se vier antes). */
     public void encerrar(LocalDateTime quando) {
         if (fim != null) throw new RegraDeNegocioException("O evento \"" + nome + "\" já foi encerrado.");
         if (quando == null || !quando.isAfter(inicio))
@@ -98,12 +86,10 @@ public class Evento {
         this.fim = quando;
     }
 
-    /** O fim que vale nas contas: o gravado ou, aberto, o dado (agora ou o início do próximo evento). */
     public LocalDateTime fimEfetivo(LocalDateTime seAberto) {
         return fim != null ? fim : seAberto;
     }
 
-    /** A data e hora está dentro do evento (início incluído, fim excluído; aberto vai até agora)? */
     public boolean contem(LocalDateTime dataHora, LocalDateTime agora) {
         return !dataHora.isBefore(inicio) && dataHora.isBefore(fimEfetivo(agora));
     }

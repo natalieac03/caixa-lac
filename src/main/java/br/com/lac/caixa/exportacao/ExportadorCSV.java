@@ -11,11 +11,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Gera o TEXTO dos arquivos .csv do estoque, do historico e do fechamento
- * (a resposta HTTP com o arquivo fica em controle.RespostaCsv).
- * Usa ';' como separador (o Excel em pt-br abre direto) e escapa aspas.
- */
+/** Gera o texto dos CSVs do estoque, do histórico e do fechamento. */
 public final class ExportadorCSV {
 
     private static final DateTimeFormatter DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -39,10 +35,6 @@ public final class ExportadorCSV {
         return sb.toString();
     }
 
-    /**
-     * Uma coluna por forma com o valor pago nela (venda dividida preenche
-     * várias) e a descrição do Outro. Canceladas ficam fora.
-     */
     public static String doHistorico(List<Venda> vendas) {
         StringBuilder sb = new StringBuilder("ID;Dia;Hora;Produtos;Quantidade;Valor total");
         for (FormaPagamento forma : FormaPagamento.values()) sb.append(';').append(forma.getRotulo());
@@ -122,10 +114,6 @@ public final class ExportadorCSV {
         return csv.toString();
     }
 
-    /**
-     * Campo de texto entre aspas (aspas dobradas). Texto que começa com = + - @
-     * tab ou CR ganha um apóstrofo na frente, para a planilha não ler como fórmula.
-     */
     static String campo(String valor) {
         if (valor == null) {
             return "";

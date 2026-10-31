@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+/** Tela de taxas por forma de pagamento. */
 @Controller
 public class TaxaController {
     private final TaxaService taxas;
@@ -60,7 +61,6 @@ public class TaxaController {
         return "redirect:/taxas";
     }
 
-    /** "3,5" ou "3.5" (pontos percentuais), até 4 casas. Vazio = zero. */
     static BigDecimal percentual(String texto) {
         if (texto == null || texto.isBlank()) return BigDecimal.ZERO;
         String t = texto.trim().replace("%", "").trim().replace(',', '.');

@@ -5,10 +5,7 @@ import br.com.lac.caixa.modelo.PagamentoVenda;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Escolhe a estrategia de pagamento correta a partir da forma selecionada.
- * Isola o "switch" num lugar so, mantendo o resto do codigo limpo.
- */
+/** Escolhe a estratégia de pagamento pela forma e monta a mensagem de confirmação. */
 public class PagamentoFactory {
 
     private PagamentoFactory() {}
@@ -23,10 +20,6 @@ public class PagamentoFactory {
         };
     }
 
-    /**
-     * Confirmação da venda, uma parte por linha:
-     * "Recebido R$ 10,00 via Pix + R$ 8,00 em dinheiro (troco R$ 2,00)."
-     */
     public static String mensagem(List<PagamentoVenda> partes) {
         if (partes.isEmpty()) return "Cortesia: nada a receber.";
         return "Recebido "

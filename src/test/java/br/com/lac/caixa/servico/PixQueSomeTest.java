@@ -40,7 +40,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** O Pix pago não pode sumir: 409 com order em processamento, venda cancelada, token reusado, travas. */
+/** O Pix pago não some: order em processamento, venda cancelada, token reusado e travas. */
 @SpringBootTest(
         properties = {
             "spring.profiles.active=test",
@@ -115,19 +115,15 @@ class PixQueSomeTest {
         String order = cobrancas.gerar(token, 0, new BigDecimal("10")).getOrderId();
         FAKE.processando(order);
 
-        // Cancelar (a pessoa desistiu) com o MP recusando: continua PENDENTE, não CANCELADA
         assertEquals(StatusCobranca.PENDENTE, cobrancas.cancelar(token, 0).getStatus());
-        // Trocar o valor também é recusado enquanto o MP processa
         avancarSegundos(6);
         var erro = assertThrows(RegraDeNegocioException.class, () -> cobrancas.gerar(token, 0, new BigDecimal("12")));
         assertEquals("O Pix anterior está em processamento; espere alguns segundos.", erro.getMessage());
         assertEquals(order, cobrancas.consultar(token, 0).getOrderId(), "a order continua a mesma");
 
-        // O pagamento é confirmado e chega o webhook
         FAKE.pagar(order, "10.00");
         cobrancas.atualizarPorOrder(order);
         assertEquals(StatusCobranca.PAGA, cobrancas.consultar(token, 0).getStatus());
-        // Sem venda: depois da carência, aparece em Pix recebido sem venda
         avancarSegundos(11 * 60);
         assertTrue(cobrancas.pixSemVenda().stream().anyMatch(c -> c.getOrderId().equals(order)));
     }

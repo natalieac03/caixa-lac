@@ -7,10 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 
-/**
- * Um "ramo" de um combo: quantas unidades de qual categoria são exigidas.
- * Ex.: 2 Bóton, 3 Adesivo Grande.
- */
+/** Quantas unidades de uma categoria uma promoção exige. */
 @Entity
 public class PromocaoItem {
 

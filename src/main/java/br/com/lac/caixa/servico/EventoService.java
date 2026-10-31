@@ -14,13 +14,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Eventos: criar, editar, listar, iniciar e encerrar. Eventos não se sobrepõem.
- * Sem fim = em andamento: só pode haver um, e ele vale até agora (para a
- * sobreposição e para as vendas). Se um evento marcado começar enquanto o aberto
- * não foi encerrado, o aberto vale só até o início desse (fim efetivo), para
- * nenhuma venda cair em dois eventos.
- */
+/** Eventos: criar, editar, iniciar, encerrar e o fim efetivo do evento aberto. */
 @Service
 public class EventoService {
     private static final DateTimeFormatter DIA_E_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -50,18 +44,12 @@ public class EventoService {
         return eventos.findById(id).orElseThrow(() -> new RegraDeNegocioException("Evento não encontrado."));
     }
 
-    /**
-     * O fim (exclusivo) que vale nas contas: o gravado; aberto, logo depois de agora
-     * (a venda feita agora já é dele; 1 µs é a precisão do banco), ou o início do
-     * próximo evento se ele já começou.
-     */
     @Transactional(readOnly = true)
     public LocalDateTime fimEfetivo(Evento e) {
         if (!e.isAberto()) return e.getFim();
         return proximoInicio(e).orElse(depoisDeAgora());
     }
 
-    /** O instante logo depois de agora, para incluir a venda feita agora num evento aberto. */
     LocalDateTime depoisDeAgora() {
         return agora().plusNanos(1000);
     }
@@ -73,7 +61,6 @@ public class EventoService {
                 .filter(proximo -> !proximo.isAfter(agora));
     }
 
-    /** Para os filtros: o evento escolhido vira o período [inicio, fim efetivo). */
     @Transactional(readOnly = true)
     public PeriodoDoEvento periodo(Long id) {
         return periodo(buscar(id));
@@ -84,42 +71,35 @@ public class EventoService {
         return new PeriodoDoEvento(e.getId(), e.getNome(), e.getInicio(), fimEfetivo(e), e.isAberto());
     }
 
-    /** Todos os eventos como períodos (fim efetivo), do mais antigo ao mais novo. */
     @Transactional(readOnly = true)
     public List<PeriodoDoEvento> periodos() {
         return eventos.findAllByOrderByInicioAsc().stream().map(this::periodo).toList();
     }
 
-    /** "Este evento": o que está acontecendo agora ou, se nenhum, o último que já começou. */
     @Transactional(readOnly = true)
     public Optional<Evento> atual(LocalDateTime agora) {
         return eventos.findFirstByInicioLessThanEqualOrderByInicioDesc(agora);
     }
 
-    /** O evento em andamento (sem fim), se houver. */
     @Transactional(readOnly = true)
     public Optional<Evento> aberto() {
         return eventos.findFirstByFimIsNullOrderByInicioDesc();
     }
 
-    /** O evento que contém a data e hora (aberto vale até agora). */
     @Transactional(readOnly = true)
     public Optional<Evento> doMomento(LocalDateTime quando) {
         return eventos.doMomento(quando, depoisDeAgora()).stream().findFirst();
     }
 
-    /** "14:00" se o evento começou hoje; senão "dd/MM HH:mm" (o selo do topo). */
     public String desde(Evento e) {
         boolean hoje = e.getInicio().toLocalDate().equals(agora().toLocalDate());
         return e.getInicio().format(DateTimeFormatter.ofPattern(hoje ? "HH:mm" : "dd/MM HH:mm"));
     }
 
-    /** Sugestão de nome do botão "Iniciar evento": "Evento dd/mm". */
     public String nomeSugerido() {
         return "Evento " + agora().format(DIA_MES);
     }
 
-    /** Começa agora um evento sem fim (o "Iniciar evento" do topo e da tela inicial). */
     @Transactional
     public Evento iniciar(String nome) {
         String n = nome == null || nome.isBlank() ? nomeSugerido() : nome;
@@ -128,7 +108,6 @@ public class EventoService {
         return e;
     }
 
-    /** Grava o fim agora (ou no início do próximo evento, se ele já começou). */
     @Transactional
     public Evento encerrar(Long id) {
         Evento e = buscar(id);
@@ -160,7 +139,6 @@ public class EventoService {
         return salvo;
     }
 
-    /** Edita sem mexer nas metas. */
     @Transactional
     public Evento editar(Long id, String nome, LocalDateTime inicio, LocalDateTime fim, String observacao) {
         Evento e = buscar(id);
@@ -186,10 +164,6 @@ public class EventoService {
         return salvo;
     }
 
-    /**
-     * Grava já conferindo no banco. Dois cliques ao mesmo tempo passam juntos pela
-     * validação; no Postgres o índice ux_evento_aberto (V22) recusa o segundo aberto.
-     */
     private Evento salvar(Evento e) {
         try {
             return eventos.saveAndFlush(e);

@@ -7,6 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.opentest4j.TestAbortedException;
 
+/** A regra do Navegador com e sem navegador, dentro e fora do CI. */
 class NavegadorTest {
     @Test
     @DisplayName("Sem navegador: erro no CI, teste pulado no computador; com navegador segue")

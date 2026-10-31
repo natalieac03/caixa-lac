@@ -7,7 +7,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-/** A massa fixa das finanças no Postgres de verdade (Testcontainers). */
+/** A massa fixa das finanças no Postgres (Testcontainers). */
 @ExtendWith(ExigeDocker.class)
 @SpringBootTest(properties = {"spring.profiles.active=test"})
 class FinancasPostgresTest extends MassaFinanceira {

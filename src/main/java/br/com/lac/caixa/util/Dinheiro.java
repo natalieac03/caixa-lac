@@ -6,12 +6,7 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.Locale;
 
-/**
- * Formata e lê valores em reais.
- * - reais(1234.56)  -> "R$ 1.234,56" (mensagens e telas)
- * - numero(1234.56) -> "1234,56"     (CSV: sem milhar, o Excel lê como número)
- * - parse aceita "12,50", "12.50" e "1.234,56"; vazio vira null.
- */
+/** Formata e lê valores em reais, para tela, mensagens e CSV. */
 public final class Dinheiro {
 
     private static final DecimalFormatSymbols PT_BR = DecimalFormatSymbols.getInstance(Locale.forLanguageTag("pt-BR"));

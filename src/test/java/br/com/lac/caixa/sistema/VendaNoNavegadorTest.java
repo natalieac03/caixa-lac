@@ -18,7 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 
-/** Testes de sistema: a tela de venda de verdade, num Chromium, contra o app rodando. */
+/** A tela de venda num Chromium, contra o app rodando. */
 @ExtendWith(Navegador.class)
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -65,13 +65,11 @@ class VendaNoNavegadorTest {
     void vendaDivididaComTroco() {
         entrarEAbrirVenda();
 
-        // Arrange: 3 bótons de R$ 6,00 = R$ 18,00
         pagina.getByLabel("Quantidade de " + boton.getNome()).fill("3");
         assertThat(pagina.locator("#totalCarrinho")).hasText("18,00");
         assertThat(pagina.locator("#contagemItens")).hasText("3 itens");
         assertThat(pagina.locator("#botaoConfirmar")).hasText("Confirmar R$ 18,00");
 
-        // Act: divide em Pix 10,00 + Dinheiro 8,00 recebendo 10,00
         pagina.getByText("Dividir pagamento").click();
         var linhas = pagina.locator(".linha-pagamento");
         assertThat(linhas).hasCount(2);
@@ -87,7 +85,6 @@ class VendaNoNavegadorTest {
         assertThat(pagina.locator("#botaoConfirmar")).isEnabled();
         pagina.locator("#botaoConfirmar").click();
 
-        // Assert: confirmação e histórico com as duas partes
         pagina.waitForURL(Pattern.compile(".*/historico$"));
         assertThat(pagina.locator(".aviso-sucesso"))
                 .containsText("Recebido R$ 10,00 via Pix + R$ 8,00 em dinheiro (troco R$ 2,00).");
@@ -103,11 +100,9 @@ class VendaNoNavegadorTest {
         pagina.getByLabel("Quantidade de " + boton.getNome()).fill("1");
         assertThat(pagina.locator("#totalCarrinho")).hasText("6,00");
 
-        // Act: a sessão some (como depois de 12 h ou de trocar a senha) e a pessoa mexe na quantidade
         contexto.clearCookies();
         pagina.getByLabel("Quantidade de " + boton.getNome()).fill("2");
 
-        // Assert
         var aviso = pagina.locator("#sessaoExpirada");
         assertThat(aviso).containsText("Sessão expirou. Entre de novo.");
         assertThat(aviso.getByRole(com.microsoft.playwright.options.AriaRole.LINK))

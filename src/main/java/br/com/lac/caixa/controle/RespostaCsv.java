@@ -7,13 +7,12 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
-/** Resposta de download de um CSV já gerado (ExportadorCSV gera só o texto). */
+/** Resposta HTTP de download de um CSV, com BOM UTF-8. */
 final class RespostaCsv {
 
     private RespostaCsv() {}
 
     static ResponseEntity<Resource> arquivo(String csv, String nomeArquivo) {
-        // BOM UTF-8 para o Excel exibir os acentos corretamente.
         byte[] bom = new byte[] {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
         byte[] corpo = csv.getBytes(StandardCharsets.UTF_8);
         byte[] conteudo = new byte[bom.length + corpo.length];

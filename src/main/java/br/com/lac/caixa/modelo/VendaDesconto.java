@@ -7,11 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import java.math.BigDecimal;
 
-/**
- * Um desconto promocional aplicado numa venda, como estava na hora da venda.
- * A descrição fica congelada; promocao_id vira null se a promoção for apagada
- * (ON DELETE SET NULL na V12). Vendas anteriores à V12 não têm linhas aqui.
- */
+/** Um desconto promocional de uma venda, congelado como estava na hora da venda. */
 @Entity
 public class VendaDesconto {
 
@@ -19,7 +15,6 @@ public class VendaDesconto {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** Só o id (sem relação JPA): a promoção pode ser apagada depois. */
     private Long promocaoId;
 
     @Column(nullable = false)

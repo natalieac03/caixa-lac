@@ -16,18 +16,12 @@ import java.util.Random;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/**
- * Teste de propriedade: em carrinhos pequenos e aleatórios (semente fixa), a
- * calculadora dá o mesmo total que uma força bruta escrita de forma independente.
- * A força bruta tenta todo subconjunto de A_PARTIR_DE e, nos pacotes, toda escolha
- * de QUAIS unidades entram (não supõe que as mais caras entram primeiro).
- */
+/** A calculadora dá o mesmo total que uma força bruta em carrinhos aleatórios. */
 class CalculadoraForcaBrutaTest {
 
     static final int CASOS = 500;
     static final long SEMENTE = 20261030L;
 
-    /** Uma unidade do carrinho: categoria e preço normal em centavos. */
     record Unidade(long categoria, long preco) {}
 
     @Test
@@ -47,8 +41,6 @@ class CalculadoraForcaBrutaTest {
             conferidos++;
         }
     }
-
-    // ---------- sorteio ----------
 
     static CenariosDeDesempenho.Cenario sortear(Random r) {
         int quantasCategorias = 1 + r.nextInt(3);
@@ -90,8 +82,6 @@ class CalculadoraForcaBrutaTest {
         }
         return new CenariosDeDesempenho.Cenario(new Carrinho(linhas), promocoes);
     }
-
-    // ---------- força bruta ----------
 
     static long forcaBruta(CenariosDeDesempenho.Cenario caso) {
         Map<Long, Integer> porCategoria = new HashMap<>();
@@ -140,7 +130,6 @@ class CalculadoraForcaBrutaTest {
         return melhor;
     }
 
-    /** Maior economia com pacotes, tentando toda escolha de unidades (memo pelo multiconjunto restante). */
     static long economiaMaxima(List<Unidade> restantes, List<Promocao> pacotes, Map<List<Unidade>, Long> memo) {
         var chave = restantes.stream()
                 .sorted((a, b) -> a.categoria() != b.categoria()
@@ -165,7 +154,6 @@ class CalculadoraForcaBrutaTest {
         return melhor;
     }
 
-    /** Todas as escolhas de índices de unidades que formam um pacote. */
     static List<List<Integer>> escolhas(List<Unidade> restantes, Promocao pacote) {
         List<List<Integer>> resultado = new ArrayList<>();
         resultado.add(new ArrayList<>());

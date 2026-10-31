@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Estoque: produtos, entrada por compra, edição inline, categorias e exportação em CSV. -->
 <html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head('Estoque')}"></head>
 <body>
@@ -131,7 +132,6 @@
                             </div>
                         </td>
                     </tr>
-                    <!-- Edição inline: nome, preço e categoria. -->
                     <tr class="linha-edicao oculto" th:id="'edicao_' + ${p.id}">
                         <td colspan="7">
                             <form th:action="@{'/estoque/' + ${p.id} + '/editar'}" method="post" class="form-edicao">
@@ -299,7 +299,6 @@
 </main>
 
 <script th:inline="none">
-    /* Abre/fecha a linha de edição do produto (só uma aberta por vez). */
     function alternarEdicao(id) {
         const linha = document.getElementById(id);
         const abrir = linha.classList.contains('oculto');

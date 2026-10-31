@@ -10,21 +10,19 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+/** Baixa e reposição do estoque do produto. */
 class ProdutoTest {
 
     @Test
     @DisplayName("Baixa e reposição recusam quantidade menor que 1 e nunca deixam o estoque negativo")
     void baixaEReposicaoProtegemEstoque() {
-        // Arrange
         var p = new Produto("Produto", BigDecimal.ONE, 2);
 
-        // Act / Assert: recusas não mudam o estoque
         assertThrows(RegraDeNegocioException.class, () -> p.baixar(0));
         assertThrows(RegraDeNegocioException.class, () -> p.repor(-1));
         assertThrows(EstoqueInsuficienteException.class, () -> p.baixar(3));
         assertEquals(2, p.getQuantidade());
 
-        // Act / Assert: baixa até zero e repõe
         p.baixar(2);
         assertEquals(0, p.getQuantidade());
         p.repor(3);

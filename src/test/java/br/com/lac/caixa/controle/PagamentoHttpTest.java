@@ -29,7 +29,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-/** Pagamento dividido de ponta a ponta: POST /venda, histórico, CSV e fechamento. */
+/** Pagamento dividido de ponta a ponta: venda, histórico, CSV e fechamento. */
 @SpringBootTest(
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:pagamentos;DB_CLOSE_DELAY=-1"})
 @AutoConfigureMockMvc
@@ -51,7 +51,6 @@ class PagamentoHttpTest {
 
     Produto p;
 
-    /** Produto de R$ 6,00: 3 unidades = R$ 18,00. */
     @BeforeEach
     void preparar() {
         p = produtos.save(new Produto("Bóton Pagamento", new BigDecimal("6"), 100));
@@ -101,7 +100,6 @@ class PagamentoHttpTest {
                 .andExpect(content()
                         .string(containsString("data-pagamento=\"Pix R$ 10,00 + Dinheiro R$ 8,00 (troco R$ 2,00)\"")))
                 .andExpect(content().string(containsString(">Dinheiro R$ 8,00 (troco R$ 2,00)<")));
-        // Filtro por forma: a venda aparece buscando por QUALQUER uma das formas.
         for (String forma : new String[] {"PIX", "DINHEIRO"}) {
             mvc.perform(get("/historico").param("forma", forma).sessionAttr("autenticado", true))
                     .andExpect(content().string(containsString("Pix R$ 10,00 + Dinheiro R$ 8,00")));
@@ -234,7 +232,6 @@ class PagamentoHttpTest {
                 .andExpect(content().string(not(containsString("id=\"alerta-fechamento\""))))
                 .andExpect(content().string(containsString("Vendas com pagamento dividido")));
         assertTrue(fechamento.consultar(LocalDate.now(), LocalDate.now()).isConfere());
-        // Simula dado inconsistente direto no banco: a tela tem que avisar.
         jdbc.update("update pagamento_venda set valor = 9 where venda_id = ? and forma = 'DINHEIRO'", id);
         try {
             mvc.perform(get("/fechamento")

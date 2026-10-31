@@ -12,11 +12,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-/**
- * POST vindo de outro site é recusado (403) antes de chegar ao controller:
- * Sec-Fetch-Site cross-site ou Origin de outro host. O webhook do Mercado Pago
- * fica de fora (vem do servidor deles e tem a própria assinatura).
- */
+/** POST vindo de outro site é recusado com 403. */
 @SpringBootTest(
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:origem_post;DB_CLOSE_DELAY=-1"})
 @AutoConfigureMockMvc
@@ -25,7 +21,6 @@ class OrigemDoPostHttpTest {
     @Autowired
     MockMvc mvc;
 
-    /** Um POST qualquer do caixa: cancelar uma venda que não existe volta com redirect e mensagem. */
     MockHttpServletRequestBuilder cancelar() {
         return post("/historico/999999/cancelar")
                 .sessionAttr("autenticado", true)

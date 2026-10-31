@@ -7,7 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 
-/** Categoria de despesa (Material, Transporte...). "transporte" e "Transporte" são a mesma. */
+/** Categoria de despesa (Material, Transporte...). */
 @Entity
 public class CategoriaDespesa {
 

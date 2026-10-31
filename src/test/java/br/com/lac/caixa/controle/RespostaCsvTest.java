@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+/** Download do CSV com nome do arquivo e BOM UTF-8. */
 class RespostaCsvTest {
     @Test
     @DisplayName("Download do CSV: anexo com o nome do arquivo e BOM UTF-8 antes do texto")

@@ -8,7 +8,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** O que só o relatório do evento (e os alertas) mostra: as vendas canceladas e os ajustes manuais. */
+/** O que só o relatório do evento mostra: vendas canceladas e ajustes manuais. */
 @Service
 @Transactional(readOnly = true)
 public class RelatorioDoEvento {
@@ -18,7 +18,6 @@ public class RelatorioDoEvento {
         this.consultas = consultas;
     }
 
-    /** Vendas canceladas do período (pela data da venda). */
     public List<Financas.LinhaCancelamento> cancelamentos(FiltroFinancas f) {
         return consultas.cancelamentos(f).stream()
                 .map(c -> new Financas.LinhaCancelamento(
@@ -26,7 +25,6 @@ public class RelatorioDoEvento {
                 .toList();
     }
 
-    /** Vendas válidas com ajuste manual, com o motivo e a diferença (cobrado - calculado). */
     public List<Financas.LinhaAjuste> ajustesManuais(FiltroFinancas f) {
         return consultas.ajustesManuais(f).stream()
                 .map(a -> new Financas.LinhaAjuste(

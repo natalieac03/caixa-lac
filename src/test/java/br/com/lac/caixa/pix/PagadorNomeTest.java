@@ -20,7 +20,7 @@ import org.springframework.core.env.StandardEnvironment;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
-/** MP_PAYER_NOME vai como payer.first_name na order Pix (APRO aprova sozinho no modo teste). */
+/** MP_PAYER_NOME vai como payer.first_name na order Pix. */
 @SpringBootTest(
         properties = {
             "spring.profiles.active=test",
@@ -50,7 +50,6 @@ class PagadorNomeTest {
     @Autowired
     CobrancaPixService cobrancas;
 
-    /** O valor de mercadopago.payer-first-name como está no application.properties de verdade. */
     static String expressao() throws Exception {
         var p = new Properties();
         try (InputStream in = PagadorNomeTest.class.getResourceAsStream("/application.properties")) {

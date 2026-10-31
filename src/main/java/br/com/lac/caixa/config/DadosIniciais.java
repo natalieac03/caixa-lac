@@ -10,10 +10,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
-/**
- * Produtos de exemplo na primeira execução, só no perfil local (desenvolvimento).
- * Em produção um banco vazio continua vazio: a LAC cadastra o próprio estoque.
- */
+/** Produtos de exemplo na primeira execução, só no perfil local. */
 @Configuration
 @Profile("local")
 public class DadosIniciais {
@@ -27,7 +24,6 @@ public class DadosIniciais {
             Categoria boton = categorias.save(new Categoria("Bóton"));
             Categoria adesivo = categorias.save(new Categoria("Adesivo Grande"));
 
-            // Pelo serviço, para cada produto já nascer com o movimento do estoque inicial.
             estoque.criarNovo("Bóton Capivara", new BigDecimal("6.00"), 30, boton);
             estoque.criarNovo("Bóton Logo LAC", new BigDecimal("6.00"), 30, boton);
             estoque.criarNovo("Adesivo Capivara Grande", new BigDecimal("8.00"), 25, adesivo);

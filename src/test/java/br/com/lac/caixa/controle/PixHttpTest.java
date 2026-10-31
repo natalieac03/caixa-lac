@@ -33,7 +33,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-/** Pix automático na venda, com o Mercado Pago falso (FakeMercadoPago). */
+/** Pix automático na venda, com o Mercado Pago falso. */
 @SpringBootTest(properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:pix;DB_CLOSE_DELAY=-1"})
 @AutoConfigureMockMvc
 class PixHttpTest {
@@ -67,7 +67,6 @@ class PixHttpTest {
 
     final ObjectMapper json = new ObjectMapper();
 
-    /** Produto de R$ 6,00: 3 unidades = R$ 18,00. */
     Produto p;
 
     String token;
@@ -82,7 +81,6 @@ class PixHttpTest {
         return req.sessionAttr("autenticado", true).accept(MediaType.APPLICATION_JSON);
     }
 
-    /** Gera o Pix da parte e devolve o id da order. */
     String gerar(int parte, String valor) throws Exception {
         String corpo = mvc.perform(logado(post("/venda/pix"))
                         .param("token", token)
@@ -107,7 +105,6 @@ class PixHttpTest {
     @Test
     @DisplayName("Gerar Pix devolve QR e código; mesmo token + parte + valor reaproveita a cobrança")
     void gerarEReaproveitar() throws Exception {
-        // Act
         mvc.perform(logado(post("/venda/pix"))
                         .param("token", token)
                         .param("parte", "0")
@@ -120,7 +117,6 @@ class PixHttpTest {
         int criacoes = FAKE.criacoes.get();
         String primeira = gerar(0, "18,00");
 
-        // Assert: nenhuma order nova no Mercado Pago
         assertEquals(criacoes, FAKE.criacoes.get());
         assertEquals(
                 "PENDENTE",
@@ -130,13 +126,10 @@ class PixHttpTest {
     @Test
     @DisplayName("Valor mudou: a cobrança pendente é cancelada no Mercado Pago e outra é criada")
     void valorMudouCancelaEGeraOutra() throws Exception {
-        // Arrange
         String antiga = gerar(0, "18,00");
 
-        // Act
         String nova = gerar(0, "15,00");
 
-        // Assert
         assertNotEquals(antiga, nova);
         assertEquals("canceled", FAKE.order(antiga).status);
         assertEquals(0, new BigDecimal("15.00").compareTo(FAKE.order(nova).valor));
@@ -157,7 +150,6 @@ class PixHttpTest {
                 .andExpect(jsonPath("$.erro", containsString("já foi paga")));
     }
 
-    /** O servidor só pergunta ao Mercado Pago de novo depois de 5 s da última consulta. */
     void passaramCincoSegundos() {
         jdbc.update("update cobranca_pix set consultada_em = null");
     }
@@ -165,19 +157,16 @@ class PixHttpTest {
     @Test
     @DisplayName("Consulta: o servidor pergunta ao Mercado Pago e só marca PAGA com o valor certo")
     void consultaMarcaPagaSoComValorCerto() throws Exception {
-        // Arrange
         String order = gerar(0, "18,00");
         String url = "/venda/pix/" + token + "/0";
         mvc.perform(logado(get(url))).andExpect(jsonPath("$.status").value("PENDENTE"));
 
-        // Act / Assert: pago com valor diferente não confirma
         FAKE.pagar(order, "10.00");
         passaramCincoSegundos();
         mvc.perform(logado(get(url)))
                 .andExpect(jsonPath("$.status").value("PENDENTE"))
                 .andExpect(jsonPath("$.valorPago").value(10.0));
 
-        // Act / Assert: com o valor certo, PAGA
         FAKE.pagar(order, "18.00");
         passaramCincoSegundos();
         mvc.perform(logado(get(url))).andExpect(jsonPath("$.status").value("PAGA"));
@@ -229,8 +218,6 @@ class PixHttpTest {
                 .andExpect(jsonPath("$.erro").value("Sessão expirada"));
     }
 
-    // ---------- POST /venda ----------
-
     @Test
     @DisplayName("Venda com Pix do Mercado Pago ainda não pago é recusada, sem baixar estoque")
     void vendaComPixNaoPagoRecusada() throws Exception {
@@ -245,14 +232,11 @@ class PixHttpTest {
     @Test
     @DisplayName("Venda com Pix do Mercado Pago pago é aceita e grava a origem e a order")
     void vendaComPixPagoAceita() throws Exception {
-        // Arrange: paga no Mercado Pago (o servidor confere no POST /venda, sem a tela ter consultado)
         String order = gerar(0, "18,00");
         FAKE.pagar(order, "18.00");
 
-        // Act
         mvc.perform(venda("pag_forma_0", "PIX", "pag_origem_0", "MERCADO_PAGO")).andExpect(redirectedUrl("/historico"));
 
-        // Assert
         long id = vendas.findByToken(token).orElseThrow().getId();
         assertEquals(
                 "MERCADO_PAGO",

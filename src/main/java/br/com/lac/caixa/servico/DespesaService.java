@@ -15,7 +15,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Despesas e categorias de despesa. Compras de mercadoria ficam fora (são custo). */
+/** Despesas e categorias de despesa. */
 @Service
 public class DespesaService {
     private final DespesaRepository despesas;
@@ -135,7 +135,6 @@ public class DespesaService {
         return c;
     }
 
-    /** Só apaga categoria sem despesas (as despesas antigas não ficam sem categoria). */
     @Transactional
     public void apagarCategoria(Long id) {
         CategoriaDespesa c = categoria(id);

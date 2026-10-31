@@ -12,11 +12,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/**
- * Uma despesa do grupo. Compra de mercadoria não é despesa (vira custo pela
- * entrada de estoque). O evento é opcional e escolhido à mão: a despesa de um
- * evento pode ter data anterior a ele (material comprado na véspera).
- */
+/** Uma despesa do grupo, opcionalmente ligada a um evento. */
 @Entity
 public class Despesa {
 

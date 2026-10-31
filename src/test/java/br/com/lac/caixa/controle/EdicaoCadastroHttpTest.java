@@ -39,6 +39,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 
+/** Edição de produto, categoria e promoção pelas telas. */
 @SpringBootTest(
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:edicao;DB_CLOSE_DELAY=-1"})
 @AutoConfigureMockMvc
@@ -77,8 +78,6 @@ class EdicaoCadastroHttpTest {
         p.setCategoria(cat);
         p = produtos.save(p);
     }
-
-    // ---------- produto ----------
 
     @Test
     @DisplayName(
@@ -155,8 +154,6 @@ class EdicaoCadastroHttpTest {
                 .andExpect(content().string(containsString("/estoque/categorias/" + cat.getId() + "/renomear")));
     }
 
-    // ---------- categoria ----------
-
     @Test
     @DisplayName("Renomear categoria funciona e recusa nome que já existe em outra (mesmo nome padronizado)")
     void renomearCategoria() throws Exception {
@@ -179,11 +176,8 @@ class EdicaoCadastroHttpTest {
 
         assertEquals(
                 "Botões Grandes " + p.getId(), categorias.buscar(cat.getId()).getNome());
-        // Renomear para o próprio nome (outra caixa) é permitido.
         categorias.renomear(cat.getId(), "BOTÕES GRANDES " + p.getId());
     }
-
-    // ---------- promoção ----------
 
     @Test
     @DisplayName("Editar promoção troca preço e quantidades por categoria e mantém o tipo")

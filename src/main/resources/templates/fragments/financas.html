@@ -1,7 +1,7 @@
 <!DOCTYPE html>
+<!-- Pedaços da tela de Finanças reaproveitados no relatório do evento. -->
 <html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
 <body>
-<!--/* Pedaços da tela de Finanças reaproveitados no relatório do evento. Só exibem o que vem do servidor. */-->
 
 <div th:fragment="cartoes(painel)" class="indicadores cartoes-financas">
     <div class="indicador cartao-financas" th:each="c : ${painel.cartoes}" th:id="'cartao-' + ${c.id}"

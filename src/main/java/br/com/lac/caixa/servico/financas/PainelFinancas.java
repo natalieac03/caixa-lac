@@ -31,12 +31,7 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Monta tudo o que a tela de Finanças mostra a partir do FinancasService:
- * cartões com variação, demonstrativo, rankings com a curva ABC, mapa de calor
- * com o nível de cor de cada célula, estoque ordenado e os dados dos gráficos.
- * Os textos já saem formatados; a tela não faz conta de dinheiro.
- */
+/** Monta o painel e os dados dos gráficos de Finanças, com os textos já formatados. */
 @Service
 @Transactional(readOnly = true)
 public class PainelFinancas {
@@ -54,12 +49,10 @@ public class PainelFinancas {
         this.estoque = estoque;
     }
 
-    /** Um cartão: valor escrito, variação escrita (com seta) e a direção (sobe, desce, igual, sem). */
     public record Cartao(String id, String rotulo, String valor, String variacao, String direcao, String nota) {}
 
     public record ProdutoAbc(LinhaProduto produto, ClasseAbc classe) {}
 
-    /** nivel de 0 (nenhuma venda) a 4 (a hora com mais vendas), para a intensidade da cor. */
     public record CelulaMapa(int hora, long vendas, BigDecimal receita, int nivel) {}
 
     public record LinhaMapa(DayOfWeek dia, String rotulo, List<CelulaMapa> horas) {}
@@ -82,7 +75,6 @@ public class PainelFinancas {
             ValorEstoque valorEstoque,
             List<Financas.Meta> metas) {}
 
-    /** Os gráficos: rótulos, valores (números) e os mesmos valores escritos. */
     public record Grafico(List<String> rotulos, List<BigDecimal> valores, List<String> textos) {}
 
     public record Dados(
@@ -106,7 +98,6 @@ public class PainelFinancas {
                 .map(p -> new ProdutoAbc(p, abc.get(p.produtoId())))
                 .toList();
         List<LinhaGiro> giro = new ArrayList<>(estoque.giro(f));
-        // O que acaba primeiro vem primeiro; sem giro no fim.
         giro.sort(Comparator.comparing(
                         LinhaGiro::diasAteAcabar, Comparator.nullsLast(Comparator.<BigDecimal>naturalOrder()))
                 .thenComparing(LinhaGiro::nome));
@@ -192,8 +183,6 @@ public class PainelFinancas {
         };
     }
 
-    // ---------------------------------------------------------------- cartões
-
     private List<Cartao> cartoes(Comparacao c) {
         Resumo r = c.atual();
         Map<String, Variacao> v = new HashMap<>();
@@ -244,7 +233,6 @@ public class PainelFinancas {
         return lista;
     }
 
-    /** Pontos percentuais para margens; % sobre o anterior para o resto. */
     private static Cartao cartao(
             String id, String rotulo, String valor, Variacao v, String contra, boolean pontos, String nota) {
         if (contra == null || v == null || v.diferenca() == null) {
@@ -271,8 +259,6 @@ public class PainelFinancas {
     static String assinado(BigDecimal valor) {
         return (valor.signum() > 0 ? "+" : "") + new DecimalFormat("0.00", SIMBOLOS).format(valor);
     }
-
-    // ---------------------------------------------------------------- mapa de calor
 
     private List<LinhaMapa> mapa(FiltroFinancas f) {
         var celulas = financas.mapaDeCalor(f);

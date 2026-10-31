@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/** Calcula o fechamento de um período ou evento. */
 @Service
 public class FechamentoService {
     private final VendaRepository vendas;
@@ -24,7 +25,6 @@ public class FechamentoService {
         return consultar(FiltroHistorico.periodo(inicio, fim));
     }
 
-    /** Pelo período do filtro (datas ou evento); só o período conta. */
     @Transactional(readOnly = true)
     public Fechamento consultar(FiltroHistorico periodo) {
         var filtro = VendaSpecs.doFiltro(periodo).and(VendaSpecs.naoCancelada());

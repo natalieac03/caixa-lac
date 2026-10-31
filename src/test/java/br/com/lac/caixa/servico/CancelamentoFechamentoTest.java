@@ -26,6 +26,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
+/** Cancelamento devolve o estoque e sai dos totais; fechamento com pagamento dividido. */
 @SpringBootTest(
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:cancelamento;DB_CLOSE_DELAY=-1"
         })
@@ -83,7 +84,6 @@ class CancelamentoFechamentoTest {
     @Test
     @DisplayName("Cancelar devolve todos os itens uma vez só, preserva data/motivo e tira a venda de totais e CSV")
     void cancelarDevolveTodosOsItensUmaVezEPreservaAuditoria() {
-        // Arrange: venda de 3 x R$ 6 + 2 x R$ 2 = R$ 22
         var p = produtos.save(new Produto("Primeiro", new BigDecimal("6"), 10));
         var outro = produtos.save(new Produto("Segundo", new BigDecimal("2"), 7));
         var v = caixa.registrarVenda(
@@ -98,13 +98,11 @@ class CancelamentoFechamentoTest {
         assertEquals(7, p.getQuantidade());
         assertEquals(5, outro.getQuantidade());
 
-        // Act: cancela e tenta cancelar de novo
         caixa.cancelarVenda(v.getId(), "Cliente desistiu");
         var instante = v.getDataCancelamento();
         caixa.cancelarVenda(v.getId(), "Segunda tentativa");
         vendas.flush();
 
-        // Assert: estoque devolvido uma vez, auditoria preservada
         assertEquals(10, p.getQuantidade());
         assertEquals(7, outro.getQuantidade());
         assertTrue(v.isCancelada());
@@ -113,7 +111,6 @@ class CancelamentoFechamentoTest {
         assertEquals("Cliente desistiu", v.getMotivoCancelamento());
         assertValor("22", v.getValorCobrado());
 
-        // Assert: aparece no histórico, mas fora dos indicadores, do CSV e do fechamento
         var filtro = new FiltroHistorico(null, dia, dia, "");
         var r = historico.consultar(filtro, 0);
         assertEquals(1, r.pagina().getTotalElements());
@@ -128,11 +125,9 @@ class CancelamentoFechamentoTest {
     @Test
     @DisplayName("Motivo vazio não cancela nem devolve estoque")
     void motivoVazioNaoCancelaNemDevolveEstoque() {
-        // Arrange
         var p = produtos.save(new Produto("Produto", BigDecimal.TEN, 10));
         var v = registrar(p, 2, FormaPagamento.PIX, null);
 
-        // Act / Assert
         assertThrows(RegraDeNegocioException.class, () -> caixa.cancelarVenda(v.getId(), " "));
         assertFalse(v.isCancelada());
         assertEquals(8, p.getQuantidade());
@@ -141,10 +136,9 @@ class CancelamentoFechamentoTest {
     @Test
     @DisplayName("Fechamento soma formas, descontos e ajustes sem canceladas nem vendas fora do período")
     void fechamentoSomaFormasDescontosEAjustesSemCanceladas() {
-        // Arrange
         var p = produtos.save(new Produto("Produto", new BigDecimal("10"), 20));
-        registrar(p, 2, FormaPagamento.PIX, "18"); // ajuste -2
-        registrar(p, 1, FormaPagamento.PIX, "12"); // ajuste +2
+        registrar(p, 2, FormaPagamento.PIX, "18");
+        registrar(p, 1, FormaPagamento.PIX, "12");
         var credito = registrar(p, 1, FormaPagamento.CREDITO, null);
         credito.registrarValores(new BigDecimal("8"), new BigDecimal("2"), new BigDecimal("8"), null);
         credito.registrarPagamentos(
@@ -161,10 +155,8 @@ class CancelamentoFechamentoTest {
         legado.registrarPagamentos(List.of(new PagamentoVenda(FormaPagamento.DEBITO, new BigDecimal("4"), null, null)));
         vendas.saveAndFlush(legado);
 
-        // Act
         var r = fechamento.consultar(dia, dia);
 
-        // Assert
         assertEquals(4, r.quantidade());
         assertValor("42", r.total());
         assertValor("2", r.descontos());
@@ -181,7 +173,6 @@ class CancelamentoFechamentoTest {
     @Test
     @DisplayName("Fechamento soma cada parte do pagamento dividido na forma certa e bate com o total cobrado")
     void fechamentoSomaCadaParteNaFormaCertaEBateComOTotal() {
-        // Arrange: duas vendas divididas, uma simples, uma cortesia e uma dividida cancelada
         var p = produtos.save(new Produto("Produto", new BigDecimal("6"), 50));
         dividida(
                 p,
@@ -210,22 +201,17 @@ class CancelamentoFechamentoTest {
                 new PagamentoInformado(FormaPagamento.DEBITO, new BigDecimal("6"), null, null));
         int antes = p.getQuantidade();
 
-        // Act
         caixa.cancelarVenda(cancelada.getId(), "Desistiu");
         var r = fechamento.consultar(dia, dia);
 
-        // Assert: cancelamento devolve o estoque
         assertEquals(antes + 2, p.getQuantidade());
-        // Assert: cada parte na sua forma
         assertValor("15", linha(r, FormaPagamento.PIX).total());
         assertEquals(2, linha(r, FormaPagamento.PIX).vendas());
         assertValor("14", linha(r, FormaPagamento.DINHEIRO).total());
         assertEquals(2, linha(r, FormaPagamento.DINHEIRO).vendas());
         assertValor("7", linha(r, FormaPagamento.OUTRO).total());
-        // Assert: cancelada sai dos totais com todas as suas partes
         assertValor("0", linha(r, FormaPagamento.CREDITO).total());
         assertValor("0", linha(r, FormaPagamento.DEBITO).total());
-        // Assert: totais e conferência
         assertEquals(4, r.quantidade());
         assertValor("36", r.total());
         assertValor("36", r.totalFormas());

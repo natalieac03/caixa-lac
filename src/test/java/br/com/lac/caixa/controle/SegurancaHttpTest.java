@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
+/** Toda rota exige login, menos as públicas; logout só por POST. */
 @SpringBootTest(
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:seguranca;DB_CLOSE_DELAY=-1"})
 @AutoConfigureMockMvc
@@ -38,7 +39,6 @@ class SegurancaHttpTest {
         });
     }
 
-    /** Percorre todas as rotas registradas: uma rota nova sem login quebra este teste. */
     @Test
     void todaRotaExigeLogin() throws Exception {
         int conferidas = 0;
@@ -52,7 +52,6 @@ class SegurancaHttpTest {
                         : metodos.iterator().next();
                 var req = metodo == RequestMethod.POST ? post(url) : get(url);
                 if (url.equals("/venda/previa") || url.startsWith("/venda/pix")) {
-                    // Chamada do JS: 401 em JSON em vez de redirect (veja SessaoEErrosHttpTest).
                     mvc.perform(req).andExpect(status().isUnauthorized());
                 } else {
                     mvc.perform(req).andExpect(redirectedUrl("/login"));
@@ -60,7 +59,6 @@ class SegurancaHttpTest {
                 conferidas++;
             }
         }
-        // O webhook é público, mas sem assinatura válida responde 401 (e sem data.id, 400).
         mvc.perform(post("/webhooks/mercadopago").param("data.id", "1")).andExpect(status().isUnauthorized());
         mvc.perform(post("/webhooks/mercadopago")).andExpect(status().isBadRequest());
         assertTrue(conferidas >= 15, "rotas conferidas: " + conferidas);

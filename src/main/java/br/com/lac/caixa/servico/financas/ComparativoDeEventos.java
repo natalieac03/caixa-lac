@@ -26,11 +26,6 @@ public class ComparativoDeEventos {
         this.relogio = relogio;
     }
 
-    /**
-     * Todos os eventos, do mais antigo ao mais novo, cada um com o seu resumo (o
-     * aberto até agora), e por último o "Dia a dia": as vendas fora dos eventos e
-     * as despesas sem evento no mesmo intervalo total (do primeiro ao último dia).
-     */
     public List<Financas.ResumoDoEvento> eventos() {
         var periodos = eventos.periodos();
         List<Financas.ResumoDoEvento> lista = new ArrayList<>();

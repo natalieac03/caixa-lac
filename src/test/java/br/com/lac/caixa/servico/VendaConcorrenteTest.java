@@ -25,7 +25,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** Várias vendas do mesmo produto ao mesmo tempo (vários caixas no evento). */
+/** Várias vendas do mesmo produto ao mesmo tempo. */
 @SpringBootTest(
         properties = {
             "spring.profiles.active=test",
@@ -48,7 +48,6 @@ class VendaConcorrenteTest {
     @Autowired
     MockMvc mvc;
 
-    /** Dispara n vendas de 1 unidade ao mesmo tempo; devolve quantas entraram e quantas faltou estoque. */
     int[] venderJuntos(long produtoId, int n) throws Exception {
         var pool = Executors.newFixedThreadPool(n);
         var largada = new CountDownLatch(1);

@@ -17,13 +17,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Webhook do Mercado Pago (fora do login). Reforço da consulta da tela: confere
- * o x-signature, responde 200 na hora e, em segundo plano, consulta a order no
- * Mercado Pago e atualiza a cobrança. Assinatura inválida: 401 sem corpo.
- * O id da order vem só do data.id da URL, que entra na assinatura; sem ele,
- * 400 (o id do corpo não é assinado e não vale).
- */
+/** Webhook do Mercado Pago: confere a assinatura e atualiza a cobrança em segundo plano. */
 @RestController
 public class WebhookController {
 

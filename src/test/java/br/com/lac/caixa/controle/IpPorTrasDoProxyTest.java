@@ -28,12 +28,7 @@ import org.springframework.boot.web.servlet.context.ServletWebServerApplicationC
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 
-/**
- * server.forward-headers-strategy=native (perfil prod) liga o RemoteIpValve do
- * Tomcat: o X-Forwarded-For só vale quando a conexão vem da rede privada
- * (o proxy do Railway). Aqui a estratégia é ligada no perfil de teste e o
- * valve configurado pelo Spring Boot é exercitado de verdade.
- */
+/** Atrás do proxy, o limite de login conta o IP real do X-Forwarded-For. */
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
@@ -71,7 +66,6 @@ class IpPorTrasDoProxyTest {
         assertEquals("native", prod.getProperty("server.forward-headers-strategy"));
     }
 
-    /** O IP que a aplicação enxerga, passando pelo valve configurado. */
     String ipVisto(String remoto, String xForwardedFor) throws Exception {
         var tomcat = ((TomcatWebServer) contexto.getWebServer()).getTomcat();
         Valve[] valves = tomcat.getEngine().getPipeline().getValves();
@@ -119,7 +113,6 @@ class IpPorTrasDoProxyTest {
         assertEquals("10.0.4.2", ipVisto("10.0.4.2", null));
     }
 
-    /** Ponta a ponta: a conexão do teste vem de 127.0.0.1 (interno), então o limite conta o IP do cabeçalho. */
     @Test
     void limiteDeLoginContaOIpDoCabecalho() throws Exception {
         var http = HttpClient.newHttpClient();
@@ -133,13 +126,11 @@ class IpPorTrasDoProxyTest {
                 .firstValue("Location")
                 .orElseThrow()
                 .endsWith("/login?erro"));
-        // Mesmo IP do cabeçalho, ainda dentro da espera: recusa sem conferir a senha.
         assertTrue(http.send(errar, HttpResponse.BodyHandlers.discarding())
                 .headers()
                 .firstValue("Location")
                 .orElseThrow()
                 .endsWith("/login?espera"));
-        // Outro IP no cabeçalho, mesma conexão 127.0.0.1: não herda a espera.
         var outro = HttpRequest.newBuilder(errar.uri())
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .header("X-Forwarded-For", "203.0.113.51")

@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-/** Todo lugar que mexe no estoque grava movimento: a soma dos movimentos é sempre a quantidade. */
+/** Todo lugar que mexe no estoque grava movimento. */
 @SpringBootTest(
         properties = {
             "spring.profiles.active=test",
@@ -56,17 +56,14 @@ class InvarianteEstoqueTest {
     @Test
     @DisplayName("Cada operação grava o movimento certo: tipo, sinal, custo, venda e compra")
     void movimentosDeCadaOperacao() {
-        // Arrange
         var p = estoque.criarNovo("Bóton Movimento", new BigDecimal("6"), 10, null, new BigDecimal("2"));
 
-        // Act
         var venda = vender(p, 3);
         caixa.cancelarVenda(venda.getId(), "Ensaio");
         var compra = estoque.registrarCompra(p.getId(), 5, new BigDecimal("15.00"), LocalDate.now(), "fornecedor");
         estoque.adicionarUnidades(p.getId(), 2);
         estoque.removerUnidades(p.getId(), 4);
 
-        // Assert
         List<MovimentoEstoque> ms = movimentos.findByProdutoIdOrderByIdAsc(p.getId());
         assertEquals(
                 List.of(
@@ -92,17 +89,13 @@ class InvarianteEstoqueTest {
     @Test
     @DisplayName("Produto com movimentos é arquivado, não apagado; operação recusada não grava movimento")
     void arquivaERecusaSemMovimento() {
-        // Arrange
         var p = estoque.criarNovo("Bóton Arquivo", new BigDecimal("6"), 2, null);
 
-        // Act / Assert: retirar mais do que há é recusado e nada é gravado
         assertThrows(RegraDeNegocioException.class, () -> estoque.removerUnidades(p.getId(), 5));
         assertEquals(1, movimentos.findByProdutoIdOrderByIdAsc(p.getId()).size());
 
-        // Act: remover
         estoque.remover(p.getId());
 
-        // Assert
         assertTrue(!produtos.findById(p.getId()).orElseThrow().isAtivo(), "arquivado");
         assertEquals(2, movimentos.saldo(p.getId()));
     }
@@ -110,7 +103,6 @@ class InvarianteEstoqueTest {
     @Test
     @DisplayName("Propriedade: centenas de operações aleatórias (semente fixa) e a soma sempre bate")
     void operacoesAleatorias() {
-        // Arrange
         Random aleatorio = new Random(20261030L);
         List<Produto> lista = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
@@ -119,7 +111,6 @@ class InvarianteEstoqueTest {
         }
         List<Venda> vendidas = new ArrayList<>();
 
-        // Act
         for (int passo = 0; passo < 300; passo++) {
             Produto p = lista.get(aleatorio.nextInt(lista.size()));
             int qtd = 1 + aleatorio.nextInt(6);
@@ -145,11 +136,9 @@ class InvarianteEstoqueTest {
                     default -> estoque.removerUnidades(p.getId(), qtd);
                 }
             } catch (RegraDeNegocioException recusada) {
-                // Sem estoque suficiente: recusada sem mexer em nada.
             }
         }
 
-        // Assert
         assertEquals(List.of(), movimentos.produtosComSaldoDivergente());
         for (Produto p : lista) {
             assertEquals(produtos.findById(p.getId()).orElseThrow().getQuantidade(), movimentos.saldo(p.getId()));

@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
+/** Histórico: página cortada no banco, indicadores do filtro inteiro e busca por produto. */
 @SpringBootTest(
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:historico;DB_CLOSE_DELAY=-1"})
 @Transactional
@@ -51,7 +52,6 @@ class HistoricoIntegracaoTest {
     @Test
     @DisplayName("Página de 50 cortada no banco; indicadores e CSV somam o filtro inteiro")
     void paginaNoBancoESomaFiltroInteiro() {
-        // Arrange: 51 vendas Pix no dia, 1 de crédito no dia e 1 Pix no dia seguinte
         var dia = LocalDate.of(2030, 1, 1);
         var p = produtos.save(new Produto("Especial %_", BigDecimal.ONE, 1000));
         for (int i = 0; i < 51; i++) {
@@ -61,11 +61,9 @@ class HistoricoIntegracaoTest {
         venda(p, FormaPagamento.PIX, dia.plusDays(1));
         var filtro = new FiltroHistorico(FormaPagamento.PIX, dia, dia, "ESPECIAL %_");
 
-        // Act
         var primeira = consulta.consultar(filtro, 0);
         var segunda = consulta.consultar(filtro, 1);
 
-        // Assert
         assertEquals(50, primeira.pagina().getNumberOfElements());
         assertEquals(1, segunda.pagina().getNumberOfElements());
         assertEquals(51, primeira.pagina().getTotalElements());
@@ -82,7 +80,6 @@ class HistoricoIntegracaoTest {
     @Test
     @DisplayName("Filtro de produto traz a venda inteira (todos os itens) sem duplicar o total")
     void produtoQualificaVendaSemCortarOutrosItensOuDuplicarTotal() {
-        // Arrange: venda com o produto buscado (x2) e outro (x3), total 5
         var dia = LocalDate.of(2031, 1, 1);
         var p = produtos.save(new Produto("Buscado", BigDecimal.ONE, 10));
         var outro = produtos.save(new Produto("Outro", BigDecimal.ONE, 10));
@@ -92,10 +89,8 @@ class HistoricoIntegracaoTest {
         v.registrarPagamentos(List.of(new PagamentoVenda(FormaPagamento.PIX, new BigDecimal("5"), null, null)));
         vendas.saveAndFlush(v);
 
-        // Act
         var r = consulta.consultar(new FiltroHistorico(null, dia, dia, "buscado"), 0);
 
-        // Assert
         assertEquals(1, r.resumo().getVendas());
         assertEquals(5, r.resumo().getItens());
         assertEquals(0, new BigDecimal("5").compareTo(r.resumo().getTotal()));
@@ -105,12 +100,10 @@ class HistoricoIntegracaoTest {
     @Test
     @DisplayName("Filtro de produto não diferencia acento nem maiúscula (H2)")
     void produtoSemDiferenciarAcentoNoH2() {
-        // Arrange
         var dia = LocalDate.of(2033, 2, 2);
         var p = produtos.save(new Produto("Pão de Açúcar ÉPICO", BigDecimal.ONE, 10));
         venda(p, FormaPagamento.PIX, dia);
 
-        // Act / Assert
         for (String termo : new String[] {"pao de acucar", "PÃO", "epico", "acuca"}) {
             assertEquals(1, vendasNoFiltro(dia, termo), termo);
         }

@@ -14,6 +14,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+/** Tela e CSV do fechamento do caixa. */
 @Controller
 public class FechamentoController {
     private final FechamentoService fechamento;
@@ -26,7 +27,6 @@ public class FechamentoController {
         this.relogio = relogio;
     }
 
-    /** Evento escolhido vale como período; Dia a dia, dentro das datas; sem datas, o dia de hoje. */
     private FiltroHistorico intervalo(String inicio, String fim, SeletorDeEvento sel) {
         if (sel.id() != null) return FiltroHistorico.doEvento(eventos.periodo(sel.id()));
         if ((inicio == null || inicio.isBlank()) && (fim == null || fim.isBlank())) {
@@ -60,11 +60,9 @@ public class FechamentoController {
             @RequestParam(required = false) String evento) {
         var filtro = intervalo(inicio, fim, SeletorDeEvento.ler(evento));
         var resultado = fechamento.consultar(filtro);
-        // Com evento, as colunas Início e Fim levam os dias do evento.
         LocalDate de = filtro.evento() == null
                 ? filtro.inicio()
                 : filtro.evento().inicio().toLocalDate();
-        // O fim do evento é exclusivo: o que acaba à meia-noite termina no dia anterior.
         LocalDate ate = filtro.evento() == null
                 ? filtro.fim()
                 : filtro.evento().fim().minusNanos(1).toLocalDate();

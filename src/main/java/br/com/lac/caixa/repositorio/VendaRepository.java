@@ -13,7 +13,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-/** Filtros do histórico via Specification (VendaSpecs); agregações em VendaConsultas. */
+/** Acesso às vendas: filtros do histórico, páginas e CSV. */
 public interface VendaRepository extends JpaRepository<Venda, Long>, JpaSpecificationExecutor<Venda>, VendaConsultas {
 
     Sort MAIS_RECENTES = Sort.by(Sort.Order.desc("dataHora"), Sort.Order.desc("id"));
@@ -22,13 +22,10 @@ public interface VendaRepository extends JpaRepository<Venda, Long>, JpaSpecific
 
     boolean existsByToken(String token);
 
-    // A página é cortada no banco sem os itens (findAll(spec, pageable)); os itens
-    // da página vêm depois, por id, para não paginar em memória.
     @EntityGraph(attributePaths = {"itens", "itens.produto"})
     @Query("select distinct v from Venda v where v.id in :ids order by v.dataHora desc, v.id desc")
     List<Venda> carregarPagina(@Param("ids") List<Long> ids);
 
-    /** CSV: o filtro inteiro, já com os itens. */
     @Override
     @EntityGraph(attributePaths = {"itens", "itens.produto"})
     List<Venda> findAll(Specification<Venda> filtro, Sort ordem);

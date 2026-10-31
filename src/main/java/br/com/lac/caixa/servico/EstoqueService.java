@@ -22,10 +22,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Regras do estoque. Por ser um @Service, o Spring mantem uma unica
- * instancia desta classe (Singleton), sem precisar do getInstancia().
- */
+/** Regras do estoque: cadastro, entradas, saídas, compras, arquivamento e movimentos. */
 @Service
 public class EstoqueService {
 
@@ -56,7 +53,6 @@ public class EstoqueService {
         this.movimentos = movimentos;
     }
 
-    /** Grava o movimento (na mesma transação de quem alterou o estoque). */
     private void movimento(
             Produto p,
             TipoMovimento tipo,
@@ -73,10 +69,6 @@ public class EstoqueService {
                 + (p.getCustoUnitario() == null ? "-" : p.getCustoUnitario().toPlainString());
     }
 
-    /**
-     * Entrada de estoque por compra: soma ao estoque e recalcula o custo médio
-     * ponderado (Produto.registrarCompra). Guarda o documento da compra.
-     */
     @Transactional
     public CompraEstoque registrarCompra(
             Long produtoId, int quantidade, BigDecimal custoTotal, LocalDate data, String observacao) {
@@ -109,7 +101,6 @@ public class EstoqueService {
         return compra;
     }
 
-    /** Só os produtos ativos: os arquivados somem das telas. */
     public List<Produto> listar() {
         return produtos.findByAtivoTrueOrderByNomeAsc();
     }
@@ -123,7 +114,6 @@ public class EstoqueService {
         return criarNovo(nome, preco, quantidade, categoria, null);
     }
 
-    /** Cadastro com custo unitário opcional (null = sem custo). */
     @Transactional
     public Produto criarNovo(String nome, BigDecimal preco, int quantidade, Categoria categoria, BigDecimal custo) {
         Produto p = new Produto(nome.trim(), preco, quantidade);
@@ -145,13 +135,11 @@ public class EstoqueService {
         return salvo;
     }
 
-    /** Edita nome, preço e categoria. Vendas já feitas guardam o preço da época. */
     @Transactional
     public Produto editar(Long id, String nome, BigDecimal preco, Categoria categoria) {
         return editar(id, nome, preco, categoria, buscar(id).getCustoUnitario());
     }
 
-    /** Edição com custo (vazio = sem custo). Vendas já feitas guardam preço e custo da época. */
     @Transactional
     public Produto editar(Long id, String nome, BigDecimal preco, Categoria categoria, BigDecimal custo) {
         Produto p = buscar(id);
@@ -162,7 +150,6 @@ public class EstoqueService {
         return salvo;
     }
 
-    /** Soma unidades ao estoque de um produto que ja existe. */
     @Transactional
     public void adicionarUnidades(Long id, int quantidade) {
         Produto p = buscar(id);
@@ -173,10 +160,6 @@ public class EstoqueService {
         auditoria.registrar("estoque_reposto", "id", id, "antes", antes, "depois", p.getQuantidade());
     }
 
-    /**
-     * Tira unidades do estoque (ex.: venda feita fora do sistema). O estoque
-     * pode chegar a 0: o produto continua na lista, só aparece como esgotado.
-     */
     @Transactional
     public void removerUnidades(Long produtoId, int quantidade) {
         Produto p = buscar(produtoId);
@@ -187,13 +170,6 @@ public class EstoqueService {
         auditoria.registrar("estoque_retirado", "id", produtoId, "antes", antes, "depois", p.getQuantidade());
     }
 
-    /**
-     * Remove um produto. Se ele ja aparece em alguma venda ou tem movimentos de
-     * estoque, nao da para apagar de vez (o historico ficaria quebrado): nesse
-     * caso o produto e ARQUIVADO, somindo das telas mas preservando o historico.
-     *
-     * @return true se foi arquivado, false se foi apagado de vez.
-     */
     @Transactional
     public boolean remover(Long id) {
         Produto p = buscar(id);
@@ -209,7 +185,6 @@ public class EstoqueService {
         return false;
     }
 
-    /** Da baixa no estoque ao confirmar uma venda (o movimento é gravado depois, com a venda salva). */
     @Transactional
     public void darBaixa(Produto produto, int quantidade) {
         if (quantidade < 1) throw new RegraDeNegocioException("Quantidade deve ser maior que zero.");
@@ -220,15 +195,10 @@ public class EstoqueService {
         recarregar(produto);
     }
 
-    /**
-     * Depois do UPDATE atômico, o objeto em memória ainda tem a quantidade e a
-     * versão antigas: recarrega do banco (sem marcar como alterado).
-     */
     private void recarregar(Produto produto) {
         if (em.contains(produto)) em.refresh(produto);
     }
 
-    /** Um SAIDA_VENDA por item da venda já salva, com o custo congelado no item. */
     @Transactional
     public void registrarSaidasDaVenda(Venda venda) {
         for (ItemVenda item : venda.getItens()) {
@@ -243,7 +213,6 @@ public class EstoqueService {
         }
     }
 
-    /** Cancelamento: devolve cada item ao estoque, com um DEVOLUCAO_CANCELAMENTO por item. */
     @Transactional
     public void devolverItensDaVenda(Venda venda) {
         for (ItemVenda item : venda.getItens()) {
@@ -261,7 +230,6 @@ public class EstoqueService {
         }
     }
 
-    /** Limite de estoque baixo do produto (null = sem limite). */
     @Transactional
     public Produto definirLimite(Long id, Integer limite) {
         Produto p = buscar(id);

@@ -32,12 +32,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-/**
- * EXPLAIN das consultas das finanças no Postgres, com volume (60 mil vendas em
- * 2 anos, 120 mil itens). Um espião troca cada consulta por EXPLAIN dela; os
- * planos vão para target/explain-financas.txt e o teste confere que as
- * consultas de uma janela curta (um dia de evento) usam os índices.
- */
+/** EXPLAIN das consultas das finanças no Postgres com volume: usam os índices. */
 @ExtendWith(ExigeDocker.class)
 @SpringBootTest(properties = {"spring.profiles.active=test"})
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -58,7 +53,6 @@ class FinancasExplainTest {
     @Autowired
     JdbcTemplate jdbc;
 
-    /** Troca a consulta pelo EXPLAIN dela e guarda o plano. */
     static class Espiao extends NamedParameterJdbcTemplate {
         final List<String> planos = new ArrayList<>();
         private final NamedParameterJdbcTemplate real;
@@ -167,7 +161,6 @@ class FinancasExplainTest {
         }
         assertTrue(curto.get("somaItens").contains("idx_item_venda_venda"), curto.get("somaItens"));
         assertTrue(curto.get("porForma").contains("idx_pagamento_venda_venda"), curto.get("porForma"));
-        // Num ano de vendas, os parados param no primeiro item do produto (V16).
         assertTrue(longo.get("parados").contains("ix_item_venda_produto"), longo.get("parados"));
     }
 }

@@ -7,6 +7,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/** Categorias de produto: listar, criar, renomear e remover. */
 @Service
 public class CategoriaService {
 
@@ -29,10 +30,6 @@ public class CategoriaService {
                 .orElseThrow(() -> new RegraDeNegocioException("Categoria não encontrada: " + id));
     }
 
-    /**
-     * Renomeia. Recusa se outra categoria já tem o mesmo nome padronizado
-     * ("BÓTON" e "bóton" são o mesmo nome).
-     */
     @Transactional
     public Categoria renomear(Long id, String nomeDigitado) {
         Categoria categoria = buscar(id);
@@ -51,10 +48,6 @@ public class CategoriaService {
         return salva;
     }
 
-    /**
-     * Devolve a categoria com esse nome, criando se não existir.
-     * "BÓTON", "bóton" e "Bóton" caem na mesma categoria.
-     */
     @Transactional
     public Categoria obterOuCriar(String nomeDigitado) {
         String normalizado = Categoria.normalizar(nomeDigitado);

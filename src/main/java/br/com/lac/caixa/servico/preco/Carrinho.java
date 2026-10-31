@@ -3,6 +3,7 @@ package br.com.lac.caixa.servico.preco;
 import br.com.lac.caixa.modelo.Produto;
 import java.util.List;
 
+/** As linhas do carrinho: produto e quantidade. */
 public record Carrinho(List<Linha> itens) {
     public Carrinho {
         itens = List.copyOf(itens);

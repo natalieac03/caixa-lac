@@ -1,6 +1,6 @@
 package br.com.lac.caixa.modelo;
 
-/** Por que o estoque mudou. Entradas e devoluções somam; saídas subtraem. */
+/** Por que o estoque mudou. */
 public enum TipoMovimento {
     ENTRADA_COMPRA(1),
     ENTRADA_AJUSTE(1),

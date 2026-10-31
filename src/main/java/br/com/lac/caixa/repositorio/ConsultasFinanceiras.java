@@ -10,12 +10,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-/**
- * As agregações das finanças, em SQL que roda igual no PostgreSQL e no H2.
- * Só entram as cláusulas dos filtros preenchidos (nada de "? is null", que o
- * Postgres recusa sem tipo). Canceladas ficam sempre de fora. Os valores voltam
- * como o banco somou; arredondar e calcular percentuais fica com o serviço.
- */
+/** As agregações das finanças em SQL que roda igual no PostgreSQL e no H2. */
 @Repository
 public class ConsultasFinanceiras {
 
@@ -25,29 +20,17 @@ public class ConsultasFinanceiras {
         this.jdbc = jdbc;
     }
 
-    /**
-     * Dia a dia: a venda não está em nenhum evento (início incluído, fim excluído).
-     * O evento aberto vale até agora, mas só até o início do próximo evento: a
-     * mesma regra do EventoService.fimEfetivo. Usa ix_evento_inicio_fim.
-     */
     static final String DIA_A_DIA = " AND NOT EXISTS (SELECT 1 FROM evento ev WHERE ev.inicio <= v.data_hora"
             + " AND (ev.fim > v.data_hora OR (ev.fim IS NULL AND v.data_hora <= :agora"
             + " AND NOT EXISTS (SELECT 1 FROM evento prox WHERE prox.inicio > ev.inicio AND prox.inicio <= v.data_hora))))";
 
-    /**
-     * CMV de um item (alias i): custo x quantidade arredondado ao centavo no
-     * próprio item, para o resumo, a série e os rankings somarem os mesmos
-     * centavos. Item sem custo fica fora (null).
-     */
     static final String CMV =
             "CASE WHEN i.custo_unitario IS NOT NULL THEN ROUND(i.custo_unitario * i.quantidade, 2) END";
 
-    /** Só as partes de pagamento (alias pg) na forma do filtro, se houver. */
     private static String partes(FiltroFinancas f) {
         return f.forma() == null ? "" : " AND pg.forma = :forma";
     }
 
-    /** WHERE das vendas (alias v) e, se o filtro tem categoria, dos itens (alias p = produto do item). */
     private record Onde(String vendas, String itens, MapSqlParameterSource parametros) {}
 
     private static Onde onde(FiltroFinancas f) {
@@ -83,9 +66,6 @@ public class ConsultasFinanceiras {
         return r.wasNull() ? null : v;
     }
 
-    // ---------------------------------------------------------------- resumo
-
-    /** Somas dos itens das vendas do filtro. cmv = soma do CMV de cada item (já ao centavo). */
     public record SomaItens(
             BigDecimal bruto,
             BigDecimal liquido,
@@ -114,10 +94,6 @@ public class ConsultasFinanceiras {
                         r.getLong("unidades")));
     }
 
-    /**
-     * Somas por venda: quantidade, cobrado, descontos promocionais, ajustes
-     * (cobrado - calculado, com sinal), cortesias e as vendas sem itens (antigas).
-     */
     public record SomaVendas(
             long vendas,
             BigDecimal cobrado,
@@ -150,7 +126,6 @@ public class ConsultasFinanceiras {
                         dec(r, "cobrado_sem_itens")));
     }
 
-    /** Soma das taxas estimadas das partes de pagamento das vendas do filtro (só as da forma, se houver). */
     public BigDecimal taxas(FiltroFinancas f) {
         Onde o = onde(f);
         return jdbc.queryForObject(
@@ -160,11 +135,6 @@ public class ConsultasFinanceiras {
                 BigDecimal.class);
     }
 
-    /**
-     * Despesas, numa regra só: a ligada a um evento é do evento e conta no dia
-     * em que ele começa; a sem evento conta na data dela. Assim eventos + dia a
-     * dia somam o mesmo que o período.
-     */
     public BigDecimal despesas(FiltroFinancas f) {
         if (f.evento() != null) {
             return jdbc.queryForObject(
@@ -173,7 +143,6 @@ public class ConsultasFinanceiras {
                     BigDecimal.class);
         }
         if (f.diaADia()) {
-            // Despesa sem evento é do dia a dia.
             return jdbc.queryForObject(
                     "SELECT COALESCE(SUM(valor), 0) FROM despesa WHERE evento_id IS NULL AND data >= :de AND data <= :ate",
                     new MapSqlParameterSource().addValue("de", f.inicio()).addValue("ate", f.fim()),
@@ -187,12 +156,8 @@ public class ConsultasFinanceiras {
                 BigDecimal.class);
     }
 
-    // ---------------------------------------------------------------- séries
-
-    /** Um balde de dia e hora: receita líquida, CMV (itens com custo) e vendas distintas. */
     public record Balde(LocalDate dia, int hora, BigDecimal liquido, BigDecimal cmv, long vendas) {}
 
-    /** Por dia e hora (o serviço junta por dia, por hora ou por dia da semana). */
     public List<Balde> porDiaEHora(FiltroFinancas f) {
         Onde o = onde(f);
         return jdbc.query(
@@ -213,9 +178,6 @@ public class ConsultasFinanceiras {
                         r.getLong("vendas")));
     }
 
-    // ---------------------------------------------------------------- rankings
-
-    /** Por produto: unidades, receita líquida, CMV e unidades sem custo. */
     public record SomaProduto(
             Long produtoId,
             String nome,
@@ -251,7 +213,6 @@ public class ConsultasFinanceiras {
                         r.getLong("sem_custo")));
     }
 
-    /** Por categoria de produto (categoria null = sem categoria). */
     public record SomaCategoria(
             Long categoriaId,
             String categoria,
@@ -284,7 +245,6 @@ public class ConsultasFinanceiras {
                         r.getLong("vendas")));
     }
 
-    /** Por forma, pelas partes de pagamento: valor, vendas distintas e taxa estimada (só a forma do filtro, se houver). */
     public record SomaForma(FormaPagamento forma, BigDecimal valor, long vendas, BigDecimal taxas) {}
 
     public List<SomaForma> porForma(FiltroFinancas f) {
@@ -302,11 +262,6 @@ public class ConsultasFinanceiras {
                         dec(r, "taxas")));
     }
 
-    /**
-     * Por promoção (promocao_id null = promoções apagadas): vendas em que entrou,
-     * desconto total e receita líquida dessas vendas: o valor cobrado ou, com
-     * filtro de categoria, o líquido só dos itens da categoria.
-     */
     public record SomaPromocao(Long promocaoId, long vendas, BigDecimal desconto, BigDecimal receita) {}
 
     public List<SomaPromocao> porPromocao(FiltroFinancas f) {
@@ -333,9 +288,6 @@ public class ConsultasFinanceiras {
                         idOuNull(r, "promocao_id"), r.getLong("vendas"), dec(r, "desconto"), dec(r, "receita")));
     }
 
-    // ---------------------------------------------------------------- estoque
-
-    /** Produto ativo com o estoque de agora e as unidades vendidas no filtro. */
     public record Estoque(
             Long produtoId,
             String nome,
@@ -368,7 +320,6 @@ public class ConsultasFinanceiras {
                         r.getLong("vendidas")));
     }
 
-    /** Produtos ativos com estoque e sem nenhuma venda no filtro. */
     public List<Estoque> parados(FiltroFinancas f) {
         Onde o = onde(f);
         String categoria = f.categoriaId() == null ? "" : " AND p.categoria_id = :categoria";
@@ -390,7 +341,6 @@ public class ConsultasFinanceiras {
                         0));
     }
 
-    /** Valor do estoque de agora (produtos ativos): a custo (só os com custo), a preço, e quantos sem custo. */
     public record ValorEstoque(BigDecimal aCusto, BigDecimal aPreco, long produtosSemCusto) {}
 
     public ValorEstoque valorDoEstoque(FiltroFinancas f) {
@@ -409,7 +359,6 @@ public class ConsultasFinanceiras {
                 (r, n) -> new ValorEstoque(dec(r, "a_custo"), dec(r, "a_preco"), r.getLong("sem_custo")));
     }
 
-    /** Venda cancelada do período (pela data da venda), com o motivo. */
     public record Cancelamento(
             Long vendaId,
             java.time.LocalDateTime dataHora,
@@ -435,7 +384,6 @@ public class ConsultasFinanceiras {
                         r.getString("motivo_cancelamento")));
     }
 
-    /** Venda válida do filtro com ajuste manual (cobrado diferente do calculado), com o motivo. */
     public record Ajuste(
             Long vendaId, java.time.LocalDateTime dataHora, BigDecimal calculado, BigDecimal cobrado, String motivo) {}
 

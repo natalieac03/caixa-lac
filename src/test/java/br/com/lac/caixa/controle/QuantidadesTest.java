@@ -8,6 +8,7 @@ import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+/** Leitura das quantidades: teto por produto e chave inválida. */
 class QuantidadesTest {
 
     @Test

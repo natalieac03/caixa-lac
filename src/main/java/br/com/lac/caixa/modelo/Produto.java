@@ -12,13 +12,9 @@ import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-/**
- * Um item do estoque da LAC: tem nome, preco, quantidade disponivel
- * e uma categoria (ex.: "Bóton", "Adesivo Grande").
- */
+/** Um item do estoque: nome, preço, quantidade, categoria e custo médio. */
 @Entity
 public class Produto {
-    /** Casas decimais do custo (o custo médio é uma divisão). */
     public static final int ESCALA_CUSTO = 4;
 
     @Id
@@ -32,7 +28,6 @@ public class Produto {
 
     private int quantidade;
 
-    /** Controle otimista: duas baixas simultâneas do mesmo produto não passam juntas. */
     @Version
     @Column(columnDefinition = "bigint default 0")
     private long versao;
@@ -40,20 +35,10 @@ public class Produto {
     @ManyToOne
     private Categoria categoria;
 
-    /**
-     * Produto arquivado (false) não aparece no estoque nem na tela de venda,
-     * mas continua existindo para não quebrar o histórico de vendas antigas.
-     */
     private boolean ativo = true;
 
-    /** Limite de estoque baixo (opcional): o alerta avisa quando a quantidade chega a ele. */
     private Integer estoqueMinimo;
 
-    /**
-     * Custo unitário atual (custo médio ponderado das compras), com
-     * {@link #ESCALA_CUSTO} casas. Opcional: null = ainda não informado ("sem
-     * custo"). Só para as finanças; não muda o preço cobrado.
-     */
     @Column(precision = 38, scale = ESCALA_CUSTO)
     private BigDecimal custoUnitario;
 
@@ -81,17 +66,12 @@ public class Produto {
         this.nome = nome.trim();
     }
 
-    /**
-     * Edição do cadastro. O preço novo só vale para vendas novas: cada item de
-     * venda guarda o preço unitário do momento da venda (ItemVenda).
-     */
     public void editar(String nome, BigDecimal preco, Categoria categoria) {
         setNome(nome);
         setPreco(preco);
         setCategoria(categoria);
     }
 
-    /** Edição com custo: custo vazio (null) = sem custo. */
     public void editar(String nome, BigDecimal preco, Categoria categoria, BigDecimal custo) {
         editar(nome, preco, categoria);
         setCustoUnitario(custo);
@@ -110,11 +90,6 @@ public class Produto {
         return custoUnitario == null;
     }
 
-    /**
-     * Entrada por compra: soma ao estoque e recalcula o custo médio ponderado,
-     * novo = (estoque x custo atual + custo da compra) / (estoque + quantidade).
-     * Sem custo atual, assume o custo unitário da compra.
-     */
     public void registrarCompra(int qtd, BigDecimal custoTotal) {
         if (qtd < 1) throw new RegraDeNegocioException("Quantidade deve ser maior que zero.");
         if (custoTotal == null || custoTotal.signum() < 0) {
@@ -146,7 +121,6 @@ public class Produto {
         return quantidade;
     }
 
-    /** Tira unidades do estoque; nunca deixa negativo. */
     public void baixar(int qtd) {
         if (qtd < 1) throw new RegraDeNegocioException("Quantidade deve ser maior que zero.");
         if (qtd > quantidade) {
@@ -156,7 +130,6 @@ public class Produto {
         quantidade -= qtd;
     }
 
-    /** Devolve ou soma unidades ao estoque. */
     public void repor(int qtd) {
         if (qtd < 1) throw new RegraDeNegocioException("Quantidade deve ser maior que zero.");
         quantidade = Math.addExact(quantidade, qtd);
@@ -170,7 +143,6 @@ public class Produto {
         this.categoria = categoria;
     }
 
-    /** Nome da categoria para exibição (vazio se não tiver). */
     public String getNomeCategoria() {
         return categoria != null ? categoria.getNome() : "";
     }
@@ -187,14 +159,12 @@ public class Produto {
         return estoqueMinimo;
     }
 
-    /** null = sem limite (o alerta usa a média de vendas do último evento). */
     public void setEstoqueMinimo(Integer limite) {
         if (limite != null && limite < 0)
             throw new RegraDeNegocioException("O limite de estoque baixo não pode ser negativo.");
         this.estoqueMinimo = limite;
     }
 
-    /** Com limite: a quantidade chegou a ele (menor ou igual). */
     public boolean isAbaixoDoLimite() {
         return estoqueMinimo != null && quantidade <= estoqueMinimo;
     }

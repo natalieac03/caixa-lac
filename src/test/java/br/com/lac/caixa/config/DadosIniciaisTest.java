@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 
+/** Produtos de exemplo só no perfil local. */
 class DadosIniciaisTest {
 
     long produtosAoSubir(String perfil, String banco) {

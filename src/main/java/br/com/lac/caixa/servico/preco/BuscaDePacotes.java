@@ -10,37 +10,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.ToDoubleBiFunction;
 
-/**
- * Escolhe pacotes sobre as unidades que sobraram (sem A_PARTIR_DE), em centavos.
- * Cada pacote leva as unidades mais caras que ainda restam em cada categoria, o
- * que maximiza a economia para uma mesma quantidade de unidades consumidas.
- *
- * <p>{@link #exata()}: programação dinâmica; estado = quantas unidades restam em
- * cada categoria usada por algum pacote, memo em array indexado por base mista.
- * Empate: o primeiro pacote na ordem recebida (por id).
- * <p>{@link #gulosa()}: para carrinhos grandes demais; o melhor de duas
- * heurísticas (maior economia por pacote; maior economia por unidade).
- */
+/** Escolhe os pacotes de maior economia sobre as unidades que sobraram. */
 public final class BuscaDePacotes {
 
-    /** Economia total e quais pacotes entraram (quantas vezes e quanto economizou cada um). */
     public record Resultado(long economia, Map<Promocao, Integer> usados, Map<Promocao, Long> economiaPorPacote) {
         static final Resultado NENHUM = new Resultado(0, Map.of(), Map.of());
     }
 
     private final List<Promocao> pacotes;
     private final List<Long> categorias = new ArrayList<>();
-    private final long[][] acumulado; // acumulado[c][k] = soma das k unidades mais caras
+    private final long[][] acumulado;
     private final int[] total;
     private final long[] base;
     private final int[][] usoPorPacote;
     private final long[] precoPacote;
     private final long estados;
 
-    /**
-     * @param restantes unidades restantes por categoria (preços em centavos, em qualquer ordem)
-     * @param todos     pacotes ativos, na ordem de desempate (por id)
-     */
     public BuscaDePacotes(Map<Long, List<Long>> restantes, List<Promocao> todos) {
         this.pacotes = todos.stream()
                 .filter(p -> p.getItens().stream()
@@ -80,12 +65,9 @@ public final class BuscaDePacotes {
         }
     }
 
-    /** Tamanho do espaço de estados da busca exata (custo de {@link #exata()}). */
     public long estados() {
         return estados;
     }
-
-    // ---------- busca exata ----------
 
     public Resultado exata() {
         if (pacotes.isEmpty()) return Resultado.NENHUM;
@@ -116,11 +98,6 @@ public final class BuscaDePacotes {
         return e;
     }
 
-    /**
-     * DP iterativa (sem recursão, então sem estourar a pilha com milhares de
-     * unidades): cada pacote só diminui o índice do estado, então percorrer os
-     * estados em ordem crescente garante que memo[proximo] já está pronto.
-     */
     private void economia(int ultimo, long[] memo, int[] escolha) {
         for (int estado = 0; estado <= ultimo; estado++) {
             long melhor = 0;
@@ -155,9 +132,6 @@ public final class BuscaDePacotes {
         }
     }
 
-    // ---------- heurísticas ----------
-
-    /** O melhor entre "maior economia por pacote" e "maior economia por unidade". */
     public Resultado gulosa() {
         if (pacotes.isEmpty()) return Resultado.NENHUM;
         Resultado porPacote = gulosa((ganho, unidades) -> ganho);

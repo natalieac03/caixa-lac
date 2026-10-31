@@ -1,8 +1,4 @@
-/*
- * Sininho: conta os avisos novos (ids que este navegador ainda não viu), abre e
- * fecha o painel e consulta /avisos a cada 60 s enquanto a aba estiver visível.
- * O conteúdo vem pronto do servidor; aqui não se calcula nada.
- */
+/* Sininho: conta os avisos novos, abre o painel e consulta /avisos a cada 60 s. */
 (function () {
     'use strict';
     var botao = document.getElementById('botao-sino');
@@ -44,12 +40,10 @@
         botao.setAttribute('data-novos', String(novos));
     }
 
-    /* Abrir o painel marca os avisos atuais como vistos (só os atuais: a lista não cresce). */
     function marcarVistos() {
         try {
             localStorage.setItem(CHAVE, JSON.stringify(idsAtuais()));
         } catch (e) {
-            /* Sem localStorage: todos continuam contando como novos. */
         }
     }
 
@@ -122,7 +116,7 @@
                 return r.ok ? r.json() : null;
             })
             .then(function (d) { if (d) desenhar(d); })
-            .catch(function () { /* sem rede: tenta de novo no próximo ciclo */ });
+            .catch(function () {});
     }
 
     function iniciar() {
@@ -134,7 +128,6 @@
         timer = null;
     }
 
-    /* Aba escondida não consulta; ao voltar, consulta na hora e retoma. */
     document.addEventListener('visibilitychange', function () {
         if (document.hidden) { parar(); } else { consultar(); iniciar(); }
     });

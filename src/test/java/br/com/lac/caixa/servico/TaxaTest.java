@@ -42,7 +42,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** Taxas por forma com vigência: gravadas na venda, arredondadas ao centavo, sem mexer no passado. */
+/** Taxas com vigência: gravadas na venda, arredondadas ao centavo, sem mexer no passado. */
 @SpringBootTest(
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:taxas;DB_CLOSE_DELAY=-1"})
 @AutoConfigureMockMvc
@@ -132,19 +132,18 @@ class TaxaTest {
     void arredondamento() {
         var agora = LocalDateTime.of(2025, 1, 1, 0, 0);
         var credito = new TaxaPagamento(FormaPagamento.CREDITO, r("3.5"), r("0"), LocalDate.of(2025, 1, 1), agora);
-        assertValor("0.21", credito.estimar(r("6.00"))); // 0,21 exato
-        assertValor("0.04", credito.estimar(r("1.00"))); // 0,035 -> 0,04
-        assertValor("0.03", credito.estimar(r("0.99"))); // 0,03465 -> 0,03
+        assertValor("0.21", credito.estimar(r("6.00")));
+        assertValor("0.04", credito.estimar(r("1.00")));
+        assertValor("0.03", credito.estimar(r("0.99")));
         var meio = new TaxaPagamento(FormaPagamento.CREDITO, r("2.5"), r("0"), LocalDate.of(2025, 1, 1), agora);
-        assertValor("0.02", meio.estimar(r("1.00"))); // 0,025 -> 0,02 (o par), como o resto das finanças
-        assertValor("0.04", meio.estimar(r("1.40"))); // 0,035 -> 0,04 (o par)
+        assertValor("0.02", meio.estimar(r("1.00")));
+        assertValor("0.04", meio.estimar(r("1.40")));
         var debito = new TaxaPagamento(FormaPagamento.DEBITO, r("1.99"), r("0.30"), LocalDate.of(2025, 1, 1), agora);
-        assertValor("0.66", debito.estimar(r("18.00"))); // 0,3582 + 0,30 = 0,6582 -> 0,66
-        assertValor("0.32", debito.estimar(r("1.00"))); // 0,0199 + 0,30 -> 0,32
+        assertValor("0.66", debito.estimar(r("18.00")));
+        assertValor("0.32", debito.estimar(r("1.00")));
         var pix = new TaxaPagamento(FormaPagamento.PIX, r("0.99"), r("0"), LocalDate.of(2025, 1, 1), agora);
-        assertValor("0.05", pix.estimar(r("5.00"))); // 0,0495 -> 0,05
-        assertValor("0.00", pix.estimar(r("0.50"))); // 0,00495 -> 0,00
-        // Percentual fora de 0..100, negativo, com casas demais e fixo negativo são recusados.
+        assertValor("0.05", pix.estimar(r("5.00")));
+        assertValor("0.00", pix.estimar(r("0.50")));
         assertThrows(
                 RegraDeNegocioException.class,
                 () -> new TaxaPagamento(FormaPagamento.PIX, r("101"), r("0"), LocalDate.of(2025, 1, 1), agora));
@@ -162,30 +161,25 @@ class TaxaTest {
     @Test
     @DisplayName("Vigência: venda antes da mudança guarda a taxa antiga, depois guarda a nova; passado é recusado")
     void vigencia() {
-        // Arrange: crédito 3,5% hoje; muda para 4,99% + R$ 0,50 daqui a 2 dias
         taxas.definir(FormaPagamento.CREDITO, r("3.5"), null, hoje());
         taxas.definir(FormaPagamento.CREDITO, r("4.99"), r("0.50"), hoje().plusDays(2));
         assertThrows(
                 RegraDeNegocioException.class,
                 () -> taxas.definir(FormaPagamento.CREDITO, r("1"), null, hoje().minusDays(1)));
 
-        // Act: uma venda hoje, outra amanhã (ainda a antiga) e outra depois da mudança
         Venda antes = vender(r("20"), 1, List.of(PagamentoInformado.total(FormaPagamento.CREDITO)));
         avancarDias(1);
         Venda vespera = vender(r("20"), 1, List.of(PagamentoInformado.total(FormaPagamento.CREDITO)));
         avancarDias(1);
         Venda depois = vender(r("20"), 1, List.of(PagamentoInformado.total(FormaPagamento.CREDITO)));
 
-        // Assert
         assertValor("0.70", taxaGravada(antes, FormaPagamento.CREDITO));
         assertValor("0.70", taxaGravada(vespera, FormaPagamento.CREDITO));
-        assertValor("1.50", taxaGravada(depois, FormaPagamento.CREDITO)); // 0,998 + 0,50 = 1,498 -> 1,50
+        assertValor("1.50", taxaGravada(depois, FormaPagamento.CREDITO));
 
-        // Act: muda de novo (hoje); as vendas passadas não mudam
         taxas.definir(FormaPagamento.CREDITO, r("10"), null, hoje());
         assertValor("0.70", taxaGravada(antes, FormaPagamento.CREDITO));
         assertValor("1.50", taxaGravada(depois, FormaPagamento.CREDITO));
-        // Mesma forma e data: substitui (não duplica).
         assertEquals(
                 1,
                 jdbc.queryForObject(
@@ -201,18 +195,15 @@ class TaxaTest {
     @DisplayName(
             "Venda dividida: taxa por parte; forma sem taxa grava zero registrada; Pix do Mercado Pago usa a do Pix")
     void dividaESemTaxaEPixMercadoPago() {
-        // Arrange
         taxas.definir(FormaPagamento.DEBITO, r("1.99"), r("0.30"), hoje());
         taxas.definir(FormaPagamento.PIX, r("0.99"), null, hoje());
 
-        // Act: R$ 18 = débito 10 + dinheiro 8 (dinheiro sem taxa)
         Venda dividida = vender(
                 r("6"),
                 3,
                 List.of(
                         new PagamentoInformado(FormaPagamento.DEBITO, r("10"), null, null),
                         new PagamentoInformado(FormaPagamento.DINHEIRO, r("8"), null, null)));
-        // Act: Pix do Mercado Pago de R$ 12
         String token = UUID.randomUUID().toString();
         String order = cobrancas.gerar(token, 0, r("12")).getOrderId();
         FAKE.pagar(order, "12.00");
@@ -226,8 +217,7 @@ class TaxaTest {
                         token)
                 .venda();
 
-        // Assert
-        assertValor("0.50", taxaGravada(dividida, FormaPagamento.DEBITO)); // 0,199 + 0,30 = 0,499 -> 0,50
+        assertValor("0.50", taxaGravada(dividida, FormaPagamento.DEBITO));
         assertValor("0.00", taxaGravada(dividida, FormaPagamento.DINHEIRO));
         assertTrue(jdbc.queryForObject(
                 "select taxa_registrada from pagamento_venda where venda_id = ? and forma = 'DINHEIRO'",
@@ -237,7 +227,7 @@ class TaxaTest {
                 "select taxa_id from pagamento_venda where venda_id = ? and forma = 'DINHEIRO'",
                 Long.class,
                 dividida.getId()));
-        assertValor("0.12", taxaGravada(pixMp, FormaPagamento.PIX)); // 0,1188 -> 0,12
+        assertValor("0.12", taxaGravada(pixMp, FormaPagamento.PIX));
         assertEquals(
                 "MERCADO_PAGO",
                 jdbc.queryForObject(
@@ -249,13 +239,11 @@ class TaxaTest {
     @Test
     @DisplayName("Vendas antigas (antes das taxas): taxa zero e marcadas como sem taxa registrada")
     void vendasAntigas() throws Exception {
-        // Arrange: uma parte como a V15 deixa as antigas
         Venda v = vender(r("6"), 1, List.of(PagamentoInformado.total(FormaPagamento.DINHEIRO)));
         jdbc.update(
                 "update pagamento_venda set taxa_registrada = false, taxa_estimada = 0, taxa_id = null where venda_id = ?",
                 v.getId());
 
-        // Assert
         assertTrue(taxas.vendasSemTaxaRegistrada() >= 1);
         assertFalse(jdbc.queryForObject(
                 "select taxa_registrada from pagamento_venda where venda_id = ?", Boolean.class, v.getId()));

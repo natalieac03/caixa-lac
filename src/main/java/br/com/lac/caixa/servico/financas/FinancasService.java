@@ -51,14 +51,7 @@ import java.util.function.Function;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * As contas da tela de Finanças (o painel): resumo e comparação, série, mapa
- * de calor, rankings, curva ABC, formas, promoções, demonstrativo e metas. As
- * somas são feitas no banco (ConsultasFinanceiras); aqui ficam arredondamento,
- * percentuais, ordenação e o preenchimento dos pontos sem venda. O estoque, o
- * relatório do evento e o comparativo têm os seus serviços; as contas comuns
- * ficam em {@link Contas}.
- */
+/** As contas do painel de Finanças: resumo, comparação, série, rankings, formas, promoções e metas. */
 @Service
 @Transactional(readOnly = true)
 public class FinancasService {
@@ -74,8 +67,6 @@ public class FinancasService {
         this.eventos = eventos;
         this.promocoes = promocoes;
     }
-
-    // ---------------------------------------------------------------- A: resumo
 
     public Resumo resumo(FiltroFinancas f) {
         var itens = consultas.somaItens(f);
@@ -121,7 +112,6 @@ public class FinancasService {
                 porCategoria ? BigDecimal.ZERO.setScale(2) : dinheiro(vendas.cobradoSemItens()));
     }
 
-    /** O resumo e o do período anterior de mesmo tamanho (ou do evento anterior), com as variações. */
     public Comparacao comparar(FiltroFinancas f) {
         Resumo atual = resumo(f);
         FiltroFinancas anterior;
@@ -134,7 +124,6 @@ public class FinancasService {
             anterior = f.noEvento(new PeriodoDoEvento(e.getId(), e.getNome(), e.getInicio(), e.getFim()));
             descricao = "evento " + e.getNome();
         } else {
-            // Mesmo tamanho até agora e, se o período ainda não acabou, o mesmo recorte de horas.
             long dias = f.dias();
             LocalDate ate = f.inicio().minusDays(1);
             LocalDate de = ate.minusDays(dias - 1);
@@ -176,12 +165,6 @@ public class FinancasService {
         return lista;
     }
 
-    // ---------------------------------------------------------------- B: séries
-
-    /**
-     * De quanto em quanto tempo vai a série, pelo tamanho do período escolhido:
-     * por hora até 48 horas, por dia até 90 dias, por semana até 1 ano e por mês acima.
-     */
     static Granularidade granularidade(FiltroFinancas f) {
         LocalDateTime de = f.inicioConsulta();
         LocalDateTime ate = f.fimEscolhido();
@@ -191,7 +174,6 @@ public class FinancasService {
         return Granularidade.MES;
     }
 
-    /** Início do ponto em que cai o momento: a hora, o dia, a semana (segunda) ou o mês, nunca antes do período. */
     private static LocalDateTime inicioDoPonto(Granularidade g, LocalDateTime momento, LocalDate inicioDoPeriodo) {
         LocalDate dia = momento.toLocalDate();
         LocalDate comeco = switch (g) {
@@ -216,7 +198,6 @@ public class FinancasService {
         };
     }
 
-    /** Por hora, dia, semana ou mês (pelo tamanho do período), com zeros onde não houve venda. */
     public Serie serie(FiltroFinancas f) {
         Granularidade g = granularidade(f);
         LocalDate inicioDoPeriodo = f.inicioConsulta().toLocalDate();
@@ -239,7 +220,6 @@ public class FinancasService {
         return new Serie(g, pontos);
     }
 
-    /** Vendas e receita por dia da semana x hora (7 x 24 células, segunda a domingo). */
     public List<Celula> mapaDeCalor(FiltroFinancas f) {
         Map<DayOfWeek, long[]> vendas = new EnumMap<>(DayOfWeek.class);
         Map<DayOfWeek, BigDecimal[]> receita = new EnumMap<>(DayOfWeek.class);
@@ -249,7 +229,6 @@ public class FinancasService {
             java.util.Arrays.fill(zeros, BigDecimal.ZERO);
             receita.put(d, zeros);
         }
-        // Cada venda está num único dia e hora: somar os baldes por dia da semana é exato.
         for (Balde b : consultas.porDiaEHora(f)) {
             DayOfWeek d = b.dia().getDayOfWeek();
             vendas.get(d)[b.hora()] += b.vendas();
@@ -262,8 +241,6 @@ public class FinancasService {
         return celulas;
     }
 
-    // ---------------------------------------------------------------- C: rankings
-
     private static Comparator<LinhaProduto> ordem(Metrica metrica) {
         Comparator<LinhaProduto> c = switch (metrica) {
             case QUANTIDADE -> Comparator.comparingLong(LinhaProduto::quantidade);
@@ -272,7 +249,6 @@ public class FinancasService {
             case MARGEM ->
                 Comparator.comparing(LinhaProduto::margemPercentual, Comparator.nullsFirst(Comparator.naturalOrder()));
         };
-        // Maior primeiro; empate pelo nome e pelo id.
         return c.reversed().thenComparing(LinhaProduto::nome).thenComparing(LinhaProduto::produtoId);
     }
 
@@ -321,13 +297,11 @@ public class FinancasService {
         return somas.stream().map(s -> dinheiro(s.liquido())).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    /** Produtos vendidos no filtro, ordenados pela métrica (maior primeiro), com posição. */
     public List<LinhaProduto> rankingProdutos(FiltroFinancas f, Metrica metrica) {
         var somas = consultas.porProduto(f);
         return linhasDeProduto(somas, somaLiquidos(somas), metrica);
     }
 
-    /** Categorias com as mesmas métricas e, em cada uma, o ranking dos seus produtos. */
     public List<LinhaCategoria> rankingCategorias(FiltroFinancas f, Metrica metrica) {
         var categorias = consultas.porCategoria(f);
         var produtos = consultas.porProduto(f);
@@ -383,7 +357,6 @@ public class FinancasService {
         return numeradas;
     }
 
-    /** Curva ABC por receita líquida: A até 80% acumulado, B até 95%, C o resto. */
     public List<LinhaAbc> curvaAbc(FiltroFinancas f) {
         var produtos = rankingProdutos(f, Metrica.RECEITA);
         BigDecimal total = produtos.stream().map(LinhaProduto::receitaLiquida).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -408,11 +381,6 @@ public class FinancasService {
         return linhas;
     }
 
-    /**
-     * Por forma de pagamento, pelas partes: valor, vendas, taxa estimada e
-     * participação. Todas as formas. Com filtro de categoria, nenhuma: o
-     * pagamento é da venda inteira e não se separa por item.
-     */
     public List<LinhaForma> formasDePagamento(FiltroFinancas f) {
         if (f.categoriaId() != null) return List.of();
         var somas = consultas.porForma(f);
@@ -431,7 +399,6 @@ public class FinancasService {
         return linhas;
     }
 
-    /** Por promoção: vendas em que entrou, desconto concedido e receita líquida dessas vendas. */
     public List<LinhaPromocao> promocoes(FiltroFinancas f) {
         List<LinhaPromocao> linhas = new ArrayList<>();
         for (var s : consultas.porPromocao(f)) {
@@ -459,14 +426,6 @@ public class FinancasService {
         return tipo + p.getNomesCategorias() + " por " + Dinheiro.reais(p.getPreco());
     }
 
-    // ---------------------------------------------------------------- demonstrativo
-
-    /**
-     * O demonstrativo em linhas, cada uma com o valor e o % da receita líquida.
-     * Com filtro de categoria, descontos e ajustes não se separam: vira uma linha
-     * "descontos e ajustes rateados" (bruto - líquido); taxas, despesas e lucro
-     * líquido ficam sem valor.
-     */
     public List<Financas.LinhaDemonstrativo> demonstrativo(Resumo r) {
         BigDecimal base = r.receitaLiquida();
         List<Financas.LinhaDemonstrativo> linhas = new ArrayList<>();
@@ -492,12 +451,6 @@ public class FinancasService {
         return new Financas.LinhaDemonstrativo(rotulo, operador, valor, percentual(valor, base), resultado);
     }
 
-    // ---------------------------------------------------------------- metas
-
-    /**
-     * Metas do evento do filtro (receita líquida e lucro líquido). Só com filtro
-     * de evento e sem categoria nem forma: a meta é do evento inteiro.
-     */
     public List<Financas.Meta> metas(FiltroFinancas f, Resumo r) {
         if (f.evento() == null || !f.aceitaDespesas()) return List.of();
         var evento = eventos.findById(f.evento().id());

@@ -8,11 +8,7 @@ import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 
-/**
- * Camadas: o domínio não conhece serviço, banco nem web; o repositório não
- * conhece serviço nem controle; o serviço não conhece o controle; util é
- * folha; e nenhum ciclo entre os pacotes de primeiro nível.
- */
+/** Regras de dependência entre pacotes, sem ciclos. */
 @AnalyzeClasses(packages = "br.com.lac.caixa", importOptions = ImportOption.DoNotIncludeTests.class)
 class ArquiteturaTest {
 

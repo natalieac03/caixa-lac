@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-/** Tela de Finanças: só mostra o que o FinancasService calcula (via PainelFinancas). */
+/** Tela de Finanças, o JSON dos gráficos e os CSVs de cada tabela. */
 @Controller
 public class FinancasController {
     private final FiltrosDaTelaFinancas filtros;
@@ -34,7 +34,6 @@ public class FinancasController {
         this.categorias = categorias;
     }
 
-    /** Ranking só por quantidade, receita ou lucro (os da tela); o resto vira receita. */
     static Metrica metrica(String texto) {
         if (texto == null) return Metrica.RECEITA;
         return switch (texto.trim().toLowerCase()) {
@@ -59,7 +58,6 @@ public class FinancasController {
         try {
             resolvido = filtros.resolver(atalho, inicio, fim, evento, categoria, forma);
         } catch (RegraDeNegocioException ex) {
-            // Filtro recusado (ex.: período longo demais): 400 com a mensagem e o mês atual, sem redirecionar.
             resposta.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             model.addAttribute("erro", ex.getMessage());
             resolvido = filtros.resolver("mes", null, null, null, categoria, forma);
@@ -74,7 +72,6 @@ public class FinancasController {
         return "financas";
     }
 
-    /** Os dados dos gráficos, com o mesmo filtro da tela. */
     @GetMapping(value = "/financas/dados", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public PainelFinancas.Dados dados(
@@ -89,7 +86,6 @@ public class FinancasController {
         return painel.dados(resolvido.filtro(), metrica(metrica));
     }
 
-    /** CSV de uma tabela da tela (mesmo filtro): demonstrativo, serie, produtos, categorias, formas, mapa... */
     @GetMapping("/financas/exportar/{tabela}.csv")
     public ResponseEntity<Resource> exportar(
             @PathVariable String tabela,

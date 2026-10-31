@@ -21,18 +21,7 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Os avisos do sininho (no topo de todas as telas logadas). Aparecem só quando há algo:
- * <ul>
- *   <li>estoque acabando: com limite, quantidade até o limite; sem limite,
- *       estoque para menos de 1 dia de venda pela média do último evento que já
- *       terminou (quantidade x dias do evento &lt; vendidas no evento);</li>
- *   <li>produtos ativos sem custo;</li>
- *   <li>vendas de hoje com ajuste manual;</li>
- *   <li>fechamento de hoje em que a soma das formas não bate com o total;</li>
- *   <li>evento aberto (sem fim) há mais de 12 horas, com link para encerrar.</li>
- * </ul>
- */
+/** Os avisos do sininho: estoque acabando, sem custo, ajustes, fechamento e evento esquecido. */
 @Service
 @Transactional(readOnly = true)
 public class AlertasService {
@@ -61,24 +50,16 @@ public class AlertasService {
         this.servicoDeEventos = servicoDeEventos;
     }
 
-    /** motivo já escrito: "limite de 5 un." ou "média de 4,00 un./dia na Feira 1". */
     public record EstoqueAcabando(Long produtoId, String nome, int estoque, String motivo) {}
 
     public record SemCusto(Long produtoId, String nome) {}
 
-    /** Evento em andamento há mais de {@link #HORAS_EVENTO_ABERTO} horas. */
     public record EventoEsquecido(Long eventoId, String nome, LocalDateTime desde) {}
 
-    /** Depois de quantas horas um evento aberto vira aviso. */
     public static final long HORAS_EVENTO_ABERTO = 12;
 
-    /**
-     * Um aviso do sininho. O id é estável e muda quando o conteúdo muda (ex.:
-     * produto + quantidade): o navegador guarda os ids já vistos para contar os novos.
-     */
     public record Aviso(String id, String texto, String link, String linkTexto) {}
 
-    /** Uma seção do painel (estoque acabando, sem custo, ajustes, fechamento). */
     public record Secao(String id, String titulo, List<Aviso> avisos) {}
 
     public record Alertas(
@@ -99,7 +80,6 @@ public class AlertasService {
             return secoes().stream().mapToInt(x -> x.avisos().size()).sum();
         }
 
-        /** As seções com os textos e links já escritos (o mesmo conteúdo na página e no JSON /avisos). */
         public List<Secao> secoes() {
             List<Secao> secoes = new ArrayList<>();
             if (!estoqueAcabando.isEmpty()) {
@@ -180,7 +160,6 @@ public class AlertasService {
         List<Produto> ativos =
                 estoque.listar().stream().filter(Produto::isAtivo).toList();
 
-        // Média do último evento que já terminou.
         Map<Long, LinhaGiro> giro = new HashMap<>();
         long dias = 0;
         String evento = null;

@@ -25,26 +25,12 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/**
- * Cobranças Pix do Mercado Pago para as partes Pix de uma venda em andamento.
- * Regra de ouro: PAGA só com a resposta do Mercado Pago (consulta ou webhook
- * seguido de consulta), conferindo que o valor pago é o valor da cobrança.
- *
- * <p>Nenhuma chamada ao Mercado Pago acontece com a linha travada: primeiro se
- * pergunta (sem transação), depois uma transação curta trava a cobrança
- * (PESSIMISTIC_WRITE), confere que a order ainda é a mesma e aplica.
- *
- * <p>Uma order só é trocada por outra quando o Mercado Pago confirmou que ela
- * acabou (cancelada ou expirada): se ele recusar o cancelamento (409, ex.:
- * pagamento em processamento), a cobrança continua PENDENTE e a troca de valor
- * é recusada. Assim nenhum pagamento chega a uma order esquecida.
- */
+/** Cobranças Pix do Mercado Pago das partes de uma venda em andamento. */
 @Service
 public class CobrancaPixService {
 
     private static final Logger LOG = LoggerFactory.getLogger(CobrancaPixService.class);
 
-    /** A tela consulta a cada 3 s; o servidor não pergunta ao Mercado Pago mais que uma vez a cada 5 s. */
     static final Duration CACHE_DA_CONSULTA = Duration.ofSeconds(5);
 
     private final CobrancaPixRepository cobrancas;
@@ -66,7 +52,6 @@ public class CobrancaPixService {
         this.mp = mp;
         this.relogio = relogio;
         this.auditoria = auditoria;
-        // Transação própria e curta só para travar e aplicar (não participa da venda que chama).
         this.transacao = new TransactionTemplate(transacoes);
         this.transacao.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
@@ -87,7 +72,6 @@ public class CobrancaPixService {
         try {
             if (token != null && UUID.fromString(token).toString().equals(token)) return;
         } catch (IllegalArgumentException naoEUuid) {
-            // cai na mensagem abaixo
         }
         throw new RegraDeNegocioException("Token de venda inválido.");
     }
@@ -96,11 +80,6 @@ public class CobrancaPixService {
         return cobrancas.findByTokenAndParte(token, parte).orElseThrow(() -> new RegraDeNegocioException(mensagem));
     }
 
-    /**
-     * Cria a cobrança da parte ou reaproveita a que já existe com o mesmo valor.
-     * Com outro valor, a pendente é cancelada no Mercado Pago e outra é criada,
-     * mas só se o cancelamento foi confirmado; já paga, recusa.
-     */
     public CobrancaPix gerar(String token, int parte, BigDecimal valor) {
         exigirLigado();
         exigirToken(token);
@@ -145,7 +124,6 @@ public class CobrancaPixService {
             CobrancaPix c = base.getId() == null
                     ? base
                     : cobrancas.buscarPorIdParaAtualizar(base.getId()).orElseThrow();
-            // O mesmo pedido duas vezes (idempotência no Mercado Pago): a order já está registrada.
             if (order.orderId().equals(c.getOrderId())) return c;
             c.registrarOrder(valor, order.orderId(), order.qrCode(), order.qrCodeBase64(), agora());
             CobrancaPix salva = cobrancas.save(c);
@@ -154,10 +132,6 @@ public class CobrancaPixService {
         });
     }
 
-    /**
-     * Situação da parte; se pendente, pergunta ao Mercado Pago (no máximo uma vez a
-     * cada 5 s; falha do Mercado Pago: continua pendente).
-     */
     public CobrancaPix consultar(String token, int parte) {
         exigirToken(token);
         CobrancaPix c = daParte(token, parte, "Não há Pix gerado para esta parte.");
@@ -175,11 +149,6 @@ public class CobrancaPixService {
         return c.getConsultadaEm() == null || !c.getConsultadaEm().isAfter(agora().minus(CACHE_DA_CONSULTA));
     }
 
-    /**
-     * Cancela a cobrança pendente da parte (o total mudou ou a pessoa desistiu).
-     * Se o Mercado Pago recusar, devolve a situação real: PAGA (pago agora há
-     * pouco) ou PENDENTE (em processamento); a tela decide o que mostrar.
-     */
     public CobrancaPix cancelar(String token, int parte) {
         exigirLigado();
         exigirToken(token);
@@ -188,12 +157,6 @@ public class CobrancaPixService {
         return c;
     }
 
-    /**
-     * Para o POST /venda: a parte Pix do Mercado Pago só vale se a cobrança está
-     * PAGA com o mesmo valor. Se ainda pendente, consulta o Mercado Pago uma vez.
-     *
-     * @return o id da order que pagou
-     */
     public String exigirPaga(String token, int parte, BigDecimal valorDaParte) {
         CobrancaPix c = daParte(
                 token, parte, "Não há Pix do Mercado Pago gerado para esta parte. " + "Gere o Pix ou use Pix manual.");
@@ -221,23 +184,14 @@ public class CobrancaPixService {
         return c.getOrderId();
     }
 
-    /** Pix que não sai do aviso enquanto alguém pode estar confirmando a venda na tela. */
     static final Duration CARENCIA_SEM_VENDA = Duration.ofMinutes(10);
 
-    /** Cobrança pendente mais velha que isso é cancelada pela limpeza agendada. */
     static final Duration ABANDONADA_APOS = Duration.ofMinutes(20);
 
-    /**
-     * Aviso do webhook (já com a assinatura conferida): a order é consultada no
-     * Mercado Pago (sem cache: o aviso diz que algo mudou) e a cobrança
-     * atualizada. Order que não é nossa ou cobrança que já saiu de PENDENTE:
-     * nada muda (o mesmo aviso duas vezes é inofensivo).
-     */
     public boolean atualizarPorOrder(String orderId) {
         if (orderId == null || orderId.isBlank() || !mp.ligado()) return false;
         var cobranca = cobrancas.findByOrderId(orderId);
         if (cobranca.isEmpty()) {
-            // Ex.: o botão "Simular notificação" do painel do Mercado Pago manda um id que não existe.
             LOG.warn("Webhook: a order {} não é de nenhuma cobrança deste caixa; aviso ignorado.", paraLog(orderId));
             return false;
         }
@@ -249,23 +203,16 @@ public class CobrancaPixService {
         return antes != depois.getStatus() || !Objects.equals(pagoAntes, depois.getValorPago());
     }
 
-    /** Id vindo de fora, pronto para o log: sem quebras de linha (não forja linhas) e com no máximo 64 caracteres. */
     static String paraLog(String externo) {
         String limpo = externo.replaceAll("[\\r\\n\\t]", "_");
         return limpo.length() > 64 ? limpo.substring(0, 64) + "..." : limpo;
     }
 
-    /**
-     * Pix que entrou (pago, ou pago com valor diferente) sem venda válida, para
-     * resolver à mão: nunca usado numa venda, ou usado só em venda cancelada (aí
-     * é para estornar).
-     */
     @Transactional(readOnly = true)
     public List<CobrancaPix> pixSemVenda() {
         return cobrancas.pixSemVenda(agora().minus(CARENCIA_SEM_VENDA));
     }
 
-    /** Das orders dadas, as usadas em venda cancelada (o aviso diz "estorne o Pix"). */
     @Transactional(readOnly = true)
     public Set<String> deVendaCancelada(List<CobrancaPix> pix) {
         if (pix.isEmpty()) return Set.of();
@@ -289,7 +236,6 @@ public class CobrancaPixService {
                 c.getResolucao());
     }
 
-    /** Ids das cobranças pendentes há mais de 20 minutos (a limpeza agendada encerra uma a uma). */
     @Transactional(readOnly = true)
     public List<Long> abandonadas() {
         return cobrancas.findByStatusAndCriadaEmBefore(StatusCobranca.PENDENTE, agora().minus(ABANDONADA_APOS)).stream()
@@ -297,7 +243,6 @@ public class CobrancaPixService {
                 .toList();
     }
 
-    /** Pergunta de novo (pode ter sido paga) e, se ainda pendente, cancela no Mercado Pago. */
     public void encerrarSeAbandonada(Long id) {
         var c = cobrancas.findById(id).orElse(null);
         if (c == null || c.getStatus() != StatusCobranca.PENDENTE || !mp.ligado()) return;
@@ -306,12 +251,10 @@ public class CobrancaPixService {
         if (c.getStatus() == StatusCobranca.PENDENTE) cancelarNoMercadoPago(c);
     }
 
-    /** Pergunta ao Mercado Pago (sem trava) e aplica numa transação curta (só sai de PENDENTE). */
     CobrancaPix atualizarPeloMercadoPago(CobrancaPix c) {
         var s = mp.consultar(c.getOrderId());
         return transacao.execute(st -> {
             CobrancaPix alvo = cobrancas.buscarPorIdParaAtualizar(c.getId()).orElseThrow();
-            // Outra order entrou nesse meio tempo: a resposta é de uma order que já não vale.
             if (!c.getOrderId().equals(alvo.getOrderId())) return alvo;
             alvo.marcarConsultada(agora());
             if (alvo.atualizar(s.status(), s.statusDetail(), s.valorPago(), agora())) {
@@ -328,10 +271,6 @@ public class CobrancaPixService {
         });
     }
 
-    /**
-     * Cancela no Mercado Pago. Se ele recusar (409), consulta: pode ter sido pago
-     * ou estar em processamento. Só marca CANCELADA com o cancelamento confirmado.
-     */
     CobrancaPix cancelarNoMercadoPago(CobrancaPix c) {
         try {
             mp.cancelar(c.getOrderId());

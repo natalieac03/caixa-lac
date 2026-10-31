@@ -18,7 +18,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
-/** Relatório do evento para imprimir (ou salvar em PDF) e o comparativo entre eventos. */
+/** Relatório do evento para imprimir e o comparativo entre eventos. */
 @Controller
 public class RelatorioController {
     private final EventoService eventos;
@@ -51,7 +51,6 @@ public class RelatorioController {
                 .toList();
         var filtroDespesas = new DespesaService.Filtro(id, null, null);
         model.addAttribute("evento", evento);
-        // O fim que vale nas contas (aberto: agora, ou o início do próximo evento).
         model.addAttribute("periodo", eventos.periodo(evento));
         model.addAttribute("painel", p);
         model.addAttribute("top", top);

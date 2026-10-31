@@ -8,16 +8,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+/** Acesso aos eventos: sobreposição, evento do momento, aberto, próximo e anterior. */
 public interface EventoRepository extends JpaRepository<Evento, Long> {
 
     List<Evento> findAllByOrderByInicioDesc();
 
     List<Evento> findAllByOrderByInicioAsc();
 
-    /**
-     * Eventos que cruzam [inicio, fim), fora o próprio (null ao criar). Intervalos
-     * encostados não contam. Um evento aberto conta como indo até agora.
-     */
     @Query("""
             select e from Evento e
             where e.inicio < :fim and coalesce(e.fim, :agora) > :inicio and (:ignorar is null or e.id <> :ignorar)
@@ -29,7 +26,6 @@ public interface EventoRepository extends JpaRepository<Evento, Long> {
             @Param("agora") LocalDateTime agora,
             @Param("ignorar") Long ignorar);
 
-    /** Os eventos que contêm a data e hora (aberto: até {@code fimDoAberto}); o mais recente primeiro. */
     @Query("""
             select e from Evento e
             where e.inicio <= :quando
@@ -40,15 +36,11 @@ public interface EventoRepository extends JpaRepository<Evento, Long> {
             """)
     List<Evento> doMomento(@Param("quando") LocalDateTime quando, @Param("agora") LocalDateTime agora);
 
-    /** O evento em andamento (sem fim), se houver. */
     Optional<Evento> findFirstByFimIsNullOrderByInicioDesc();
 
-    /** O próximo evento a começar depois deste início (o aberto não passa dele). */
     Optional<Evento> findFirstByInicioGreaterThanOrderByInicioAsc(LocalDateTime inicio);
 
-    /** O último evento que já começou ("Este evento": o que está acontecendo ou o mais recente). */
     Optional<Evento> findFirstByInicioLessThanEqualOrderByInicioDesc(LocalDateTime agora);
 
-    /** O evento que acabou por último antes do início deste (para comparar). */
     Optional<Evento> findFirstByFimLessThanEqualOrderByFimDesc(LocalDateTime inicio);
 }

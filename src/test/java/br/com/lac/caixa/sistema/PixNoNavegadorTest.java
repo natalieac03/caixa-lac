@@ -62,7 +62,6 @@ class PixNoNavegadorTest {
 
     @BeforeEach
     void abrir() {
-        // Cada teste começa sem cobrança pendente de outro teste (o banco é o mesmo da classe).
         jdbc.update("update cobranca_pix set status = 'CANCELADA' where status = 'PENDENTE'");
         boton = produtos.save(new Produto("Bóton Pix " + System.nanoTime(), new BigDecimal("6.00"), 50));
         contexto = Navegador.browser().newContext();
@@ -87,27 +86,22 @@ class PixNoNavegadorTest {
     @Test
     @DisplayName("Gerar Pix: QR na tela, pagamento confirmado sozinho e venda registrada como Mercado Pago")
     void pixConfirmadoSozinho() {
-        // Arrange: 3 bótons = R$ 18,00, forma Pix (a primeira)
         pagina.getByLabel("Quantidade de " + boton.getNome()).fill("3");
         assertThat(pagina.locator("#totalCarrinho")).hasText("18,00");
         var painel = pagina.locator("#pixUnico");
         assertThat(painel).isVisible();
         assertThat(pagina.locator("#botaoConfirmar")).isDisabled();
 
-        // Act: gera o Pix
         painel.getByText("Gerar Pix").click();
 
-        // Assert: QR, valor e espera
         assertThat(painel.locator(".qr-valor")).hasText("R$ 18,00");
         assertThat(painel.locator("img.qr-pix")).hasAttribute("src", Pattern.compile("^data:image/png;base64,iVBOR"));
         assertThat(painel.locator(".situacao-pix")).hasText("Aguardando pagamento...");
         assertThat(pagina.locator("#botaoConfirmar")).isDisabled();
 
-        // Act: o cliente paga no banco (Mercado Pago falso)
         String order = jdbc.queryForObject("select order_id from cobranca_pix where status = 'PENDENTE'", String.class);
         FAKE.pagar(order, "18.00");
 
-        // Assert: a tela percebe sozinha (consulta a cada 3 s) e libera o confirmar
         assertThat(painel.locator(".situacao-pix")).hasText("Pix recebido (Mercado Pago).");
         assertThat(pagina.locator("#botaoConfirmar")).isEnabled();
         pagina.locator("#botaoConfirmar").click();
@@ -124,7 +118,6 @@ class PixNoNavegadorTest {
     @Test
     @DisplayName("Mudar o total depois de gerar o Pix cancela a cobrança; Pix manual libera a venda")
     void totalMudouEPixManual() {
-        // Arrange
         pagina.getByLabel("Quantidade de " + boton.getNome()).fill("2");
         assertThat(pagina.locator("#totalCarrinho")).hasText("12,00");
         var painel = pagina.locator("#pixUnico");
@@ -132,15 +125,12 @@ class PixNoNavegadorTest {
         assertThat(painel.locator(".qr-valor")).hasText("R$ 12,00");
         String order = jdbc.queryForObject("select order_id from cobranca_pix where status = 'PENDENTE'", String.class);
 
-        // Act: muda a quantidade (o total vira R$ 18,00)
         pagina.getByLabel("Quantidade de " + boton.getNome()).fill("3");
 
-        // Assert: a cobrança antiga foi cancelada e é preciso gerar outra
         assertThat(painel.locator(".situacao-pix")).containsText("O valor mudou");
         assertThat(painel.getByText("Gerar Pix")).isVisible();
         pagina.waitForCondition(() -> "canceled".equals(FAKE.order(order).status));
 
-        // Act / Assert: Pix manual libera o confirmar e grava como manual
         painel.getByText("Pix manual", new com.microsoft.playwright.Locator.GetByTextOptions().setExact(true))
                 .click();
         assertThat(pagina.locator("#botaoConfirmar")).isEnabled();
@@ -163,7 +153,6 @@ class PixNoNavegadorTest {
                 "select order_id from cobranca_pix where status = 'PENDENTE' and valor = 6", String.class);
         FAKE.pagar(order, "6.00");
 
-        // Antes da próxima consulta da tela (3 s), a pessoa desiste e pede Pix manual
         painel.getByText("Usar Pix manual").click();
 
         assertThat(painel.locator(".situacao-pix")).hasText("Pix recebido (Mercado Pago).");
@@ -182,12 +171,11 @@ class PixNoNavegadorTest {
     void semConsultasSobrepostas() {
         pagina.getByLabel("Quantidade de " + boton.getNome()).fill("2");
         var painel = pagina.locator("#pixUnico");
-        // Segura as consultas da situação (GET /venda/pix/{token}/0) sem responder
         java.util.List<com.microsoft.playwright.Route> presas = new java.util.ArrayList<>();
         pagina.route(Pattern.compile(".*/venda/pix/[0-9a-f-]{36}/0$"), presas::add);
         painel.getByText("Gerar Pix").click();
         assertThat(painel.locator(".situacao-pix")).hasText("Aguardando pagamento...");
-        pagina.waitForTimeout(7000); // passaria por dois ciclos de 3 s
+        pagina.waitForTimeout(7000);
         int disparadas = presas.size();
         presas.forEach(com.microsoft.playwright.Route::resume);
         pagina.unroute(Pattern.compile(".*/venda/pix/[0-9a-f-]{36}/0$"));

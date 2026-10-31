@@ -20,7 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 
-/** Cliente do Mercado Pago contra um servidor HTTP falso (nunca o Mercado Pago de verdade). */
+/** Cliente do Mercado Pago contra um servidor HTTP falso. */
 @ExtendWith(OutputCaptureExtension.class)
 class MercadoPagoPixTest {
     static final String TOKEN = "APP_USR-token-secreto-de-teste-0000";
@@ -71,19 +71,15 @@ class MercadoPagoPixTest {
     @Test
     @DisplayName("Criar Pix: POST /v1/orders no formato da documentação, com idempotência e expiração")
     void criarPix() throws Exception {
-        // Arrange
         servidor.enqueue(json(201, order("action_required", "waiting_transfer", "0.00")));
 
-        // Act
         var cobranca = mp.criarPix(new BigDecimal("12.5"), "venda-abc-p0-1250");
 
-        // Assert: resposta
         assertEquals("ORD01TESTE", cobranca.orderId());
         assertEquals("action_required", cobranca.status());
         assertEquals("waiting_transfer", cobranca.statusDetail());
         assertEquals("000201COPIAECOLA", cobranca.qrCode());
         assertEquals("iVBORw0KGgo=", cobranca.qrCodeBase64());
-        // Assert: requisição
         var req = servidor.takeRequest();
         assertEquals("POST", req.getMethod());
         assertEquals("/v1/orders", req.getPath());
@@ -108,17 +104,14 @@ class MercadoPagoPixTest {
     @Test
     @DisplayName("Consultar: paga (processed/accredited) com valor pago; pendente; expirada")
     void consultar() throws Exception {
-        // Arrange
         servidor.enqueue(json(200, order("processed", "accredited", "12.50")));
         servidor.enqueue(json(200, order("action_required", "waiting_transfer", "0.00")));
         servidor.enqueue(json(200, order("canceled", "expired", "0.00")));
 
-        // Act
         var paga = mp.consultar("ORD01TESTE");
         var pendente = mp.consultar("ORD01TESTE");
         var expirada = mp.consultar("ORD01TESTE");
 
-        // Assert
         assertEquals("processed", paga.status());
         assertEquals("accredited", paga.statusDetail());
         assertEquals(0, new BigDecimal("12.50").compareTo(paga.valorPago()));

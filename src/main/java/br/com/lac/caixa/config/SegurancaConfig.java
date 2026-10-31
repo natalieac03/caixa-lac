@@ -4,10 +4,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-/**
- * Liga o interceptor de autenticacao, deixando de fora a propria tela de
- * login, o logout e os arquivos publicos (css, imagens).
- */
+/** Liga o interceptor de login em tudo, menos login, logout, estáticos, health e webhook. */
 @Configuration
 public class SegurancaConfig implements WebMvcConfigurer {
 
@@ -25,7 +22,6 @@ public class SegurancaConfig implements WebMvcConfigurer {
                         "/logout",
                         "/error",
                         "/actuator/health",
-                        // Webhook do Mercado Pago: autenticado pela assinatura x-signature.
                         "/webhooks/mercadopago",
                         "/css/**",
                         "/img/**",

@@ -5,21 +5,10 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.stream.IntStream;
 
-/**
- * Divide um valor em centavos entre itens, proporcional a um peso (o valor
- * bruto de cada item), pelo método do maior resto: cada item recebe o piso da
- * sua parte e os centavos que sobram vão, um a um, para os maiores restos
- * (empate: o item que vem primeiro). A soma das partes é exatamente o valor.
- *
- * <p>O valor pode ser negativo (ajuste para mais): divide-se o módulo e as
- * partes saem negativas. Com todos os pesos zero, divide pelos pesos
- * alternativos (a quantidade de cada item). Classe pura, sem Spring nem banco.
- * A V12 repete este cálculo em SQL para as vendas antigas.
- */
+/** Divide um valor em centavos entre itens, proporcional a um peso, pelo método do maior resto. */
 public final class Rateio {
     private Rateio() {}
 
-    /** Partes de {@code valor} proporcionais a {@code pesos}; se todos forem zero, a {@code reserva}. */
     public static long[] ratear(long valor, long[] pesos, long[] reserva) {
         long soma = Arrays.stream(pesos).sum();
         if (soma == 0 && valor != 0 && reserva != null) return ratear(valor, reserva, null);

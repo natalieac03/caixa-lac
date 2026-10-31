@@ -13,11 +13,7 @@ import java.time.LocalDateTime;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/**
- * Cobrança Pix criada no Mercado Pago para uma parte de uma venda em andamento
- * (token do formulário + número estável da parte). Só vira PAGA pela resposta
- * do Mercado Pago, e só se o valor pago for exatamente o valor da cobrança.
- */
+/** Cobrança Pix do Mercado Pago para uma parte de uma venda em andamento. */
 @Entity
 public class CobrancaPix {
 
@@ -58,12 +54,10 @@ public class CobrancaPix {
 
     private LocalDateTime pagaEm;
 
-    /** Pix recebido sem venda: quando e como alguém resolveu à mão. */
     private LocalDateTime resolvidaEm;
 
     private String resolucao;
 
-    /** Última vez que o Mercado Pago foi consultado (a tela não pergunta de novo em menos de 5 s). */
     private LocalDateTime consultadaEm;
 
     protected CobrancaPix() {}
@@ -84,17 +78,12 @@ public class CobrancaPix {
         }
     }
 
-    /**
-     * Chave de idempotência e external_reference da próxima order: mesma
-     * tentativa = mesma order no Mercado Pago (clique duplo não gera dois Pix).
-     */
     public String referenciaDaProximaTentativa(BigDecimal novoValor) {
         exigirValor(novoValor);
         long centavos = novoValor.movePointRight(2).longValueExact();
         return token + "-p" + parte + "-" + centavos + "-t" + (tentativa + 1);
     }
 
-    /** Registra a order criada no Mercado Pago (primeira ou substituta). */
     public void registrarOrder(
             BigDecimal novoValor, String novoOrderId, String novoQrCode, String novoQrCodeBase64, LocalDateTime agora) {
         if (status == StatusCobranca.PAGA) {
@@ -113,17 +102,10 @@ public class CobrancaPix {
         this.status = StatusCobranca.PENDENTE;
         this.valorPago = null;
         this.criadaEm = agora;
-        // A resposta da criação já é a situação de agora; a próxima consulta pergunta ao Mercado Pago.
         this.consultadaEm = null;
         this.pagaEm = null;
     }
 
-    /**
-     * Aplica a situação informada pelo Mercado Pago (consulta ou webhook). Só
-     * sai de PENDENTE: a mesma resposta duas vezes não muda nada.
-     *
-     * @return true se mudou alguma coisa
-     */
     public boolean atualizar(String statusMp, String detalheMp, BigDecimal pagoMp, LocalDateTime agora) {
         if (status != StatusCobranca.PENDENTE || statusMp == null) return false;
         switch (statusMp) {
@@ -134,13 +116,11 @@ public class CobrancaPix {
                     pagaEm = agora;
                     return true;
                 }
-                // Pago com valor diferente (ou sem valor informado): não confirma.
                 boolean mudou = pagoMp != null && (valorPago == null || valorPago.compareTo(pagoMp) != 0);
                 valorPago = pagoMp;
                 return mudou;
             }
             case "refunded", "charged_back" -> {
-                // Devolvido ou contestado: o dinheiro não ficou com a LAC.
                 status = StatusCobranca.ESTORNADA;
                 return true;
             }
@@ -149,12 +129,11 @@ public class CobrancaPix {
                 return true;
             }
             default -> {
-                return false; // created, action_required, processing: continua pendente
+                return false;
             }
         }
     }
 
-    /** Cancelada do nosso lado (o Mercado Pago confirmou o cancelamento). */
     public void marcarConsultada(LocalDateTime agora) {
         this.consultadaEm = agora;
     }
@@ -167,7 +146,6 @@ public class CobrancaPix {
         if (status == StatusCobranca.PENDENTE) status = StatusCobranca.CANCELADA;
     }
 
-    /** Pix recebido sem venda resolvido à mão (estorno, venda lançada, etc.). */
     public void resolver(String como, LocalDateTime agora) {
         if (como == null || como.isBlank() || como.trim().length() > 255) {
             throw new RegraDeNegocioException("Diga como foi resolvido (até 255 caracteres).");

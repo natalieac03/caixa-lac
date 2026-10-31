@@ -8,16 +8,11 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+/** Acesso aos produtos, com baixa e devolução atômicas do estoque. */
 public interface ProdutoRepository extends JpaRepository<Produto, Long> {
-    /** Apenas os produtos ativos (não arquivados), já com a categoria. */
     @EntityGraph(attributePaths = "categoria")
     List<Produto> findByAtivoTrueOrderByNomeAsc();
 
-    /**
-     * Baixa atômica: só tira se houver (quantidade >= q), numa única instrução.
-     * Vendas simultâneas do mesmo produto esperam a vez na linha em vez de
-     * falhar pela versão. Devolve 1 se baixou, 0 se não havia estoque.
-     */
     @Modifying(flushAutomatically = true)
     @Query("""
             update Produto p set p.quantidade = p.quantidade - :q, p.versao = p.versao + 1
@@ -25,7 +20,6 @@ public interface ProdutoRepository extends JpaRepository<Produto, Long> {
             """)
     int baixarSeHouver(@Param("id") Long id, @Param("q") int quantidade);
 
-    /** Devolução atômica (cancelamento de venda). */
     @Modifying(flushAutomatically = true)
     @Query("update Produto p set p.quantidade = p.quantidade + :q, p.versao = p.versao + 1 where p.id = :id")
     int reporAtomico(@Param("id") Long id, @Param("q") int quantidade);

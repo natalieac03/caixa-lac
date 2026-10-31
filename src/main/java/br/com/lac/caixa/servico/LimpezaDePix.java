@@ -5,10 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/**
- * A cada 5 minutos: cobranças PENDENTES com mais de 20 minutos são conferidas
- * no Mercado Pago (podem ter sido pagas) e, se ainda pendentes, canceladas lá.
- */
+/** A cada 5 minutos, encerra no Mercado Pago as cobranças pendentes abandonadas. */
 @Component
 public class LimpezaDePix {
 

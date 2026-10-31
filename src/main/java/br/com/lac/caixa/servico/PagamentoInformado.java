@@ -4,12 +4,7 @@ import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.modelo.OrigemPagamento;
 import java.math.BigDecimal;
 
-/**
- * Uma parte do pagamento como veio da tela. valor null só é aceito quando há
- * uma parte só: ela recebe o total cobrado (o caso comum, um toque).
- * origem e parte só importam no Pix: com MERCADO_PAGO, a cobrança da parte
- * (token + número estável da parte) precisa estar paga.
- */
+/** Uma parte do pagamento como veio da tela. */
 public record PagamentoInformado(
         FormaPagamento forma,
         BigDecimal valor,

@@ -20,7 +20,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/** Sininho num Chromium: selo com os novos, abrir marca como visto, Esc devolve o foco, celular. */
+/** Sininho num Chromium: novos, vistos, teclado e celular. */
 @ExtendWith(Navegador.class)
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -80,13 +80,11 @@ class SinoNoNavegadorTest {
     @Test
     @DisplayName("Selo conta os novos; abrir marca como vistos; aviso novo volta a contar; Esc fecha e devolve o foco")
     void seloEPainel() {
-        // Sem avisos: sino sem selo
         pagina.navigate(url("/"));
         var botao = pagina.locator("#botao-sino");
         assertThat(pagina.locator("#selo-avisos")).isHidden();
         assertThat(pagina.locator("#texto-avisos-novos")).hasText("nenhum aviso novo");
 
-        // Dois produtos sem custo: 2 novos
         estoque.criarNovo("Caneca A", new BigDecimal("30"), 5, null);
         estoque.criarNovo("Caneca B", new BigDecimal("30"), 5, null);
         pagina.navigate(url("/estoque"));
@@ -94,7 +92,6 @@ class SinoNoNavegadorTest {
         assertThat(pagina.locator("#texto-avisos-novos")).hasText("2 avisos novos");
         assertThat(botao).hasAttribute("aria-expanded", "false");
 
-        // Abrir: painel com as seções e links, marca os atuais como vistos
         botao.click();
         assertThat(botao).hasAttribute("aria-expanded", "true");
         var painel = pagina.locator("#painel-avisos");
@@ -103,18 +100,15 @@ class SinoNoNavegadorTest {
         assertThat(painel.locator("#alerta-sem-custo a").first()).hasAttribute("href", "/estoque?semCusto=true");
         assertThat(pagina.locator("#selo-avisos")).isHidden();
 
-        // Esc fecha e o foco volta para o sino
         pagina.keyboard().press("Escape");
         assertThat(painel).isHidden();
         assertThat(botao).hasAttribute("aria-expanded", "false");
         assertEquals("botao-sino", pagina.evaluate("() => document.activeElement.id"));
 
-        // Recarregar: continua listado, mas não é novo
         pagina.reload();
         assertThat(pagina.locator("#selo-avisos")).isHidden();
         assertThat(pagina.locator("#painel-avisos li")).hasCount(2);
 
-        // Um aviso novo: só ele conta
         estoque.criarNovo("Caneca C", new BigDecimal("30"), 5, null);
         pagina.reload();
         assertThat(pagina.locator("#selo-avisos")).hasText("1");
@@ -127,7 +121,6 @@ class SinoNoNavegadorTest {
         pagina.navigate(url("/historico"));
         assertThat(pagina.locator("#selo-avisos")).isHidden();
         estoque.criarNovo("Ecobag Sem Custo", new BigDecimal("30"), 5, null);
-        // Simula a volta à aba (dispara a consulta na hora, sem esperar os 60 s)
         pagina.evaluate("() => document.dispatchEvent(new Event('visibilitychange'))");
         assertThat(pagina.locator("#selo-avisos")).hasText("1");
         assertThat(pagina.locator("#painel-avisos li")).containsText("Ecobag Sem Custo");

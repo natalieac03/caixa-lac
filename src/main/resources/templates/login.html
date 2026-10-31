@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Tela de login com a senha única e a contagem regressiva da espera. -->
 <html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head('Entrar')}"></head>
 <body>
@@ -39,7 +40,6 @@
     </div>
 </main>
 <script th:inline="none">
-    /* Contagem regressiva da espera; o servidor recusa de qualquer jeito antes do tempo. */
     (function () {
         const aviso = document.getElementById('aviso-espera');
         if (!aviso) return;

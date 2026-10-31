@@ -25,7 +25,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** Sem MP_ACCESS_TOKEN: Pix automático desligado e o caixa segue com Pix manual. */
+/** Sem MP_ACCESS_TOKEN, o caixa segue com Pix manual. */
 @SpringBootTest(
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:pix_desligado;DB_CLOSE_DELAY=-1"
         })
@@ -69,11 +69,9 @@ class PixDesligadoHttpTest {
     @Test
     @DisplayName("Venda com Pix manual funciona como antes; Pix \"do Mercado Pago\" sem cobrança é recusado")
     void vendaComPixManual() throws Exception {
-        // Arrange
         var p = produtos.save(new Produto("Bóton Desligado", new BigDecimal("6"), 10));
         String token = UUID.randomUUID().toString();
 
-        // Act / Assert: Pix manual (como sempre foi)
         mvc.perform(post("/venda")
                         .sessionAttr("autenticado", true)
                         .param("token", token)
@@ -85,7 +83,6 @@ class PixDesligadoHttpTest {
                 "MANUAL",
                 jdbc.queryForObject("select origem from pagamento_venda where venda_id = ?", String.class, id));
 
-        // Act / Assert: quem tentar dizer que é do Mercado Pago é recusado
         mvc.perform(post("/venda")
                         .sessionAttr("autenticado", true)
                         .param("token", UUID.randomUUID().toString())

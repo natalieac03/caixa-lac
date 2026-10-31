@@ -9,17 +9,7 @@ import java.util.Locale;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
-/**
- * Validação do x-signature dos webhooks do Mercado Pago, como na documentação:
- * - o cabeçalho é "ts=...,v1=..." (separado por vírgula);
- * - manifesto: "id:[data.id da URL];request-id:[x-request-id];ts:[ts];", com o
- *   data.id em minúsculas, e sem o par de quem não veio;
- * - HMAC-SHA256 do manifesto com a assinatura secreta, em hexadecimal, comparado
- *   com v1 (em tempo constante);
- * - tolerância de tempo (a documentação sugere, sem fixar): o ts não pode estar
- *   a mais de TOLERANCIA do relógio. O ts é aceito em segundos ou milissegundos
- *   (a documentação diz milissegundos, mas o exemplo dela está em segundos).
- */
+/** Validação do x-signature dos webhooks do Mercado Pago. */
 public final class AssinaturaWebhook {
 
     public static final Duration TOLERANCIA = Duration.ofMinutes(10);

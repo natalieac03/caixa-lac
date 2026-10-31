@@ -19,14 +19,7 @@ import java.util.stream.Collectors;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/**
- * Combo de promoção: cada PromocaoItem define quantas unidades de qual
- * categoria entram no combo. O preco é o valor total do combo (PACOTE) ou
- * o valor por unidade de todas as categorias (A_PARTIR_DE).
- *
- * Ex. PACOTE: 2 Bóton + 3 Adesivo Grande = R$ 25 o conjunto.
- * Ex. A_PARTIR_DE: a partir de 2 Bóton, cada um sai a R$ 5.
- */
+/** Promoção por categoria: pacote com preço fechado ou preço a partir de uma quantidade. */
 @Entity
 public class Promocao {
 
@@ -42,7 +35,6 @@ public class Promocao {
     @Enumerated(EnumType.STRING)
     private TipoPromocao tipo = TipoPromocao.A_PARTIR_DE;
 
-    /** Preço unitário (A_PARTIR_DE) ou total do pacote (PACOTE). */
     private BigDecimal preco;
 
     private boolean ativo = true;
@@ -56,7 +48,6 @@ public class Promocao {
         this.preco = preco;
     }
 
-    /** Edição: troca preço e quantidades por categoria; o tipo continua o mesmo. */
     public void alterar(List<PromocaoItem> novosItens, BigDecimal novoPreco) {
         if (novoPreco == null || novoPreco.signum() <= 0)
             throw new RegraDeNegocioException("Preço deve ser maior que zero.");
@@ -68,12 +59,10 @@ public class Promocao {
         preco = novoPreco;
     }
 
-    /** catId -> quantidade exigida, para preencher o formulário de edição. */
     public Map<Long, Integer> getQuantidadePorCategoria() {
         return itens.stream().collect(Collectors.toMap(i -> i.getCategoria().getId(), PromocaoItem::getQuantidade));
     }
 
-    /** "Bóton x2 + Adesivo Grande x3" */
     public String getNomesCategorias() {
         return itens.stream()
                 .sorted(Comparator.comparing(i -> i.getCategoria().getNome()))
@@ -81,11 +70,6 @@ public class Promocao {
                 .collect(Collectors.joining(" + "));
     }
 
-    /**
-     * Quantos combos completos cabem dado o estoque disponível no carrinho.
-     * Ex.: exige 2 Bóton + 3 Adesivo Grande, tem 5 bótons e 7 adesivos
-     * → min(5/2, 7/3) = min(2, 2) = 2 combos.
-     */
     public int combosDisponiveis(Map<Long, Integer> qtdPorCategoria) {
         if (itens.isEmpty()) return 0;
         int min = Integer.MAX_VALUE;

@@ -10,16 +10,11 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 
-/**
- * Mercado Pago de mentira para os testes (MockWebServer): guarda as orders em
- * memória e responde POST/GET /v1/orders e o cancelamento no formato da Orders
- * API. Os testes mudam a situação com pagar/expirar.
- */
+/** Mercado Pago falso para os testes, com as orders em memória. */
 public class FakeMercadoPago extends Dispatcher {
 
     public static final String TOKEN = "APP_USR-token-do-fake-0000";
 
-    /** Uma order: status, detalhe, valor e valor pago (null = nada pago ainda). */
     public static final class Order {
         public final String id;
         public final BigDecimal valor;
@@ -43,7 +38,6 @@ public class FakeMercadoPago extends Dispatcher {
     public final AtomicInteger consultas = new AtomicInteger();
     public final AtomicInteger cancelamentos = new AtomicInteger();
 
-    /** O corpo JSON da última criação de order (o MockWebServer só deixa ler o corpo uma vez). */
     public volatile com.fasterxml.jackson.databind.JsonNode ultimaCriacao;
 
     public static MockWebServer iniciar(FakeMercadoPago fake) {
@@ -68,21 +62,18 @@ public class FakeMercadoPago extends Dispatcher {
         o.pago = new BigDecimal(valor);
     }
 
-    /** Pago no banco, mas o Mercado Pago ainda está processando (cancelar responde 409). */
     public void processando(String id) {
         Order o = orders.get(id);
         o.status = "processing";
         o.detalhe = "in_process";
     }
 
-    /** Pago e devolvido: refunded (estorno) ou charged_back (contestação). */
     public void estornar(String id, String status) {
         Order o = orders.get(id);
         o.status = status;
         o.detalhe = status;
     }
 
-    /** Roda dentro do atendimento de cada consulta (GET /v1/orders/{id}), antes de responder. */
     public volatile Runnable aoConsultar;
 
     public void expirar(String id) {

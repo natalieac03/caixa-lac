@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+/** Regras da CobrancaPix: troca de order, estorno e contestação. */
 class CobrancaPixTest {
     static final LocalDateTime AGORA = LocalDateTime.of(2026, 3, 7, 14, 0);
 

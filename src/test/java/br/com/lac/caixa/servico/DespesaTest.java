@@ -24,7 +24,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** Despesas: categorias, valor > 0, filtro por período e por evento, telas. */
+/** Despesas: categorias, valor, filtro por período e por evento, e telas. */
 @SpringBootTest(
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:despesas;DB_CLOSE_DELAY=-1"})
 @AutoConfigureMockMvc
@@ -53,7 +53,6 @@ class DespesaTest {
     @Test
     @DisplayName("As seis categorias iniciais existem; criar, renomear e apagar (só sem despesas)")
     void categorias() {
-        // Assert: as da migração
         assertEquals(
                 java.util.Set.of("Material", "Impressão", "Transporte", "Alimentação", "Taxa de espaço", "Outros"),
                 new java.util.HashSet<>(despesas.categorias().stream()
@@ -61,7 +60,6 @@ class DespesaTest {
                         .filter(n -> !n.startsWith("Teste"))
                         .toList()));
 
-        // Act / Assert
         var nova = despesas.criarCategoria("Teste Divulgação");
         assertThrows(RegraDeNegocioException.class, () -> despesas.criarCategoria("  teste   DIVULGAÇÃO "));
         despesas.renomearCategoria(nova.getId(), "Teste Divulgação online");
@@ -92,7 +90,6 @@ class DespesaTest {
     @Test
     @DisplayName("Despesa por evento: o filtro do evento soma as ligadas a ele, mesmo com data fora do horário")
     void despesaPorEvento() {
-        // Arrange: evento em 10/05; uma despesa da véspera ligada a ele, uma do dia sem vínculo
         var feira = eventos.criar(
                 "Feira de maio", LocalDateTime.of(2025, 5, 10, 9, 0), LocalDateTime.of(2025, 5, 10, 18, 0), null);
         Long transporte = categoria("Transporte");
@@ -102,12 +99,10 @@ class DespesaTest {
         despesas.criar(LocalDate.of(2025, 5, 10), "Mesa", espaco, r("80"), feira.getId(), "estande 12");
         despesas.criar(LocalDate.of(2025, 5, 10), "Uber de outro assunto", transporte, r("23.90"), null, null);
 
-        // Act
         var doEvento = despesas.filtrar(new DespesaService.Filtro(feira.getId(), null, null));
         var doDia =
                 despesas.filtrar(new DespesaService.Filtro(null, LocalDate.of(2025, 5, 10), LocalDate.of(2025, 5, 10)));
 
-        // Assert
         assertEquals(
                 java.util.List.of("Mesa", "Lona (véspera)"),
                 doEvento.stream().map(Despesa::getDescricao).toList());
@@ -118,7 +113,6 @@ class DespesaTest {
                 r("103.90")
                         .compareTo(despesas.total(new DespesaService.Filtro(
                                 null, LocalDate.of(2025, 5, 10), LocalDate.of(2025, 5, 10)))));
-        // Com evento, as datas do filtro são ignoradas (o evento é o atalho de período).
         var f = new DespesaService.Filtro(feira.getId(), LocalDate.of(2030, 1, 1), null);
         assertEquals(2, despesas.filtrar(f).size());
     }

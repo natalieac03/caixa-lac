@@ -15,6 +15,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 
+/** /actuator/health aberto e sem detalhes; o resto do actuator fechado. */
 @SpringBootTest(
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:saude;DB_CLOSE_DELAY=-1"})
 @AutoConfigureMockMvc
@@ -38,7 +39,6 @@ class SaudeHttpTest {
         for (String url : new String[] {"/actuator/env", "/actuator/beans", "/actuator/info", "/actuator/metrics"}) {
             mvc.perform(get(url).sessionAttr("autenticado", true)).andExpect(status().isNotFound());
         }
-        // Sem a página de descoberta, /actuator cai no fluxo normal: sem login, vai para o login.
         mvc.perform(get("/actuator")).andExpect(redirectedUrl("/login"));
     }
 }

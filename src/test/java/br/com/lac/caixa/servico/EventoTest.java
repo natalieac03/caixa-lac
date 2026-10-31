@@ -29,7 +29,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** Eventos: sobreposição recusada e venda no evento pela data e hora (bordas incluídas). */
+/** Eventos: sobreposição recusada e a venda no evento pela data e hora. */
 @SpringBootTest(
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:eventos;DB_CLOSE_DELAY=-1"})
 @AutoConfigureMockMvc
@@ -59,7 +59,6 @@ class EventoTest {
         return LocalDateTime.parse(texto);
     }
 
-    /** Venda de R$ 6 na data e hora dada. */
     Venda vendaEm(LocalDateTime quando) {
         var p = estoque.criarNovo("Bóton Evento " + System.nanoTime(), new BigDecimal("6"), 10, null);
         var v = caixa.registrarVenda(
@@ -76,10 +75,8 @@ class EventoTest {
     @Test
     @DisplayName("Sobreposição: cruzar, conter ou ficar dentro é recusado; encostar (fim = início) é aceito")
     void sobreposicao() {
-        // Arrange
         eventos.criar("Feira de março", t("2025-03-10T10:00"), t("2025-03-10T18:00"), null);
 
-        // Act / Assert
         var cruza = assertThrows(
                 RegraDeNegocioException.class,
                 () -> eventos.criar("Cruza", t("2025-03-10T17:00"), t("2025-03-10T20:00"), null));
@@ -95,14 +92,12 @@ class EventoTest {
                 () -> eventos.criar("Começa antes", t("2025-03-10T08:00"), t("2025-03-10T10:01"), null));
         var depois = eventos.criar("Depois", t("2025-03-10T18:00"), t("2025-03-10T22:00"), null);
         var antes = eventos.criar("Antes", t("2025-03-10T06:00"), t("2025-03-10T10:00"), null);
-        // Fim antes do início e editar para cruzar também são recusados.
         assertThrows(
                 RegraDeNegocioException.class,
                 () -> eventos.criar("Ao contrário", t("2025-03-12T10:00"), t("2025-03-12T09:00"), null));
         assertThrows(
                 RegraDeNegocioException.class,
                 () -> eventos.editar(depois.getId(), "Depois", t("2025-03-10T17:59"), t("2025-03-10T22:00"), null));
-        // Editar o próprio evento sem mudar o período não conflita com ele mesmo.
         eventos.editar(antes.getId(), "Antes (manhã)", t("2025-03-10T06:00"), t("2025-03-10T10:00"), "café");
         assertEquals("Antes (manhã)", eventos.buscar(antes.getId()).getNome());
     }
@@ -110,7 +105,6 @@ class EventoTest {
     @Test
     @DisplayName("Venda no evento certo pela data e hora, com as bordas: início entra, fim não")
     void vendaNoEventoCerto() {
-        // Arrange: dois eventos encostados
         var manha = eventos.criar("Manhã", t("2025-04-05T08:00"), t("2025-04-05T12:00"), null);
         var tarde = eventos.criar("Tarde", t("2025-04-05T12:00"), t("2025-04-05T18:00"), null);
         var noInicio = vendaEm(t("2025-04-05T08:00"));
@@ -119,7 +113,6 @@ class EventoTest {
         var noFimDaTarde = vendaEm(t("2025-04-05T18:00"));
         var antesDeTudo = vendaEm(t("2025-04-05T07:59:59"));
 
-        // Act
         var daManha = historico
                 .consultar(FiltroHistorico.doEvento(eventos.periodo(manha.getId())), 0)
                 .pagina()
@@ -131,7 +124,6 @@ class EventoTest {
                 .map(Venda::getId)
                 .getContent();
 
-        // Assert
         assertEquals(
                 List.of(antesDoFim.getId(), noInicio.getId()).stream().sorted().toList(),
                 daManha.stream().sorted().toList());
@@ -140,7 +132,6 @@ class EventoTest {
                 "Tarde", eventos.doMomento(naBorda.getDataHora()).orElseThrow().getNome());
         assertTrue(eventos.doMomento(noFimDaTarde.getDataHora()).isEmpty());
         assertTrue(eventos.doMomento(antesDeTudo.getDataHora()).isEmpty());
-        // Fechamento do evento: as duas vendas da manhã.
         var f = fechamento.consultar(FiltroHistorico.doEvento(eventos.periodo(manha.getId())));
         assertEquals(2, f.quantidade());
         assertEquals(0, new BigDecimal("12").compareTo(f.total()));
@@ -149,16 +140,13 @@ class EventoTest {
     @Test
     @DisplayName("Corrigir a data da venda a move de evento (não há vínculo gravado)")
     void corrigirDataMoveDeEvento() {
-        // Arrange
         var junho = eventos.criar("Junho", t("2025-06-01T10:00"), t("2025-06-01T18:00"), null);
         var julho = eventos.criar("Julho", t("2025-07-01T10:00"), t("2025-07-01T18:00"), null);
         var v = vendaEm(t("2025-06-01T15:00"));
         assertEquals("Junho", eventos.doMomento(v.getDataHora()).orElseThrow().getNome());
 
-        // Act
         caixa.alterarDataHora(v.getId(), t("2025-07-01T11:00"));
 
-        // Assert
         var deJunho = historico.consultar(FiltroHistorico.doEvento(eventos.periodo(junho.getId())), 0);
         var deJulho = historico.consultar(FiltroHistorico.doEvento(eventos.periodo(julho.getId())), 0);
         assertEquals(0, deJunho.pagina().getTotalElements());
@@ -168,7 +156,6 @@ class EventoTest {
     @Test
     @DisplayName("Telas: criar, recusar sobreposição com mensagem, filtrar histórico e fechamento pelo evento")
     void telas() throws Exception {
-        // Act / Assert: cria pela tela
         mvc.perform(post("/eventos")
                         .sessionAttr("autenticado", true)
                         .param("nome", "Encontro LAC")
@@ -190,7 +177,6 @@ class EventoTest {
         var dentro = vendaEm(t("2025-08-09T10:30"));
         var fora = vendaEm(t("2025-08-09T17:00"));
 
-        // Assert: lista, edição, histórico com evento e fechamento do evento
         mvc.perform(get("/eventos").sessionAttr("autenticado", true))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Encontro LAC")));

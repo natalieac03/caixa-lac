@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+/** Campo de texto do CSV: aspas e apóstrofo antes de fórmula. */
 class CampoCsvTest {
 
     @Test

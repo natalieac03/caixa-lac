@@ -12,6 +12,7 @@ import java.util.Random;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+/** Busca de pacotes: ótimo exato, unidades mais caras e desempate. */
 class BuscaDePacotesTest {
     final Categoria a = CenariosDeDesempenho.categoria(1);
     final Categoria b = CenariosDeDesempenho.categoria(2);
@@ -23,7 +24,6 @@ class BuscaDePacotesTest {
     @Test
     @DisplayName("Busca exata acha a combinação ótima que a gulosa por pacote erra")
     void exataBateGulosa() {
-        // 4 unidades de R$ 2,00: "3 por 4,00" economiza 2,00 de uma vez, mas dois "2 por 2,80" economizam 2,40.
         var restantes = Map.of(1L, List.of(200L, 200L, 200L, 200L));
         var tresPor4 = pacote(1, "4.00", a, 3);
         var doisPor280 = pacote(2, "2.80", a, 2);
@@ -98,7 +98,7 @@ class BuscaDePacotesTest {
 
         var r = busca.exata();
 
-        assertEquals(25_000L * 200, r.economia()); // cada par de 12,00 sai por 10,00
+        assertEquals(25_000L * 200, r.economia());
         assertEquals(Map.of(doisPor10, 25_000), r.usados());
     }
 }

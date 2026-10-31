@@ -3,10 +3,7 @@ package br.com.lac.caixa.config;
 import org.springframework.boot.diagnostics.AbstractFailureAnalyzer;
 import org.springframework.boot.diagnostics.FailureAnalysis;
 
-/**
- * Troca a pilha de exceções do Spring por uma mensagem curta no log de
- * inicialização (registrado em META-INF/spring.factories).
- */
+/** Mensagem curta no log de inicialização quando a APP_SENHA é inválida. */
 public class SenhaInvalidaFailureAnalyzer extends AbstractFailureAnalyzer<SenhaDeAcesso.SenhaInvalidaException> {
 
     @Override

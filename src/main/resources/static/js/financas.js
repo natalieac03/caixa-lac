@@ -1,8 +1,4 @@
-/*
- * Tela de Finanças: desenha os gráficos com os dados de /financas/dados e cuida
- * da busca, da ordenação e do drill-down das tabelas. Nenhuma conta de dinheiro
- * aqui: valores e textos já vêm prontos do servidor.
- */
+/* Tela de Finanças: gráficos a partir de /financas/dados e busca, ordenação e drill-down das tabelas. */
 (function () {
     'use strict';
 
@@ -13,8 +9,6 @@
         var v = getComputedStyle(document.documentElement).getPropertyValue(nome).trim();
         return v || reserva;
     }
-
-    /* ---------- Tabelas: busca, ordenação e drill-down (funcionam sem gráficos) ---------- */
 
     document.querySelectorAll('input[data-busca]').forEach(function (campo) {
         var tabela = document.getElementById(campo.getAttribute('data-busca'));
@@ -68,8 +62,6 @@
         });
     });
 
-    /* ---------- Gráficos ---------- */
-
     if (typeof Chart === 'undefined' || !document.getElementById('grafico-serie')) return;
     var script = document.getElementById('script-financas');
     var url = script.getAttribute('data-dados') + '?' + raiz.getAttribute('data-consulta')
@@ -91,7 +83,6 @@
         return function (ctx) { return ctx.dataset.label + ': ' + textos[ctx.dataIndex]; };
     }
 
-    /* Listras para não depender só de cor. */
     function listras(base) {
         var c = document.createElement('canvas');
         c.width = c.height = 8;
@@ -148,7 +139,6 @@
                     }
                 }
             });
-            // Com filtro de categoria a tela não tem as formas de pagamento.
             var formas = document.getElementById('grafico-formas');
             if (formas) new Chart(formas, {
                 type: 'bar',

@@ -12,7 +12,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/** docs/DEPLOY.md e railway.json acompanham o código: variáveis, migrações e healthcheck. */
+/** docs/DEPLOY.md e railway.json acompanham o código. */
 class DeployDocsTest {
     static final Path DEPLOY = Path.of("docs", "DEPLOY.md");
 

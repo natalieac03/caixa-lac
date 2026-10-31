@@ -18,11 +18,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.ApplicationContext;
 
-/**
- * Gera os prints do relatório impresso em docs/prints/ (PDF A4 e imagens em modo
- * de impressão), com a massa fixa. Não roda na suíte normal; para gerar de novo:
- * ./mvnw -B test -Dtest=PrintsDoRelatorioTest -Dprints=true -Djacoco.skip=true
- */
+/** Gera os prints do relatório em docs/prints/; só roda com -Dprints=true. */
 @ExtendWith(Navegador.class)
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -39,7 +35,6 @@ class PrintsDoRelatorioTest {
     void gerar() throws Exception {
         Assumptions.assumeTrue(Boolean.getBoolean("prints"), "use -Dprints=true para gerar os prints");
         var massa = new MassaDeTeste(contexto).montar();
-        // Metas na Feira 1, para o print mostrar as barras de progresso.
         var feira1 = massa.e.get("Feira 1");
         contexto.getBean(EventoService.class)
                 .editar(
@@ -93,7 +88,6 @@ class PrintsDoRelatorioTest {
         new MassaDeTeste(contexto).montar();
         var eventos = contexto.getBean(EventoService.class);
         if (eventos.aberto().isEmpty()) {
-            // Evento em andamento desde a última hora cheia (o selo mostra "desde HH:00").
             var inicio =
                     java.time.LocalDateTime.now().withMinute(0).withSecond(0).withNano(0);
             eventos.criar("Feira de Outubro II", inicio, null, null);

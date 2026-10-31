@@ -49,12 +49,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
-/**
- * Regras das finanças: período máximo e agrupamento da série, dias até agora e
- * o mesmo recorte de horas na comparação, CMV arredondado por item, filtro de
- * forma nas taxas, data final do fechamento e a correção da data da venda.
- * Cada teste usa as próprias datas ou a própria categoria.
- */
+/** Regras das finanças: período máximo, série, recortes, CMV, taxas, fechamento e correção de data. */
 @SpringBootTest(
         properties = {
             "spring.profiles.active=test",
@@ -121,7 +116,6 @@ class RegrasDasFinancasTest {
         return categorias.obterOuCriar("Regra " + System.nanoTime());
     }
 
-    /** Vende 1 unidade de um produto novo e põe a venda no dia e hora dados (como a MassaDeTeste). */
     Venda vender(String quando, Categoria categoria, String preco, String custo, List<PagamentoInformado> partes) {
         var p = estoque.criarNovo(
                 "Produto " + System.nanoTime(), r(preco), 10, categoria, custo == null ? null : r(custo));
@@ -139,8 +133,6 @@ class RegrasDasFinancasTest {
     Venda vender(String quando, Categoria categoria, String preco) {
         return vender(quando, categoria, preco, null, List.of(PagamentoInformado.total(FormaPagamento.DINHEIRO)));
     }
-
-    // ------------------------------------------------------------ período e série
 
     @Test
     @DisplayName("Período de 0001-01-01 a 9999-12-31: 400 rápido, com a mensagem dos 3 anos")
@@ -183,8 +175,8 @@ class RegrasDasFinancasTest {
     @DisplayName("Série por dia até 90 dias, por semana acima de 90 dias e por mês acima de 1 ano")
     void agrupamentoDaSerie() {
         var cat = categoria();
-        vender("2024-02-07T10:00", cat, "6.00"); // quarta
-        vender("2024-02-09T10:00", cat, "4.00"); // sexta da mesma semana
+        vender("2024-02-07T10:00", cat, "6.00");
+        vender("2024-02-09T10:00", cat, "4.00");
         vender("2024-05-20T10:00", cat, "5.00");
 
         var noventa = financas.serie(FiltroFinancas.periodo(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 3, 30))
@@ -196,7 +188,6 @@ class RegrasDasFinancasTest {
                 .comCategoria(cat.getId()));
         assertEquals(Granularidade.SEMANA, semanas.granularidade());
         assertFalse(semanas.porHora());
-        // A primeira semana começa no início do período (quarta); as outras, na segunda-feira.
         assertEquals(
                 LocalDate.of(2024, 1, 3).atStartOfDay(), semanas.pontos().get(0).inicio());
         assertEquals(
@@ -216,11 +207,10 @@ class RegrasDasFinancasTest {
                 LocalDate.of(2023, 6, 15).atStartOfDay(), meses.pontos().get(0).inicio());
         assertEquals(
                 LocalDate.of(2023, 7, 1).atStartOfDay(), meses.pontos().get(1).inicio());
-        assertEquals(19, meses.pontos().size()); // jun/2023 a dez/2024
-        assertValor("10.00", meses.pontos().get(8).receitaLiquida()); // fev/2024
+        assertEquals(19, meses.pontos().size());
+        assertValor("10.00", meses.pontos().get(8).receitaLiquida());
         assertValor("15.00", soma(meses.pontos()));
 
-        // Um ano exato ainda é por semana.
         assertEquals(
                 Granularidade.SEMANA,
                 financas.serie(FiltroFinancas.periodo(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31)))
@@ -230,8 +220,6 @@ class RegrasDasFinancasTest {
     static BigDecimal soma(List<Ponto> pontos) {
         return pontos.stream().map(Ponto::receitaLiquida).reduce(BigDecimal.ZERO.setScale(2), BigDecimal::add);
     }
-
-    // ------------------------------------------------------------ dias e comparação
 
     @Test
     @DisplayName("Dias do período contam só até agora: janeiro inteiro visto no dia 10 tem 10 dias")
@@ -272,8 +260,6 @@ class RegrasDasFinancasTest {
         assertEquals("01/02/2026 até 10:00", comparacao.periodoAnterior());
     }
 
-    // ------------------------------------------------------------ CMV e taxas
-
     @Test
     @DisplayName("CMV arredondado por item no banco: o resumo soma os mesmos centavos do ranking")
     void cmvPorItem() {
@@ -286,7 +272,7 @@ class RegrasDasFinancasTest {
         BigDecimal ranking = financas.rankingProdutos(f, Metrica.RECEITA).stream()
                 .map(LinhaProduto::cmv)
                 .reduce(BigDecimal.ZERO.setScale(2), BigDecimal::add);
-        assertValor("0.02", ranking); // 0,005 vira 0,01 em cada item
+        assertValor("0.02", ranking);
         assertEquals(ranking, financas.resumo(f).cmv());
         assertEquals(
                 ranking, financas.rankingCategorias(f, Metrica.RECEITA).get(0).cmv());
@@ -313,8 +299,6 @@ class RegrasDasFinancasTest {
                 "0.60", financas.resumo(dia.comForma(FormaPagamento.CREDITO)).taxas());
     }
 
-    // ------------------------------------------------------------ fechamento
-
     @Test
     @DisplayName("CSV do fechamento de evento que acaba à meia-noite: a data final é o dia do evento")
     void fechamentoAteMeiaNoite() throws Exception {
@@ -334,8 +318,6 @@ class RegrasDasFinancasTest {
         assertFalse(csv.contains("11/06/2024"), csv);
     }
 
-    // ------------------------------------------------------------ correção da data
-
     BigDecimal taxaGravada(Venda v) {
         return jdbc.queryForObject(
                 "select taxa_estimada from pagamento_venda where venda_id = ?", BigDecimal.class, v.getId());
@@ -353,7 +335,7 @@ class RegrasDasFinancasTest {
         assertValor("0.12", taxaGravada(v));
 
         caixa.alterarDataHora(v.getId(), LocalDateTime.of(2026, 3, 5, 10, 0));
-        assertValor("0.06", taxaGravada(v)); // 1% vigente em 05/03
+        assertValor("0.06", taxaGravada(v));
 
         var futuro = assertThrows(
                 RegraDeNegocioException.class,

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+/** Tela de promoções. */
 @Controller
 public class PromocaoController {
 
@@ -33,10 +34,6 @@ public class PromocaoController {
         return "descontos";
     }
 
-    /**
-     * O formulário envia qtdCat_{catId} para cada categoria marcada.
-     * Categorias desmarcadas ficam disabled e não chegam no params.
-     */
     @PostMapping("/descontos/novo")
     public String novo(
             @RequestParam Map<String, String> params,
@@ -48,7 +45,6 @@ public class PromocaoController {
         return "redirect:/descontos";
     }
 
-    /** Mesmo formulário da criação, já preenchido com a promoção. */
     @GetMapping("/descontos/{id}/editar")
     public String editar(@PathVariable Long id, Model model) {
         listar(model);
@@ -67,10 +63,6 @@ public class PromocaoController {
         return "redirect:/descontos";
     }
 
-    /**
-     * O formulário envia qtdCat_{catId} para cada categoria marcada.
-     * Categorias desmarcadas ficam disabled e não chegam no params.
-     */
     private static Map<Long, Integer> qtdPorCategoria(Map<String, String> params) {
         Map<Long, Integer> qtdPorCat = new LinkedHashMap<>();
         for (Map.Entry<String, String> e : params.entrySet()) {

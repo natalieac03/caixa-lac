@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.springframework.data.jpa.domain.Specification;
 
-/** Predicados do filtro do histórico: só entra o que foi preenchido. */
+/** Predicados do filtro do histórico. */
 public final class VendaSpecs {
 
     private VendaSpecs() {}
@@ -23,7 +23,6 @@ public final class VendaSpecs {
         return (v, consulta, cb) -> {
             List<Predicate> predicados = new ArrayList<>();
             if (filtro.forma() != null) {
-                // Venda dividida entra se QUALQUER parte usou a forma.
                 Subquery<Long> parte = consulta.subquery(Long.class);
                 Root<Venda> mesma = parte.correlate(v);
                 Join<Venda, PagamentoVenda> p = mesma.join("pagamentos");
@@ -37,8 +36,6 @@ public final class VendaSpecs {
                 predicados.add(cb.lessThan(v.get("dataHora"), filtro.fimConsulta()));
             }
             if (filtro.diaADia()) {
-                // Dia a dia: nenhum evento contém a data e hora da venda. O aberto vale até
-                // agora, mas só até o início do próximo evento (a regra do EventoService.fimEfetivo).
                 Subquery<Long> ev = consulta.subquery(Long.class);
                 Root<Evento> e = ev.from(Evento.class);
                 Subquery<Long> proximo = consulta.subquery(Long.class);
@@ -59,7 +56,6 @@ public final class VendaSpecs {
                 predicados.add(cb.not(cb.exists(ev)));
             }
             if (!filtro.produto().isEmpty()) {
-                // Trecho literal do nome (sem curingas de LIKE), sem acento, em qualquer item da venda.
                 Subquery<Long> item = consulta.subquery(Long.class);
                 Root<Venda> mesma = item.correlate(v);
                 Join<Venda, ItemVenda> i = mesma.join("itens");
@@ -76,13 +72,11 @@ public final class VendaSpecs {
         };
     }
 
-    /** Mais de uma parte no pagamento. */
     public static Specification<Venda> pagamentoDividido() {
         return (v, consulta, cb) ->
                 cb.greaterThan(cb.size(v.<java.util.Collection<PagamentoVenda>>get("pagamentos")), 1);
     }
 
-    /** Sem parte de pagamento: valor cobrado zero. */
     public static Specification<Venda> cortesia() {
         return (v, consulta, cb) -> cb.isEmpty(v.<java.util.Collection<PagamentoVenda>>get("pagamentos"));
     }

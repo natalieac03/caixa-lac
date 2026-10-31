@@ -25,7 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/** Vendas novas: bruto, desconto rateado e líquido por item, e os descontos da venda congelados. */
+/** Venda nova: bruto, desconto rateado e líquido por item, e descontos congelados. */
 @SpringBootTest(
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:rateio_venda;DB_CLOSE_DELAY=-1"
         })
@@ -62,7 +62,6 @@ class RateioVendaTest {
                 .venda();
     }
 
-    /** bruto, desconto e líquido do item do produto nessa venda. */
     BigDecimal[] item(Venda v, Produto p) {
         return jdbc.queryForObject(
                 "select valor_bruto, desconto_rateado, valor_liquido from item_venda where venda_id = ? and produto_id = ?",
@@ -93,20 +92,17 @@ class RateioVendaTest {
     @Test
     @DisplayName("A_PARTIR_DE: desconto rateado pelo bruto, soma dos líquidos = cobrado, desconto com id da promoção")
     void aPartirDe() {
-        // Arrange: 3 bótons (R$ 6) saem por R$ 5 cada; adesivo R$ 8 sem promoção
         Categoria boton = categoria("Bóton Rateio");
         var b = estoque.criarNovo("Bóton Rateio", r("6"), 100, boton);
         var a = estoque.criarNovo("Adesivo Rateio", r("8"), 100, categoria("Adesivo Rateio"));
         promocoes.criar(Map.of(boton.getId(), 3), TipoPromocao.A_PARTIR_DE, r("5"));
         Promocao promo = ultimaPromocao();
 
-        // Act
         var quantidades = new LinkedHashMap<Long, Integer>();
         quantidades.put(b.getId(), 3);
         quantidades.put(a.getId(), 1);
         Venda v = vender(quantidades, null);
 
-        // Assert: bruto 18 + 8 = 26, cobrado 23, desconto 3,00 -> 2,08 e 0,92 (maior resto)
         assertValor("23", v.getValorCobrado());
         var ib = item(v, b);
         var ia = item(v, a);
@@ -124,10 +120,8 @@ class RateioVendaTest {
         assertValor("3", (BigDecimal) desconto.get("VALOR"));
         assertFalse(jdbc.queryForObject("select rateio_retroativo from venda where id = ?", Boolean.class, v.getId()));
 
-        // Act: a promoção é apagada
         promocoes.remover(promo.getId());
 
-        // Assert: o desconto da venda continua, sem o vínculo
         var depois =
                 jdbc.queryForMap("select promocao_id, descricao from venda_desconto where venda_id = ?", v.getId());
         assertNull(depois.get("PROMOCAO_ID"));
@@ -137,7 +131,6 @@ class RateioVendaTest {
     @Test
     @DisplayName("Pacote: o desconto do pacote é rateado pelo bruto e guarda o id do pacote")
     void pacote() {
-        // Arrange: pacote 2 bótons + 1 adesivo por R$ 15 (normal 6 + 6 + 8 = 20)
         Categoria boton = categoria("Bóton Pacote");
         Categoria adesivo = categoria("Adesivo Pacote");
         var b = estoque.criarNovo("Bóton Pacote", r("6"), 100, boton);
@@ -145,10 +138,8 @@ class RateioVendaTest {
         promocoes.criar(Map.of(boton.getId(), 2, adesivo.getId(), 1), TipoPromocao.PACOTE, r("15"));
         Promocao pacote = ultimaPromocao();
 
-        // Act
         Venda v = vender(Map.of(b.getId(), 2, a.getId(), 1), null);
 
-        // Assert: desconto 5,00 sobre 12 e 8 -> 3,00 e 2,00
         assertValor("15", v.getValorCobrado());
         assertValor("3.00", item(v, b)[1]);
         assertValor("2.00", item(v, a)[1]);
@@ -163,12 +154,10 @@ class RateioVendaTest {
     @Test
     @DisplayName("Ajuste manual para menos e para mais entra no rateio, com sinal; cortesia zera os líquidos")
     void ajustesECortesia() {
-        // Arrange: 1 x R$ 6 + 1 x R$ 12 = 18
         var p6 = estoque.criarNovo("Caneca Ajuste", r("6"), 100, null);
         var p12 = estoque.criarNovo("Camiseta Ajuste", r("12"), 100, null);
         Map<Long, Integer> carrinho = Map.of(p6.getId(), 1, p12.getId(), 1);
 
-        // Act / Assert: cobrado 17 -> desconto 1,00 = 0,33 + 0,67
         Venda menos = vender(carrinho, r("17"));
         assertValor("0.33", item(menos, p6)[1]);
         assertValor("0.67", item(menos, p12)[1]);
@@ -179,7 +168,6 @@ class RateioVendaTest {
                         "select count(*) from venda_desconto where venda_id = ?", Integer.class, menos.getId()),
                 "ajuste manual não é desconto promocional");
 
-        // Act / Assert: cobrado 20 -> desconto -2,00 = -0,67 + -1,33
         Venda mais = vender(carrinho, r("20"));
         assertValor("-0.67", item(mais, p6)[1]);
         assertValor("6.67", item(mais, p6)[2]);
@@ -187,7 +175,6 @@ class RateioVendaTest {
         assertValor("13.33", item(mais, p12)[2]);
         assertValor("20", somaLiquidos(mais));
 
-        // Act / Assert: cortesia
         Venda cortesia = vender(carrinho, BigDecimal.ZERO);
         assertValor("0", item(cortesia, p6)[2]);
         assertValor("0", item(cortesia, p12)[2]);
@@ -218,7 +205,6 @@ class RateioVendaTest {
     @Test
     @DisplayName("Propriedade: 300 vendas aleatórias (semente fixa), com promoções e ajustes, sempre fecham")
     void propriedade() {
-        // Arrange: 7 produtos em 2 categorias, uma A_PARTIR_DE e um pacote
         Random aleatorio = new Random(424242L);
         Categoria c1 = categoria("Bóton Prop");
         Categoria c2 = categoria("Adesivo Prop");
@@ -234,7 +220,6 @@ class RateioVendaTest {
         Long pacote = ultimaPromocao().getId();
         List<Long> vendas = new ArrayList<>();
 
-        // Act
         for (int k = 0; k < 300; k++) {
             Map<Long, Integer> carrinho = new LinkedHashMap<>();
             int linhas = 1 + aleatorio.nextInt(lista.size());
@@ -254,7 +239,6 @@ class RateioVendaTest {
             vendas.add(vender(carrinho, manual).getId());
         }
 
-        // Assert: em toda venda, soma dos líquidos = cobrado e desconto = bruto - líquido
         for (Long id : vendas) {
             assertEquals(
                     0,
@@ -273,14 +257,12 @@ class RateioVendaTest {
                             id),
                     "venda " + id);
         }
-        // E as promoções aparecem nos descontos gravados, cada uma com o seu id.
         assertTrue(jdbc.queryForObject(
                         "select count(*) from venda_desconto where promocao_id = ?", Integer.class, aPartirDe)
                 > 0);
         assertTrue(
                 jdbc.queryForObject("select count(*) from venda_desconto where promocao_id = ?", Integer.class, pacote)
                         > 0);
-        // Toda venda sem ajuste tem descontos gravados que somam o desconto da venda.
         assertEquals(
                 0,
                 jdbc.queryForObject(

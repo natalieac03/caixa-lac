@@ -7,15 +7,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.Locale;
 
-/**
- * Filtro do histórico, do CSV e do fechamento. Campo vazio = sem filtro:
- * VendaSpecs só adiciona o predicado dos campos preenchidos. O produto é
- * buscado sem diferenciar maiúsculas nem acentos ("boton" acha "Bóton").
- * Datas da tela são inclusivas; a consulta usa limite final exclusivo.
- * Evento é um atalho de período: com ele, vale o intervalo [inicio, fim) do
- * evento (com hora) e as datas ficam vazias. Dia a dia: dentro das datas, só as
- * vendas fora de qualquer evento (o aberto vale até {@code agora}).
- */
+/** Filtro do histórico, do CSV e do fechamento. */
 public record FiltroHistorico(
         FormaPagamento forma,
         LocalDate inicio,
@@ -46,21 +38,14 @@ public record FiltroHistorico(
         this(forma, inicio, fim, produto, evento, false, null);
     }
 
-    /** O mesmo filtro só com o dia a dia ligado (fora de qualquer evento). */
     public FiltroHistorico comDiaADia(LocalDateTime quando) {
         return new FiltroHistorico(forma, inicio, fim, produto, null, true, quando);
     }
 
-    /**
-     * Letras acentuadas e suas versões sem acento, na mesma posição. O banco faz
-     * lower(translate(nome, COM_ACENTO, SEM_ACENTO)) (H2 e Postgres, sem extensão);
-     * o termo buscado passa pelo mesmo caminho aqui.
-     */
     public static final String COM_ACENTO = "áàâãäéèêëíìîïóòôõöúùûüçÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ";
 
     public static final String SEM_ACENTO = "aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC";
 
-    /** "Bóton" -> "boton". */
     public static String semAcento(String texto) {
         StringBuilder sb = new StringBuilder(texto.length());
         for (char c : texto.toCharArray()) {
@@ -70,23 +55,19 @@ public record FiltroHistorico(
         return sb.toString().toLowerCase(Locale.ROOT);
     }
 
-    /** Só por intervalo de datas (fechamento). */
     public static FiltroHistorico periodo(LocalDate inicio, LocalDate fim) {
         return new FiltroHistorico(null, inicio, fim, "");
     }
 
-    /** Só pelo evento (fechamento). */
     public static FiltroHistorico doEvento(PeriodoDoEvento evento) {
         return new FiltroHistorico(null, null, null, "", evento);
     }
 
-    /** Início do evento, ou do primeiro dia, ou null sem data inicial. */
     public LocalDateTime inicioConsulta() {
         if (evento != null) return evento.inicio();
         return inicio == null ? null : inicio.atStartOfDay();
     }
 
-    /** Fim do evento, ou início do dia seguinte ao último (exclusivo), ou null sem data final. */
     public LocalDateTime fimConsulta() {
         if (evento != null) return evento.fim();
         return fim == null ? null : fim.plusDays(1).atStartOfDay();

@@ -8,9 +8,9 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+/** Acesso às taxas: a vigente no dia e as vendas sem taxa registrada. */
 public interface TaxaPagamentoRepository extends JpaRepository<TaxaPagamento, Long> {
 
-    /** A taxa vigente no dia: a de maior vigência que não seja depois dele. */
     Optional<TaxaPagamento> findFirstByFormaAndVigenteDesdeLessThanEqualOrderByVigenteDesdeDesc(
             FormaPagamento forma, LocalDate dia);
 
@@ -18,7 +18,6 @@ public interface TaxaPagamentoRepository extends JpaRepository<TaxaPagamento, Lo
 
     List<TaxaPagamento> findAllByOrderByFormaAscVigenteDesdeDesc();
 
-    /** Vendas com alguma parte de pagamento sem taxa registrada (anteriores às taxas). */
     @Query("select count(distinct v) from Venda v join v.pagamentos p where p.taxaRegistrada = false")
     long vendasSemTaxaRegistrada();
 }

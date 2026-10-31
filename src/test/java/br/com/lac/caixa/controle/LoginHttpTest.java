@@ -20,6 +20,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
+/** Login pela tela: senha certa, errada, espera e bloqueio. */
 @SpringBootTest(
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:login;DB_CLOSE_DELAY=-1"})
 @AutoConfigureMockMvc
@@ -75,7 +76,6 @@ class LoginHttpTest {
                 .andExpect(flash().attribute("segundos", 2L));
         relogio.avancar(2);
         entrar(ip, SenhaDeTeste.VALOR).andExpect(redirectedUrl("/"));
-        // O acerto zerou o contador: o próximo erro volta a 1 s.
         entrar(ip, "errada").andExpect(flash().attribute("segundos", 1L));
     }
 

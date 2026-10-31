@@ -37,7 +37,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-/** Banco vazio: Flyway roda todas as migrações e o Hibernate valida o esquema no Postgres. */
+/** Banco vazio no Postgres: migrações, esquema e as consultas das telas. */
 @ExtendWith(ExigeDocker.class)
 @SpringBootTest(properties = {"spring.profiles.active=test"})
 @AutoConfigureMockMvc
@@ -85,16 +85,10 @@ class PostgresBancoNovoTest {
     static boolean vendasCriadas;
     static long produtosAntes = -1;
 
-    /**
-     * Duas vendas feitas pela aplicação sobre o estoque semeado:
-     * 01/06/2024 Pix R$ 12 (Bóton Capivara x2) e 02/06/2024 Dinheiro R$ 14
-     * (Adesivo Capivara Grande x1 + Bóton Logo LAC x1).
-     */
     @BeforeEach
     void criarVendas() {
         if (vendasCriadas) return;
         vendasCriadas = true;
-        // Banco vazio fica vazio (DadosIniciais só no perfil local): o teste cria o próprio estoque.
         produtosAntes = produtos.count();
         var boton = categorias.save(new Categoria("Bóton"));
         var adesivo = categorias.save(new Categoria("Adesivo Grande"));
@@ -156,7 +150,6 @@ class PostgresBancoNovoTest {
     @Test
     @DisplayName("Invariante no Postgres: soma dos movimentos = quantidade, com venda, cancelamento, compra e ajustes")
     void invarianteDosMovimentos() {
-        // Arrange
         var p = estoque.criarNovo("Bóton Invariante PG", new BigDecimal("6.00"), 10, null);
         var v = caixa.registrarVenda(
                         Map.of(p.getId(), 3),
@@ -166,13 +159,11 @@ class PostgresBancoNovoTest {
                         UUID.randomUUID().toString())
                 .venda();
 
-        // Act
         caixa.cancelarVenda(v.getId(), "Ensaio");
         estoque.registrarCompra(p.getId(), 5, new BigDecimal("10.00"), LocalDate.now(), "fornecedor");
         estoque.adicionarUnidades(p.getId(), 2);
         estoque.removerUnidades(p.getId(), 4);
 
-        // Assert
         assertEquals(List.of(), movimentos.produtosComSaldoDivergente());
         assertEquals(13, produtos.findById(p.getId()).orElseThrow().getQuantidade());
         assertEquals(
@@ -201,7 +192,6 @@ class PostgresBancoNovoTest {
     @Test
     @DisplayName("Postgres: sobreposição de eventos, venda no evento, despesas por evento/período e taxa vigente")
     void eventosDespesasETaxas() {
-        // Eventos: parâmetros nulos (criar) e não nulos (editar) na consulta de sobreposição
         var e = eventos.criar(
                 "Feira PG",
                 java.time.LocalDateTime.of(2024, 6, 1, 9, 0),
@@ -215,7 +205,6 @@ class PostgresBancoNovoTest {
                         java.time.LocalDateTime.of(2024, 6, 1, 19, 0),
                         null));
         eventos.editar(e.getId(), "Feira PG", e.getInicio(), e.getFim(), "ok");
-        // A venda de 01/06/2024 10:00 (criada no @BeforeEach) cai no evento.
         var f = fechamento.consultar(br.com.lac.caixa.repositorio.FiltroHistorico.doEvento(eventos.periodo(e.getId())));
         assertEquals(1, f.quantidade());
         assertEquals(
@@ -224,7 +213,6 @@ class PostgresBancoNovoTest {
                         .orElseThrow()
                         .getNome());
 
-        // Despesas: filtros com e sem evento e datas nulas
         Long material = despesas.categorias().get(0).getId();
         despesas.criar(LocalDate.of(2024, 5, 31), "Lona", material, new BigDecimal("30"), e.getId(), null);
         despesas.criar(LocalDate.of(2024, 6, 1), "Avulsa", material, new BigDecimal("5"), null, null);
@@ -244,7 +232,6 @@ class PostgresBancoNovoTest {
                                 null, LocalDate.of(2024, 6, 1), null))
                         .size());
 
-        // Taxas: vigente e contagem de partes sem taxa registrada (as do @BeforeEach têm taxa registrada)
         taxas.definir(FormaPagamento.CREDITO, new BigDecimal("3.5"), null, LocalDate.now());
         assertEquals(
                 0,
@@ -291,7 +278,6 @@ class PostgresBancoNovoTest {
                     eventos.doMomento(durante.getDataHora()).orElseThrow().getId());
             var hoje = LocalDate.now();
             var agora = java.time.LocalDateTime.now();
-            // Logo depois da meia-noite, a venda de 10 minutos atrás é de ontem: o filtro começa no dia dela.
             var desde = antes.getDataHora().toLocalDate();
             var diaADia = new br.com.lac.caixa.repositorio.FiltroHistorico(null, desde, hoje, "").comDiaADia(agora);
             var ids = consultaHistorico
@@ -306,7 +292,6 @@ class PostgresBancoNovoTest {
                     br.com.lac.caixa.repositorio.FiltroFinancas.doEvento(eventos.periodo(feira.getId())));
             assertEquals(1, doEvento.vendas());
             assertEquals(0, new BigDecimal("12.00").compareTo(doEvento.receitaLiquida()));
-            // O aberto conta até agora na sobreposição
             org.junit.jupiter.api.Assertions.assertThrows(
                     br.com.lac.caixa.dominio.RegraDeNegocioException.class,
                     () -> eventos.criar("Cruza PG", feira.getInicio().minusHours(1), agora.plusHours(1), null));
@@ -326,7 +311,6 @@ class PostgresBancoNovoTest {
     void doisAbertosAoMesmoTempo() throws Exception {
         jdbc.update("update evento set fim = now() + interval '1 second' where fim is null");
         try (var outra = dataSource.getConnection()) {
-            // Outra pessoa clicou junto: o evento dela ainda não foi confirmado quando o serviço confere.
             outra.setAutoCommit(false);
             try (var s = outra.createStatement()) {
                 s.execute(

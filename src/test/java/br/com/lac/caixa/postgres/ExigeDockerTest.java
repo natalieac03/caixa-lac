@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.opentest4j.TestAbortedException;
 
+/** A regra do ExigeDocker com e sem Docker, dentro e fora do CI. */
 class ExigeDockerTest {
     @Test
     void semDockerNoCiEErro() {

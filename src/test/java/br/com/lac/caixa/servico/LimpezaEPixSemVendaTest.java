@@ -35,7 +35,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** Limpeza das cobranças abandonadas e aviso de Pix recebido sem venda, com relógio controlado. */
+/** Limpeza das cobranças abandonadas e o Pix recebido sem venda. */
 @SpringBootTest(
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:limpeza;DB_CLOSE_DELAY=-1"})
 @AutoConfigureMockMvc
@@ -96,7 +96,6 @@ class LimpezaEPixSemVendaTest {
     @Test
     @DisplayName("Limpeza: pendente há mais de 20 min é cancelada no Mercado Pago; paga ou recente fica")
     void limpezaDasAbandonadas() {
-        // Arrange
         String naoPaga = cobrancas
                 .gerar(UUID.randomUUID().toString(), 0, new BigDecimal("10"))
                 .getOrderId();
@@ -109,10 +108,8 @@ class LimpezaEPixSemVendaTest {
                 .gerar(UUID.randomUUID().toString(), 0, new BigDecimal("14"))
                 .getOrderId();
 
-        // Act
         limpeza.limpar();
 
-        // Assert
         assertEquals("CANCELADA", situacao(naoPaga));
         assertEquals("canceled", FAKE.order(naoPaga).status);
         assertEquals("PAGA", situacao(pagaSemAviso), "antes de cancelar, confere: estava paga");
@@ -125,7 +122,6 @@ class LimpezaEPixSemVendaTest {
     @DisplayName(
             "Pix pago sem venda aparece no histórico depois de 10 min e some ao ser resolvido; o usado numa venda não aparece")
     void pixRecebidoSemVenda() throws Exception {
-        // Arrange: um Pix pago sem venda e outro pago e usado numa venda
         String tokenSemVenda = UUID.randomUUID().toString();
         String semVenda =
                 cobrancas.gerar(tokenSemVenda, 0, new BigDecimal("18")).getOrderId();
@@ -143,13 +139,10 @@ class LimpezaEPixSemVendaTest {
                 null,
                 tokenComVenda);
 
-        // Assert: dentro da carência, ninguém aparece (a tela pode estar confirmando)
         assertTrue(cobrancas.pixSemVenda().isEmpty());
 
-        // Act
         avancarMinutos(11);
 
-        // Assert: só o Pix sem venda, com valor, hora e order
         var avisos = cobrancas.pixSemVenda();
         assertEquals(List.of(semVenda), avisos.stream().map(c -> c.getOrderId()).toList());
         mvc.perform(get("/historico").sessionAttr("autenticado", true))
@@ -158,13 +151,11 @@ class LimpezaEPixSemVendaTest {
                 .andExpect(content().string(containsString("R$ 18,00")))
                 .andExpect(content().string(not(containsString(comVenda))));
 
-        // Act: alguém resolve à mão
         mvc.perform(post("/historico/pix/" + avisos.get(0).getId() + "/resolver")
                         .sessionAttr("autenticado", true)
                         .param("como", "Venda lançada à mão"))
                 .andExpect(redirectedUrl("/historico"));
 
-        // Assert
         assertTrue(cobrancas.pixSemVenda().isEmpty());
         mvc.perform(get("/historico").sessionAttr("autenticado", true))
                 .andExpect(content().string(not(containsString("Pix recebido sem venda"))));

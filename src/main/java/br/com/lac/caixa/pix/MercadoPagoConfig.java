@@ -3,26 +3,18 @@ package br.com.lac.caixa.pix;
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/**
- * Configuração do Mercado Pago, só por variável de ambiente (application.properties
- * liga cada campo a MP_ACCESS_TOKEN, MP_WEBHOOK_SECRET e MP_PAYER_EMAIL). Sem
- * token (ou sem e-mail do pagador), o Pix automático fica desligado e o caixa usa
- * Pix manual. toString nunca mostra os segredos.
- */
+/** Configuração do Mercado Pago, vinda só de variáveis de ambiente. */
 @ConfigurationProperties(prefix = "mercadopago")
 public class MercadoPagoConfig {
 
     private String accessToken = "";
     private String webhookSecret = "";
     private String payerEmail = "";
-    /** Opcional, só para testes: "APRO" faz o Mercado Pago aprovar o Pix de teste sozinho. */
     private String payerFirstName = "";
 
     private String url = "https://api.mercadopago.com";
     private Duration timeout = Duration.ofSeconds(5);
-    /** Validade do Pix (ISO 8601). A documentação exige no mínimo 30 minutos. */
     private String expiracao = "PT30M";
-    /** Espera máxima ao respeitar o Retry-After de um 429. */
     private Duration esperaMaximaRetry = Duration.ofSeconds(5);
 
     public boolean isLigado() {

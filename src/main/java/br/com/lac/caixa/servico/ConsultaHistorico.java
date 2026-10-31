@@ -14,6 +14,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/** Consulta do histórico: página, indicadores e CSV do mesmo filtro. */
 @Service
 @Transactional(readOnly = true)
 public class ConsultaHistorico {
@@ -28,7 +29,6 @@ public class ConsultaHistorico {
 
     public record Resultado(Page<Venda> pagina, IndicadoresHistorico resumo) {}
 
-    /** Página com canceladas (riscadas na tela); indicadores sem canceladas. */
     public Resultado consultar(FiltroHistorico filtro, int pagina) {
         if (pagina < 0) throw new RegraDeNegocioException("Página inválida.");
         var cortada = vendas.findAll(
@@ -40,7 +40,6 @@ public class ConsultaHistorico {
         return new Resultado(new PageImpl<>(conteudo, cortada.getPageable(), cortada.getTotalElements()), resumo);
     }
 
-    /** CSV padrão: o filtro inteiro, sem canceladas. */
     public List<Venda> exportar(FiltroHistorico filtro) {
         var lista = vendas.findAll(
                 VendaSpecs.doFiltro(filtro).and(VendaSpecs.naoCancelada()), VendaRepository.MAIS_RECENTES);
@@ -48,11 +47,6 @@ public class ConsultaHistorico {
         return lista;
     }
 
-    /**
-     * Itens e pagamentos são duas listas: buscar as duas no mesmo JOIN não dá
-     * (MultipleBagFetchException). Os pagamentos vêm em lotes (default_batch_fetch_size),
-     * dentro da transação, antes da tela (open-in-view=false).
-     */
     private static void carregarPagamentos(List<Venda> lista) {
         lista.forEach(v -> Hibernate.initialize(v.getPagamentos()));
     }

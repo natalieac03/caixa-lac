@@ -5,12 +5,7 @@ import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.testcontainers.DockerClientFactory;
 
-/**
- * Testes com PostgreSQL real precisam de Docker. No computador, sem Docker,
- * eles são pulados. No CI (variável CI=true, que o GitHub Actions define),
- * falta de Docker é ERRO: esses testes não podem passar despercebidos.
- * Registrada antes da SpringExtension, roda antes de o contexto subir.
- */
+/** Pula os testes de Postgres sem Docker no computador; no CI, falta de Docker é erro. */
 public class ExigeDocker implements BeforeAllCallback {
 
     static boolean noCi() {
@@ -22,7 +17,6 @@ public class ExigeDocker implements BeforeAllCallback {
         conferir(DockerClientFactory.instance().isDockerAvailable(), noCi(), contexto.getDisplayName());
     }
 
-    /** Com Docker segue; sem Docker: erro no CI, pulado fora dele. */
     static void conferir(boolean dockerDisponivel, boolean ci, String teste) {
         if (dockerDisponivel) return;
         if (ci) {

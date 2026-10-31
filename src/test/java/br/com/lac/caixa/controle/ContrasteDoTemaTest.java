@@ -11,10 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-/**
- * O cartão principal da tela inicial (Nova venda) é roxo com texto e ícone on-roxo:
- * confere o contraste WCAG AA (>= 4,5:1) lendo os tokens do estilo.css nos dois temas.
- */
+/** O cartão principal da tela inicial tem contraste WCAG AA nos dois temas. */
 class ContrasteDoTemaTest {
 
     static String css() throws Exception {
@@ -23,7 +20,6 @@ class ContrasteDoTemaTest {
         }
     }
 
-    /** Os tokens "--nome: #hex;" do primeiro bloco que começa com o seletor dado. */
     static Map<String, String> tokens(String css, String seletor) {
         int i = css.indexOf(seletor + " {");
         assertTrue(i >= 0, "sem o bloco " + seletor);

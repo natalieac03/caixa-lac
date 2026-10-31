@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 
+/** Desempenho da calculadora em carrinhos grandes e o modo aproximado. */
 @ExtendWith(OutputCaptureExtension.class)
 class CalculadoraDesempenhoTest {
 
@@ -74,7 +75,6 @@ class CalculadoraDesempenhoTest {
         long ms = (System.nanoTime() - inicio) / 1_000_000;
         assertTrue(orcamento.aproximado());
         assertTrue(ms < LIMITE_MS, "levou " + ms + " ms");
-        // 9 categorias x 3 pacotes de 15 = 405,00 (a heurística acha o ótimo aqui).
         assertEquals(0, new BigDecimal("405.00").compareTo(orcamento.total()));
         assertTrue(orcamento.total().movePointRight(2).longValue() < normal);
         assertTrue(log.getAll().contains("orçamento marcado como aproximado"));
@@ -94,7 +94,6 @@ class CalculadoraDesempenhoTest {
         var orcamento = new CalculadoraDePreco().calcular(new Carrinho(linhas), promocoes);
 
         assertTrue(orcamento.aproximado());
-        // Melhor A_PARTIR_DE: 6 x 7,00 = 42,00 (contra o pacote de 50,00).
         assertEquals(0, new BigDecimal("42.00").compareTo(orcamento.total()));
     }
 }

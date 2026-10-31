@@ -21,7 +21,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/** "Iniciar evento" e "Encerrar" pelo topo, num Chromium: selo, confirmação e celular. */
+/** "Iniciar evento" e "Encerrar" pelo topo, num Chromium. */
 @ExtendWith(Navegador.class)
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -84,7 +84,6 @@ class EventoRapidoNoNavegadorTest {
         assertThat(p.locator("#selo-evento")).containsText(Pattern.compile("Feira de Outubro II, desde \\d\\d:\\d\\d"));
         assertTrue(eventos.aberto().isPresent());
 
-        // Cancelar a confirmação não encerra
         p.onceDialog(d -> {
             assertTrue(d.message().contains("Feira de Outubro II"), d.message());
             d.dismiss();
@@ -93,7 +92,6 @@ class EventoRapidoNoNavegadorTest {
         assertThat(p.locator("#selo-evento")).isVisible();
         assertTrue(eventos.aberto().isPresent());
 
-        // Aceitar encerra e volta o "Iniciar evento"
         p.onceDialog(d -> d.accept());
         p.locator("#botao-encerrar").click();
         assertThat(p.locator(".aviso-sucesso")).containsText("encerrado");

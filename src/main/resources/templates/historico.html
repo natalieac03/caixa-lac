@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Histórico de vendas: filtros, indicadores, correção de data, cancelamento e Pix sem venda. -->
 <html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head('Histórico')}"></head>
 <body>
@@ -7,7 +8,6 @@
 <main class="conteudo">
     <div th:replace="~{fragments/layout :: avisos}"></div>
 
-    <!-- Pix que entrou no Mercado Pago sem venda confirmada: alguém precisa resolver à mão. -->
     <div class="aviso aviso-erro pix-sem-venda" role="alert" th:unless="${pixSemVenda.isEmpty()}" id="pixSemVenda">
         <div>
             <strong>Pix recebido sem venda</strong>
@@ -134,8 +134,6 @@
                 <tbody>
                 <tr th:each="v : ${vendas}" th:classappend="${v.cancelada} ? 'venda-cancelada'">
                     <td class="num suave" th:text="${v.id}">1</td>
-                    <!--/* Dia e Hora: clicar abre a edição. O input de data fica
-                         nesta célula, mas pertence ao form da célula ao lado (atributo form). */-->
                     <td>
                         <span class="leitura">
                             <button type="button" class="editavel" title="Editar dia e hora"
@@ -219,8 +217,6 @@
 </main>
 
 <script th:inline="none">
-    // Troca o texto de Dia/Hora da linha pelos campos de edição.
-    // Só uma linha fica em edição por vez.
     function abrirEdicaoData(botao, tipoCampo) {
         document.querySelectorAll('tr.editando').forEach(fecharEdicaoData);
         const tr = botao.closest('tr');
@@ -230,7 +226,6 @@
         tr.querySelector('input[type=' + tipoCampo + ']').focus();
     }
 
-    // Cancelar: volta os campos ao valor gravado e mostra o texto de novo.
     function fecharEdicaoData(tr) {
         tr.querySelector('form.edicao').reset();
         tr.classList.remove('editando');
@@ -238,7 +233,6 @@
         tr.querySelectorAll('.leitura').forEach(function (el) { el.classList.remove('oculto'); });
     }
 
-    // Esc também cancela a edição aberta.
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
             document.querySelectorAll('tr.editando').forEach(fecharEdicaoData);

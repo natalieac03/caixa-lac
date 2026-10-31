@@ -30,11 +30,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.springframework.context.ApplicationContext;
 
-/**
- * A massa fixa das finanças (descrita em MassaFinanceira), montada pelos
- * serviços de verdade. Usada pelos testes do FinancasService e pelos testes de
- * tela e de sistema. Montar duas vezes no mesmo banco não duplica nada.
- */
+/** Monta a massa fixa das finanças pelos serviços de verdade. */
 public class MassaDeTeste {
     final FinancasService financas;
     final FechamentoService fechamento;
@@ -183,7 +179,6 @@ public class MassaDeTeste {
                 e.get("Feira 2").getId(),
                 null);
 
-        // O pacote é apagado (as vendas guardam o desconto sem o vínculo) e o Pôster 2 é arquivado.
         repositorioDePromocoes.findAll().stream()
                 .filter(x -> x.getTipo() == TipoPromocao.PACOTE)
                 .forEach(x -> promocoes.remover(x.getId()));

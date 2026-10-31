@@ -12,7 +12,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-/** Liga as propriedades do Mercado Pago e diz no log, sem segredos, se o Pix automático está ligado. */
+/** Liga as propriedades do Mercado Pago, o executor do webhook e o aviso no log ao subir. */
 @Configuration
 @EnableScheduling
 @EnableConfigurationProperties(MercadoPagoConfig.class)
@@ -26,10 +26,6 @@ class MercadoPagoInicio {
         this.config = config;
     }
 
-    /**
-     * Onde os avisos do webhook são processados: em segundo plano, para responder
-     * 200 na hora (o Mercado Pago espera até 22 s). Nos testes, na mesma thread.
-     */
     @Bean("avisosMercadoPago")
     Executor avisosMercadoPago(@Value("${mercadopago.webhook-sincrono:false}") boolean sincrono) {
         if (sincrono) return Runnable::run;
@@ -38,11 +34,6 @@ class MercadoPagoInicio {
         return executor;
     }
 
-    /**
-     * Duas linhas fixas no log ao subir, sem nenhum segredo (dá para conferir no
-     * Railway depois do deploy): "Mercado Pago: ligado|desligado" e
-     * "webhook: assinatura configurada|não configurada".
-     */
     @EventListener(ApplicationReadyEvent.class)
     void avisar() {
         LOG.info("Mercado Pago: {}", config.isLigado() ? "ligado" : "desligado");

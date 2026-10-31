@@ -14,10 +14,7 @@ import java.math.BigDecimal;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/**
- * Uma parte do pagamento de uma venda: forma + valor. Venda paga com Pix e
- * dinheiro tem duas linhas. Em dinheiro, o valor recebido (opcional) dá o troco.
- */
+/** Uma parte do pagamento de uma venda: forma, valor, troco, origem do Pix e taxa estimada. */
 @Entity
 public class PagamentoVenda {
 
@@ -33,44 +30,32 @@ public class PagamentoVenda {
     @Column(nullable = false)
     private BigDecimal valor;
 
-    /** Só para OUTRO (ex.: "Vale"). */
     private String descricao;
 
-    /** Só para DINHEIRO: quanto a pessoa entregou. */
     private BigDecimal valorRecebido;
 
-    /** Só para PIX: MERCADO_PAGO (confirmado pela API) ou MANUAL (conferido no app). */
     @JdbcTypeCode(SqlTypes.VARCHAR)
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
     private OrigemPagamento origem;
 
-    /** Id da order do Mercado Pago que pagou esta parte (só com origem MERCADO_PAGO). */
     @Column(length = 64)
     private String mpOrderId;
 
-    /** Taxa estimada da forma, pela taxa vigente no dia da venda (zero se não há taxa). */
     @Column(nullable = false, precision = 38, scale = 2)
     private BigDecimal taxaEstimada = BigDecimal.ZERO.setScale(2);
 
-    /** false nas partes anteriores às taxas (V15): "sem taxa registrada". */
     @Column(nullable = false)
     private boolean taxaRegistrada;
 
-    /** A configuração de taxa usada (null se não havia taxa para a forma). */
     private Long taxaId;
 
     protected PagamentoVenda() {}
 
-    /** Parte comum; Pix sai como manual. */
     public PagamentoVenda(FormaPagamento forma, BigDecimal valor, String descricao, BigDecimal valorRecebido) {
         this(forma, valor, descricao, valorRecebido, null, null);
     }
 
-    /**
-     * @param origem    só para PIX (null = MANUAL); outras formas não têm origem
-     * @param mpOrderId obrigatório com MERCADO_PAGO, proibido nos outros casos
-     */
     public PagamentoVenda(
             FormaPagamento forma,
             BigDecimal valor,
@@ -116,7 +101,6 @@ public class PagamentoVenda {
         }
     }
 
-    /** Grava a taxa estimada pela taxa vigente (null = nenhuma taxa para a forma: zero). */
     public void registrarTaxa(TaxaPagamento taxa) {
         if (taxa != null && taxa.getForma() != forma) throw new IllegalArgumentException("Taxa de outra forma.");
         this.taxaEstimada = taxa == null ? BigDecimal.ZERO.setScale(2) : taxa.estimar(valor);
@@ -136,17 +120,14 @@ public class PagamentoVenda {
         return taxaId;
     }
 
-    /** Troco do dinheiro; null se não informou o recebido. */
     public BigDecimal getTroco() {
         return valorRecebido == null ? null : valorRecebido.subtract(valor);
     }
 
-    /** "Pix", "Dinheiro" ou a descrição do Outro (pela estratégia da forma). */
     public String getNomeForma() {
         return PagamentoFactory.criar(forma).nome(this);
     }
 
-    /** "Pix R$ 10,00" ou "Dinheiro R$ 8,00 (troco R$ 2,00)" (pela estratégia da forma). */
     public String getTexto() {
         return PagamentoFactory.criar(forma).resumir(this);
     }

@@ -8,12 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-/**
- * Antes de cada tela, confere se a pessoa ja digitou a senha.
- * Se nao, manda para a tela de login. Chamadas do JS (a previa da venda, ou
- * quem pede JSON) recebem 401 com {"erro":"Sessão expirada"}: um redirect
- * para a tela de login seria lido como resposta da previa.
- */
+/** Exige login antes de cada tela; chamadas do JS sem sessão recebem 401 em JSON. */
 @Component
 public class AutenticacaoInterceptor implements HandlerInterceptor {
 

@@ -12,10 +12,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/**
- * Entrada de estoque por compra: o documento da compra (custo total exato, data
- * e observação) e o cálculo do custo médio que ela gerou (antes e depois).
- */
+/** Entrada de estoque por compra, com o custo médio antes e depois. */
 @Entity
 public class CompraEstoque {
 
@@ -52,10 +49,6 @@ public class CompraEstoque {
 
     protected CompraEstoque() {}
 
-    /**
-     * Aplica a compra no produto (estoque e custo médio) e guarda o registro.
-     * A data da compra não pode ser futura.
-     */
     public static CompraEstoque registrar(
             Produto produto,
             int quantidade,

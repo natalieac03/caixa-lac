@@ -12,11 +12,7 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import org.springframework.test.web.servlet.MockMvc;
 
-/**
- * Uma combinação de filtros conferida no Postgres: indicadores, CSV e,
- * quando só há datas, o fechamento; e as três telas respondem 200.
- * Campo vazio no CsvSource = filtro não preenchido.
- */
+/** Combinações de filtros conferidas no Postgres: indicadores, CSV, fechamento e telas. */
 final class ConferenciaDeFiltros {
     private ConferenciaDeFiltros() {}
 

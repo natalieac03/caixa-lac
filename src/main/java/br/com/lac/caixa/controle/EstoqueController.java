@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+/** Tela de estoque: cadastro, edição, entradas, saídas, compras e CSV. */
 @Controller
 public class EstoqueController {
 
@@ -34,7 +35,6 @@ public class EstoqueController {
         this.relogio = relogio;
     }
 
-    /** semCusto=true: só os produtos sem custo (link do aviso de lucro parcial nas Finanças). */
     @GetMapping("/estoque")
     public String listar(@RequestParam(required = false) boolean semCusto, Model model) {
         var produtos = estoque.listar();
@@ -47,12 +47,6 @@ public class EstoqueController {
         return "estoque";
     }
 
-    /**
-     * Cadastra um produto novo. A categoria pode vir de duas formas:
-     * - novaCategoria preenchida -> cria (ou reaproveita) essa categoria;
-     * - senão, usa a categoriaId selecionada na lista.
-     * "BÓTON" e "bóton" caem na mesma categoria (nome padronizado).
-     */
     @PostMapping("/estoque/novo")
     public String novo(
             @RequestParam String nome,
@@ -73,7 +67,6 @@ public class EstoqueController {
         return "redirect:/estoque";
     }
 
-    /** Edição inline: nome, preço e categoria. O preço novo só vale para vendas novas. */
     @PostMapping("/estoque/{id}/editar")
     public String editar(
             @PathVariable Long id,
@@ -88,13 +81,10 @@ public class EstoqueController {
         BigDecimal valor = Dinheiro.parse(preco);
         if (valor == null) throw new RegraDeNegocioException("Informe o preço.");
         Categoria categoria = categoriaEscolhida(categoriaId, novaCategoria);
-        // Custo vazio = mantém o atual (que pode ter 4 casas, do custo médio);
-        // "sem custo" marcado = apaga.
         BigDecimal novoCusto = removerCusto
                 ? null
                 : custo == null || custo.isBlank() ? estoque.buscar(id).getCustoUnitario() : Dinheiro.parse(custo);
         var p = estoque.editar(id, nome, valor, categoria, novoCusto);
-        // Campo ausente = mantém; presente e vazio = sem limite.
         if (estoqueMinimo != null) estoque.definirLimite(id, estoqueMinimo.isBlank() ? null : limite(estoqueMinimo));
         flash.addFlashAttribute(
                 "sucesso", "Produto \"" + p.getNome() + "\" atualizado. O preço novo vale só para vendas novas.");
@@ -108,18 +98,12 @@ public class EstoqueController {
         return "redirect:/estoque";
     }
 
-    /** Nova categoria digitada (cria ou reaproveita) ou a selecionada na lista. */
     private Categoria categoriaEscolhida(Long categoriaId, String novaCategoria) {
         if (novaCategoria != null && !novaCategoria.isBlank()) return categorias.obterOuCriar(novaCategoria);
         if (categoriaId != null) return categorias.buscar(categoriaId);
         throw new RegraDeNegocioException("Escolha uma categoria ou crie uma nova.");
     }
 
-    /** Soma unidades a um produto existente. */
-    /**
-     * Entrada de estoque por compra: soma ao estoque e recalcula o custo médio.
-     * Data vazia = hoje. O "+ Adicionar" de cada linha continua, sem custo.
-     */
     @PostMapping("/estoque/compra")
     public String registrarCompra(
             @RequestParam Long produtoId,
@@ -154,7 +138,6 @@ public class EstoqueController {
         return "redirect:/estoque";
     }
 
-    /** Tira unidades de um produto existente (sem apagar o produto). */
     @PostMapping("/estoque/{id}/remover-unidades")
     public String removerUnidades(
             @PathVariable Long id,
@@ -176,7 +159,6 @@ public class EstoqueController {
         return "redirect:/estoque";
     }
 
-    /** Botao "Exportar": baixa o estoque em CSV. */
     @GetMapping("/estoque/exportar.csv")
     public ResponseEntity<Resource> exportar() {
         String csv = ExportadorCSV.doEstoque(estoque.listar());

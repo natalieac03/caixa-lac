@@ -6,7 +6,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** O que o sininho consulta a cada 60 s: as mesmas seções que a página desenha. */
+/** JSON /avisos: as mesmas seções do sininho que a página desenha. */
 @RestController
 public class AvisosController {
     private final AlertasService alertas;

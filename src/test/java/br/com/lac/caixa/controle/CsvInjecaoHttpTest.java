@@ -22,10 +22,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 
-/**
- * Texto que começa com = + - @ tab ou CR vira fórmula na planilha: os CSVs
- * mandam com um apóstrofo na frente (a planilha mostra o texto como texto).
- */
+/** Os CSVs não deixam texto do usuário virar fórmula na planilha. */
 @SpringBootTest(
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:csv_injecao;DB_CLOSE_DELAY=-1"})
 @AutoConfigureMockMvc

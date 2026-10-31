@@ -18,7 +18,7 @@ import org.flywaydb.core.api.FlywayException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/** V12 nas vendas antigas: o rateio em SQL dá exatamente o mesmo que Rateio.java e fecha com o cobrado. */
+/** A V12 rateia as vendas antigas igual ao Rateio.java. */
 class RateioMigradoTest {
 
     String banco() {
@@ -46,7 +46,6 @@ class RateioMigradoTest {
         }
     }
 
-    /** Venda antiga com itens (preço unitário em centavos, quantidade) e valor cobrado. */
     long vendaAntiga(Connection c, long produto, long cobrado, long[][] itens) throws Exception {
         executar(
                 c,
@@ -103,7 +102,6 @@ class RateioMigradoTest {
     @Test
     @DisplayName("Propriedade: 400 vendas antigas aleatórias (semente fixa) migram igual ao Rateio.java")
     void propriedade() throws Exception {
-        // Arrange: banco até a V11 com vendas antigas de 1 a 7 itens, ajustes para menos e para mais e cortesias
         String url = banco();
         flyway(url, "11").migrate();
         Random aleatorio = new Random(777L);
@@ -122,23 +120,20 @@ class RateioMigradoTest {
                     soma += itens[i][0] * itens[i][1];
                 }
                 long cobrado = switch (aleatorio.nextInt(5)) {
-                    case 0 -> 0; // cortesia
-                    case 1 -> soma; // sem desconto
-                    case 2 -> soma + aleatorio.nextInt(1000); // ajuste para mais
-                    default -> (long) (soma * aleatorio.nextDouble()); // desconto ou ajuste para menos
+                    case 0 -> 0;
+                    case 1 -> soma;
+                    case 2 -> soma + aleatorio.nextInt(1000);
+                    default -> (long) (soma * aleatorio.nextDouble());
                 };
                 vendas.add(vendaAntiga(c, produto, cobrado, itens));
                 itensDasVendas.add(itens);
                 cobrados.add(cobrado);
             }
-            // Venda antiga com valor e sem itens: nada a ratear, fica como está.
             semItens = vendaAntiga(c, produto, 700, new long[0][]);
         }
 
-        // Act
         flyway(url, null).migrate();
 
-        // Assert
         try (var c = DriverManager.getConnection(url, "sa", "")) {
             for (int k = 0; k < vendas.size(); k++) {
                 long[][] itens = itensDasVendas.get(k);

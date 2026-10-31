@@ -2,11 +2,7 @@ package br.com.lac.caixa.controle;
 
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
 
-/**
- * O seletor "Evento" dos filtros (histórico, fechamento, finanças): vazio =
- * Todos, "dia-a-dia" = Dia a dia (vendas fora de qualquer evento, dentro das
- * datas), ou o id de um evento (vale como período).
- */
+/** O seletor "Evento" dos filtros: Todos, Dia a dia ou um evento. */
 public record SeletorDeEvento(String valor, Long id, boolean diaADia) {
     public static final String DIA_A_DIA = "dia-a-dia";
 

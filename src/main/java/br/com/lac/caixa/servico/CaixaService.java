@@ -26,6 +26,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/** Registra, cancela e corrige vendas: preço, pagamento, taxas e estoque. */
 @Service
 public class CaixaService {
 
@@ -59,11 +60,6 @@ public class CaixaService {
         this.taxas = taxas;
     }
 
-    /**
-     * Corrige o dia e a hora de uma venda já registrada (ex.: venda anotada
-     * no papel e lançada no caixa depois). Não vale para venda cancelada nem
-     * para o futuro; a taxa estimada passa a ser a vigente no novo dia.
-     */
     @Transactional
     public void alterarDataHora(Long vendaId, LocalDateTime novaDataHora) {
         if (novaDataHora == null) {
@@ -75,14 +71,11 @@ public class CaixaService {
         if (novaDataHora.isAfter(LocalDateTime.now(relogio)))
             throw new RegraDeNegocioException("A data da venda não pode ser no futuro.");
 
-        // A tela só edita até os minutos: se o minuto não mudou, mantém os
-        // segundos originais para não embaralhar vendas do mesmo minuto.
         if (novaDataHora.equals(venda.getDataHora().truncatedTo(ChronoUnit.MINUTES))) {
             return;
         }
         LocalDateTime antes = venda.getDataHora();
         venda.setDataHora(novaDataHora);
-        // A taxa estimada é a vigente no dia da venda: com outro dia, pode ser outra.
         for (PagamentoVenda parte : venda.getPagamentos()) {
             parte.registrarTaxa(
                     taxas.vigente(parte.getForma(), novaDataHora.toLocalDate()).orElse(null));
@@ -100,14 +93,12 @@ public class CaixaService {
             String token) {
         if (!tokenValido(token)) throw new RegraDeNegocioException("Token de venda inválido.");
         var existente = vendas.findByToken(token);
-        // Idempotência: o mesmo formulário (token) enviado de novo devolve a venda que já existe.
         if (existente.isPresent()) return new ResultadoVenda(existente.get(), "Venda já registrada.", true);
 
         Venda venda = Venda.nova(LocalDateTime.now(relogio));
         venda.setToken(token);
         List<Promocao> ativas = promocoes.listarAtivas();
 
-        // Resolve os produtos antes de calcular e alterar o estoque.
         Map<Long, Produto> selecionados = new LinkedHashMap<>();
 
         for (Map.Entry<Long, Integer> e : quantidades.entrySet()) {
@@ -137,9 +128,7 @@ public class CaixaService {
                 orcamento.descontos().stream().map(Orcamento.Desconto::valor).reduce(BigDecimal.ZERO, BigDecimal::add),
                 total,
                 motivoAjuste);
-        // O servidor confere o pagamento de novo: soma, formas, descrição do Outro, recebido.
         venda.registrarPagamentos(partes(pagamentos, total, token));
-        // Taxa estimada de cada parte pela taxa vigente no dia (Pix do Mercado Pago usa a do Pix).
         for (PagamentoVenda parte : venda.getPagamentos()) {
             parte.registrarTaxa(
                     taxas.vigente(parte.getForma(), venda.getDataHora().toLocalDate())
@@ -157,7 +146,6 @@ public class CaixaService {
                 .toList());
 
         Venda salva = vendas.save(venda);
-        // Movimentos de saída na mesma transação, já apontando para a venda salva.
         estoque.registrarSaidasDaVenda(salva);
         auditoria.registrar(
                 "venda",
@@ -189,10 +177,6 @@ public class CaixaService {
         }
     }
 
-    /**
-     * Parte única sem valor = o total (um toque). Na cortesia (total zero),
-     * essa parte some: cortesia não tem pagamento.
-     */
     private List<PagamentoVenda> partes(List<PagamentoInformado> informados, BigDecimal total, String token) {
         if (informados == null || informados.isEmpty()) return List.of();
         if (informados.size() == 1 && informados.get(0).valor() == null) {
@@ -208,10 +192,6 @@ public class CaixaService {
         return partes;
     }
 
-    /**
-     * Pix do Mercado Pago: o servidor confere de novo que a cobrança da parte
-     * está PAGA com o mesmo valor (não confia no que a tela diz).
-     */
     private PagamentoVenda parte(PagamentoInformado p, BigDecimal valor, String token) {
         String orderId = null;
         if (p.origem() == OrigemPagamento.MERCADO_PAGO) {
@@ -237,7 +217,7 @@ public class CaixaService {
     public boolean tokenRegistrado(String token) {
         return token != null && vendas.existsByToken(token);
     }
-    /** O bloqueio da venda serializa cancelamentos; a versão protege o estoque. */
+
     @Transactional
     public BigDecimal cancelarVenda(Long id, String motivo) {
         Venda venda = vendas.buscarParaCancelar(id)
@@ -256,7 +236,6 @@ public class CaixaService {
                 venda.getMotivoCancelamento(),
                 "itens",
                 venda.getResumoProdutos());
-        // O Pix do Mercado Pago já entrou na conta: cancelar a venda não devolve o dinheiro.
         return venda.getPagamentos().stream()
                 .filter(p -> p.getOrigem() == OrigemPagamento.MERCADO_PAGO)
                 .map(PagamentoVenda::getValor)

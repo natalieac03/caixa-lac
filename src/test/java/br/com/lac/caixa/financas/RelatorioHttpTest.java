@@ -21,7 +21,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** Relatório do evento e comparativo com a massa fixa; metas do evento na tela de Finanças e no relatório. */
+/** Relatório do evento, comparativo e metas com a massa fixa. */
 @SpringBootTest(
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:relatorio;DB_CLOSE_DELAY=-1"})
 @AutoConfigureMockMvc
@@ -50,7 +50,6 @@ class RelatorioHttpTest {
                 .getContentAsString(StandardCharsets.UTF_8);
     }
 
-    /** O trecho HTML de um elemento (do id até o fechamento da tag), para comparar duas páginas. */
     static String trecho(String html, String inicio, String fim) {
         int i = html.indexOf(inicio);
         assertTrue(i >= 0, "sem " + inicio);
@@ -64,7 +63,6 @@ class RelatorioHttpTest {
         String relatorio = pagina("/eventos/" + id + "/relatorio");
         String tela = pagina("/financas?evento=" + id);
 
-        // Mesmos cartões e mesmo demonstrativo da tela de Finanças
         assertEquals(
                 trecho(tela, "<table class=\"dados demonstrativo\"", "</table>"),
                 trecho(relatorio, "<table class=\"dados demonstrativo\"", "</table>"));
@@ -74,12 +72,10 @@ class RelatorioHttpTest {
         for (String numero : new String[] {"R$ 135,00", "R$ 3,45", "63,70%", "R$ 33,75", "R$ 159,00", "R$ 49,00"}) {
             assertTrue(relatorio.contains(numero), numero);
         }
-        // Cabeçalho, sem menu, aviso de lucro parcial e gráficos estáticos
         assertTrue(relatorio.contains("01/03/2025 09:00 a 01/03/2025 18:00"));
         assertTrue(!relatorio.contains("class=\"nav-links\""), "relatório sem menu");
         assertTrue(relatorio.contains("id=\"aviso-parcial\""));
         assertTrue(relatorio.contains("<svg") && relatorio.contains("Top 10 produtos por receita líquida"));
-        // Top 10, despesas, cancelamentos e ajustes com motivo
         String top = trecho(relatorio, "id=\"relatorio-top\"", "</table>");
         assertTrue(top.indexOf("Camiseta 1") < top.indexOf("Camiseta 3"), top);
         String despesas = trecho(relatorio, "id=\"relatorio-despesas\"", "</table>");
@@ -143,7 +139,6 @@ class RelatorioHttpTest {
                     .andExpect(content().string(containsString("(lucro parcial: há itens sem custo)")));
             assertTrue(
                     pagina("/eventos/" + feira1.getId() + "/relatorio").contains("R$ 135,00 de R$ 100,00 (135,00%)"));
-            // Com filtro de categoria, ou num evento sem meta, ou por período: sem barra
             mvc.perform(get("/financas?evento=" + feira1.getId() + "&categoria="
                                     + massa.c.get("Bóton").getId())
                             .sessionAttr("autenticado", true))
@@ -153,7 +148,6 @@ class RelatorioHttpTest {
             mvc.perform(get("/financas?atalho=personalizado&inicio=2025-03-01&fim=2025-03-01")
                             .sessionAttr("autenticado", true))
                     .andExpect(content().string(not(containsString("id=\"metas\""))));
-            // Evento futuro sem vendas, com meta: barra em 0%
             var futuro = eventos.criar(
                     "Feira futura",
                     java.time.LocalDateTime.of(2030, 1, 5, 9, 0),

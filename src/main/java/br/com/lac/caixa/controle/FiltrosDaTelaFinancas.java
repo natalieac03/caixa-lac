@@ -12,15 +12,7 @@ import java.time.format.DateTimeParseException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
-/**
- * Os filtros da tela de Finanças (todos na URL, para mandar o link) viram um
- * FiltroFinancas. Atalhos: hoje, evento ("Este evento": o que está acontecendo
- * ou o último que começou), 7dias, mes (do dia 1 até hoje) e personalizado
- * (De/Até). Um evento escolhido na lista vale como período; "Dia a dia" fica
- * dentro do período do atalho (vendas fora de qualquer evento). Sem atalho: mes.
- * O período vai no máximo até agora (o que ainda não aconteceu não conta dias)
- * e tem no máximo {@value #ANOS_NO_MAXIMO} anos.
- */
+/** Transforma os filtros da URL da tela de Finanças num FiltroFinancas. */
 @Component
 public class FiltrosDaTelaFinancas {
     static final DateTimeFormatter DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -35,7 +27,6 @@ public class FiltrosDaTelaFinancas {
         this.relogio = relogio;
     }
 
-    /** O que a tela recebeu e o filtro resolvido, com a descrição do período. */
     public record Resolvido(
             String atalho,
             LocalDate inicio,
@@ -48,7 +39,6 @@ public class FiltrosDaTelaFinancas {
             String periodo,
             String aviso) {
 
-        /** A query string destes filtros (para links, CSV e o JSON dos gráficos). */
         public String consulta() {
             var b = UriComponentsBuilder.newInstance().queryParam("atalho", atalho);
             if ("personalizado".equals(atalho)) b.queryParam("inicio", inicio).queryParam("fim", fim);
@@ -59,7 +49,6 @@ public class FiltrosDaTelaFinancas {
             return b.build().encode().getQuery();
         }
 
-        /** O mesmo filtro com outro atalho (categoria e forma ficam). */
         public String consultaCom(String outroAtalho) {
             var b = UriComponentsBuilder.newInstance().queryParam("atalho", outroAtalho);
             if (categoria != null) b.queryParam("categoria", categoria);
@@ -73,7 +62,6 @@ public class FiltrosDaTelaFinancas {
         LocalDate hoje = LocalDate.now(relogio);
         var sel = SeletorDeEvento.ler(evento);
         String a = atalho == null || atalho.isBlank() ? (sel.id() != null ? "evento" : "mes") : atalho.trim();
-        // Dia a dia é dentro de um período: com o atalho "Este evento", vale o mês.
         if (sel.diaADia() && "evento".equals(a)) a = "mes";
         String aviso = null;
         Long eventoId = sel.id();

@@ -9,7 +9,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 
-/** O log de inicialização diz se o Mercado Pago e a assinatura do webhook estão ligados, sem segredos. */
+/** O log de inicialização diz se o Mercado Pago está ligado, sem segredos. */
 @ExtendWith(OutputCaptureExtension.class)
 class MercadoPagoInicioTest {
     static final String TOKEN = "TEST-token-ficticio-0000";

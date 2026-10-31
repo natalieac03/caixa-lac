@@ -40,6 +40,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
+/** Registro de venda pela tela: valor cobrado, estoque, envio duplicado e prévia. */
 @SpringBootTest(
         properties = {
             "spring.profiles.active=test",
@@ -66,7 +67,6 @@ class VendaHttpTest {
     @Autowired
     CategoriaRepository categorias;
 
-    /** Produto de R$ 6,00 com 10 unidades em estoque. */
     Produto p;
 
     @BeforeEach
@@ -74,7 +74,6 @@ class VendaHttpTest {
         p = produtos.save(new Produto("Teste", new BigDecimal("6"), 10));
     }
 
-    /** POST /venda logado, com o token e os campos informados. */
     MockHttpServletRequestBuilder venda(String token, String... campos) {
         var req = post("/venda").sessionAttr("autenticado", true).param("token", token);
         for (int i = 0; i < campos.length; i += 2) req.param(campos[i], campos[i + 1]);
@@ -93,15 +92,11 @@ class VendaHttpTest {
         return new PagamentoVenda(FormaPagamento.PIX, new BigDecimal(valor), null, null);
     }
 
-    // ---------- valor cobrado ----------
-
     @Test
     @DisplayName("Valor diferente do calculado sem motivo é recusado, sem venda nem baixa")
     void adulteracaoSemMotivoRecusada() throws Exception {
-        // Arrange
         long antes = vendas.count();
 
-        // Act / Assert
         mvc.perform(venda(novoToken(), "qtd_" + p.getId(), "3", "pag_forma_0", "PIX", "valorTotal", "1"))
                 .andExpect(status().isConflict())
                 .andExpect(model().attributeExists("erro"));
@@ -112,10 +107,8 @@ class VendaHttpTest {
     @Test
     @DisplayName("Ajuste com motivo grava o valor calculado e o cobrado")
     void ajusteComMotivoGuardaDoisValores() throws Exception {
-        // Arrange
         String token = novoToken();
 
-        // Act
         mvc.perform(venda(
                         token,
                         "qtd_" + p.getId(),
@@ -128,7 +121,6 @@ class VendaHttpTest {
                         "Combinado"))
                 .andExpect(redirectedUrl("/historico"));
 
-        // Assert
         var v = vendas.findByToken(token).orElseThrow();
         assertEquals(0, new BigDecimal("18").compareTo(v.getValorCalculado()));
         assertEquals(0, new BigDecimal("1234.56").compareTo(v.getValorCobrado()));
@@ -138,13 +130,10 @@ class VendaHttpTest {
     @Test
     @DisplayName("Sem ajuste, o valor cobrado é o total calculado pelo servidor")
     void semAjusteGravaTotalCalculado() throws Exception {
-        // Arrange
         String token = novoToken();
 
-        // Act
         mvc.perform(venda(token, "qtd_" + p.getId(), "3", "pag_forma_0", "PIX")).andExpect(redirectedUrl("/historico"));
 
-        // Assert
         var v = vendas.findByToken(token).orElseThrow();
         assertEquals(v.getValorCalculado(), v.getValorCobrado());
         assertEquals(0, new BigDecimal("18").compareTo(v.getValorCobrado()));
@@ -167,16 +156,12 @@ class VendaHttpTest {
                 .andExpect(model().attributeExists("erro"));
     }
 
-    // ---------- estoque e envio duplicado ----------
-
     @Test
     @DisplayName("Um item sem estoque desfaz a venda inteira, sem baixar os outros")
     void itemSemEstoqueDesfazAVendaInteira() throws Exception {
-        // Arrange
         var pouco = produtos.save(new Produto("Pouco", new BigDecimal("3"), 1));
         long antes = vendas.count();
 
-        // Act / Assert
         mvc.perform(venda(novoToken(), "qtd_" + p.getId(), "4", "qtd_" + pouco.getId(), "2", "pag_forma_0", "PIX"))
                 .andExpect(status().isConflict())
                 .andExpect(model().attribute("erro", containsString("Estoque insuficiente de Pouco")));
@@ -196,17 +181,14 @@ class VendaHttpTest {
     @Test
     @DisplayName("O mesmo token enviado duas vezes cria uma venda só e baixa o estoque uma vez")
     void tokenRepetidoNaoDuplicaVendaNemBaixa() throws Exception {
-        // Arrange
         String token = novoToken();
         long antes = vendas.count();
 
-        // Act
         for (int i = 0; i < 2; i++) {
             mvc.perform(venda(token, "qtd_" + p.getId(), "2", "pag_forma_0", "PIX"))
                     .andExpect(redirectedUrl("/historico"));
         }
 
-        // Assert
         assertEquals(antes + 1, vendas.count());
         assertEquals(8, estoque(p));
     }
@@ -214,7 +196,6 @@ class VendaHttpTest {
     @Test
     @DisplayName("@Version barra a segunda baixa concorrente do mesmo produto")
     void versaoImpedeDuasBaixasConcorrentes() {
-        // Arrange: duas transações leem o mesmo produto (10 unidades)
         var a = emf.createEntityManager();
         var b = emf.createEntityManager();
         try {
@@ -223,12 +204,10 @@ class VendaHttpTest {
             var primeiro = a.find(Produto.class, p.getId());
             var segundo = b.find(Produto.class, p.getId());
 
-            // Act: as duas baixam 7; a primeira grava
             primeiro.baixar(7);
             segundo.baixar(7);
             a.getTransaction().commit();
 
-            // Assert: a segunda é recusada e o estoque fica em 3
             assertThrows(RollbackException.class, () -> b.getTransaction().commit());
             assertEquals(3, estoque(p));
         } finally {
@@ -238,8 +217,6 @@ class VendaHttpTest {
             b.close();
         }
     }
-
-    // ---------- prévia ----------
 
     @Test
     @DisplayName("A prévia é calculada no servidor")
@@ -257,18 +234,14 @@ class VendaHttpTest {
                 .andExpect(jsonPath("$.erro").exists());
     }
 
-    // ---------- telas ----------
-
     @Test
     @DisplayName("Tela de venda tem o token e o histórico mostra o valor cobrado")
     void telasRenderizamEHistoricoExibeValorLegado() throws Exception {
-        // Arrange
         var antiga = Venda.nova(java.time.LocalDateTime.now());
         antiga.registrarValores(new BigDecimal("9.50"), BigDecimal.ZERO, new BigDecimal("9.50"), null);
         antiga.registrarPagamentos(List.of(pix("9.50")));
         vendas.save(antiga);
 
-        // Act / Assert
         mvc.perform(get("/venda/nova").sessionAttr("autenticado", true))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("name=\"token\"")));
@@ -280,11 +253,9 @@ class VendaHttpTest {
     @Test
     @DisplayName("Telas com promoções carregam com open-in-view desligado")
     void telasCarregamPromocoesComOsivDesligado() throws Exception {
-        // Arrange
         var cat = categorias.save(new Categoria("Categoria HTTP"));
         promocoes.save(new Promocao(List.of(new PromocaoItem(cat, 2)), TipoPromocao.A_PARTIR_DE, new BigDecimal("5")));
 
-        // Act / Assert
         mvc.perform(get("/descontos").sessionAttr("autenticado", true)).andExpect(status().isOk());
         mvc.perform(get("/estoque").sessionAttr("autenticado", true)).andExpect(status().isOk());
         mvc.perform(get("/historico")
@@ -297,20 +268,17 @@ class VendaHttpTest {
     @Test
     @DisplayName("Cancelamento por HTTP risca a venda; fechamento e CSV do fechamento respondem")
     void fechamentoECancelamentoFuncionamPorHttp() throws Exception {
-        // Arrange
         var v = Venda.nova(java.time.LocalDateTime.now());
         v.adicionarItem(new ItemVenda(p, 1));
         v.registrarValores(new BigDecimal("6"), BigDecimal.ZERO, new BigDecimal("6"), null);
         v.registrarPagamentos(List.of(pix("6")));
         vendas.saveAndFlush(v);
 
-        // Act
         mvc.perform(post("/historico/" + v.getId() + "/cancelar")
                         .sessionAttr("autenticado", true)
                         .param("motivo", "Desistência"))
                 .andExpect(redirectedUrl("/historico"));
 
-        // Assert
         assertTrue(vendas.findById(v.getId()).orElseThrow().isCancelada());
         mvc.perform(get("/historico").sessionAttr("autenticado", true))
                 .andExpect(status().isOk())

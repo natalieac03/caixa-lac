@@ -3,6 +3,7 @@ package br.com.lac.caixa.modelo.pagamento;
 import br.com.lac.caixa.modelo.PagamentoVenda;
 import br.com.lac.caixa.util.Dinheiro;
 
+/** Descrição da parte paga em Outro, pela descrição digitada. */
 public class PagamentoOutro implements Pagamento {
     @Override
     public String descrever(PagamentoVenda parte) {
@@ -11,7 +12,6 @@ public class PagamentoOutro implements Pagamento {
         return Dinheiro.reais(parte.getValor()) + " via " + descricao;
     }
 
-    /** No historico aparece a descricao ("Vale"), nao "Outro". */
     @Override
     public String nome(PagamentoVenda parte) {
         return parte.getDescricao() == null || parte.getDescricao().isBlank()

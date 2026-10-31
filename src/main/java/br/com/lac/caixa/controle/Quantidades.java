@@ -4,12 +4,11 @@ import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Lê as quantidades digitadas nos formulários (campos vazios valem zero). */
+/** Lê as quantidades digitadas nos formulários. */
 final class Quantidades {
 
     private Quantidades() {}
 
-    /** Teto por linha do carrinho (contas em centavos e a busca de pacotes ficam com tamanho conhecido). */
     static final int MAXIMO_POR_PRODUTO = 9999;
 
     static int inteiro(String texto) {
@@ -18,14 +17,12 @@ final class Quantidades {
         try {
             return Integer.parseInt(t);
         } catch (NumberFormatException ex) {
-            // Número inteiro grande demais para int também passa do teto.
             if (t.matches("\\d+"))
                 throw new RegraDeNegocioException("Quantidade máxima por produto: " + MAXIMO_POR_PRODUTO);
             throw new RegraDeNegocioException("Quantidade inválida: " + t);
         }
     }
 
-    /** Campos qtd_{produtoId} -> mapa produtoId -> quantidade (só as maiores que zero). */
     static Map<Long, Integer> porProduto(Map<String, String> params) {
         Map<Long, Integer> resultado = new LinkedHashMap<>();
         params.forEach((chave, valor) -> {

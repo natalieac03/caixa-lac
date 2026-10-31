@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
+/** Partes do pagamento: troco, descrição, origem do Pix e textos de cada forma. */
 class PagamentoVendaTest {
     static BigDecimal r(String v) {
         return new BigDecimal(v);

@@ -42,7 +42,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** Evento sem fim (em andamento), iniciar e encerrar, e o "Dia a dia" (vendas fora de qualquer evento). */
+/** Evento em andamento: iniciar, encerrar, fim efetivo e dia a dia. */
 @SpringBootTest(
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:evento_aberto;DB_CLOSE_DELAY=-1"
         })
@@ -117,7 +117,6 @@ class EventoAbertoTest {
         ((RelogioDeTeste) relogio).definir(quando);
     }
 
-    /** Venda de R$ 6 registrada no relógio de agora (ou movida para a data dada). */
     Venda vender(LocalDateTime quando) {
         var v = caixa.registrarVenda(
                         Map.of(boton.getId(), 1),
@@ -168,7 +167,6 @@ class EventoAbertoTest {
         assertTrue(eventos.aberto().isEmpty());
         assertThrows(RegraDeNegocioException.class, () -> eventos.encerrar(feira.getId()));
 
-        // Nome vazio: a sugestão "Evento dd/mm"; encerrar no mesmo instante do início é recusado.
         Evento sugerido = eventos.iniciar(" ");
         assertEquals("Evento 07/03", sugerido.getNome());
         assertThrows(RegraDeNegocioException.class, () -> eventos.encerrar(sugerido.getId()));
@@ -183,14 +181,12 @@ class EventoAbertoTest {
         irPara(INICIO.plusHours(2));
         Venda durante = vender(null);
 
-        // Aberto: vale até agora
         assertEquals(List.of(durante.getId(), noInicio.getId()), idsDoEvento(feira));
         assertEquals(
                 "Feira de Março",
                 eventos.doMomento(durante.getDataHora()).orElseThrow().getNome());
         assertEquals(List.of(antes.getId()), idsDoDiaADia(INICIO.toLocalDate(), INICIO.toLocalDate()));
 
-        // Encerra às 17:00: a venda exatamente às 17:00 já é do dia a dia
         irPara(INICIO.plusHours(3));
         eventos.encerrar(feira.getId());
         Venda noFim = vender(null);
@@ -199,7 +195,6 @@ class EventoAbertoTest {
         assertEquals(List.of(noFim.getId(), antes.getId()), idsDoDiaADia(INICIO.toLocalDate(), INICIO.toLocalDate()));
         assertTrue(eventos.doMomento(noFim.getDataHora()).isEmpty());
 
-        // Fechamento e finanças com Dia a dia: só as duas fora do evento
         var f = fechamento.consultar(new FiltroHistorico(null, INICIO.toLocalDate(), INICIO.toLocalDate(), "")
                 .comDiaADia(LocalDateTime.now(relogio)));
         assertEquals(2, f.quantidade());
@@ -214,13 +209,10 @@ class EventoAbertoTest {
     void sobreposicaoComAberto() {
         Evento feira = eventos.iniciar("Feira de Março");
         irPara(INICIO.plusHours(3));
-        // Cruza [14:00, agora=17:00)
         assertThrows(
                 RegraDeNegocioException.class,
                 () -> eventos.criar("Cruza", INICIO.plusHours(2), INICIO.plusHours(4), null));
-        // Encosta no início do aberto: ok
         eventos.criar("Manhã", INICIO.minusHours(4), INICIO, null);
-        // Marcado para depois de agora: ok; quando ele começa, o aberto passa a valer só até o início dele
         Evento noite = eventos.criar("Noite", INICIO.plusHours(5), INICIO.plusHours(8), null);
         irPara(INICIO.plusHours(6));
         assertEquals(INICIO.plusHours(5), eventos.periodo(feira.getId()).fim());
@@ -229,7 +221,6 @@ class EventoAbertoTest {
                 "Noite", eventos.doMomento(daNoite.getDataHora()).orElseThrow().getNome());
         assertFalse(idsDoEvento(feira).contains(daNoite.getId()));
         assertTrue(idsDoEvento(noite).contains(daNoite.getId()));
-        // Encerrar grava o fim no início do evento seguinte (nunca sobrepõe)
         assertEquals(INICIO.plusHours(5), eventos.encerrar(feira.getId()).getFim());
     }
 
@@ -255,7 +246,6 @@ class EventoAbertoTest {
     @DisplayName("Telas: iniciar e encerrar pelo topo, selo no topo, filtro Dia a dia e etiqueta no histórico")
     void telas() throws Exception {
         Venda antes = vender(INICIO.minusHours(1));
-        // Sem evento aberto: o topo oferece "Iniciar evento" com a sugestão de nome
         mvc.perform(get("/").sessionAttr("autenticado", true))
                 .andExpect(content().string(containsString("id=\"botao-iniciar-evento\"")))
                 .andExpect(content().string(containsString("value=\"Evento 07/03\"")))
@@ -271,14 +261,12 @@ class EventoAbertoTest {
         irPara(INICIO.plusMinutes(30));
         Venda durante = vender(null);
 
-        // Com evento aberto: selo "Nome, desde HH:mm" e Encerrar com confirmação, em qualquer tela
         for (String url : new String[] {"/", "/estoque", "/financas"}) {
             mvc.perform(get(url).sessionAttr("autenticado", true))
                     .andExpect(content().string(containsString("Feira de Outubro II, desde 14:00")))
                     .andExpect(content().string(containsString("id=\"botao-encerrar\"")))
                     .andExpect(content().string(containsString("onsubmit=\"return confirm(")));
         }
-        // Histórico: etiqueta com o evento ou "Dia a dia"; filtro Dia a dia e Todos
         String todos = mvc.perform(get("/historico").sessionAttr("autenticado", true))
                 .andReturn()
                 .getResponse()
@@ -307,7 +295,6 @@ class EventoAbertoTest {
                 .andExpect(content()
                         .string(containsString("Feira de Outubro II (07/03/2026 14:00 a agora, em andamento)")));
 
-        // Encerrar pelo topo
         irPara(INICIO.plusHours(5));
         mvc.perform(post("/eventos/" + feira.getId() + "/encerrar")
                         .sessionAttr("autenticado", true)
@@ -315,7 +302,6 @@ class EventoAbertoTest {
                 .andExpect(redirectedUrl("/"))
                 .andExpect(flash().attribute("sucesso", containsString("encerrado às 19:00")));
         assertNull(eventos.aberto().orElse(null));
-        // Tela Eventos: criar sem fim com outro aberto é recusado com mensagem
         eventos.iniciar("Outra feira");
         mvc.perform(post("/eventos")
                         .sessionAttr("autenticado", true)
@@ -333,7 +319,6 @@ class EventoAbertoTest {
     @DisplayName(
             "Feira aberta desde 10/10 e Palestra 12/10 14h-16h: venda de 13/10 10h é do dia a dia; eventos + dia a dia = total")
     void abertoCortadoPeloProximoEvento() throws Exception {
-        // A Palestra foi marcada antes; a Feira começou em 10/10 e ficou aberta
         irPara(LocalDateTime.of(2025, 10, 9, 12, 0));
         Evento palestra = eventos.criar(
                 "Palestra", LocalDateTime.of(2025, 10, 12, 14, 0), LocalDateTime.of(2025, 10, 12, 16, 0), null);
@@ -350,14 +335,12 @@ class EventoAbertoTest {
         LocalDate de = LocalDate.of(2025, 10, 10);
         LocalDate ate = LocalDate.of(2025, 10, 14);
         LocalDateTime agora = LocalDateTime.now(relogio);
-        // A mesma regra em todo lugar: a Feira vale até o início da Palestra
         assertEquals(List.of(naFeira.getId()), idsDoEvento(feira));
         assertEquals(List.of(naPalestra.getId()), idsDoEvento(palestra));
         assertEquals(List.of(depois.getId()), idsDoDiaADia(de, ate));
         assertTrue(eventos.doMomento(depois.getDataHora()).isEmpty(), "13/10 10h não é de nenhum evento");
         var diaADia = financas.resumo(FiltroFinancas.diaADia(de, ate, agora));
         assertEquals(1, diaADia.vendas());
-        // Invariante: soma dos eventos + dia a dia = total do período
         var total = financas.resumo(FiltroFinancas.periodo(de, ate));
         BigDecimal soma = diaADia.receitaLiquida()
                 .add(financas.resumo(FiltroFinancas.doEvento(eventos.periodo(feira.getId())))
@@ -366,7 +349,6 @@ class EventoAbertoTest {
                         .receitaLiquida());
         assertEquals(total.receitaLiquida(), soma);
         assertEquals(3, total.vendas());
-        // Relatório da Feira mostra o fim efetivo (início da Palestra), não o fim vazio
         mvc.perform(get("/eventos/" + feira.getId() + "/relatorio").sessionAttr("autenticado", true))
                 .andExpect(content().string(containsString("10/10/2025 09:00 a 12/10/2025 14:00")));
     }

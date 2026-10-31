@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+/** Custo médio ponderado do produto e as validações de custo e compra. */
 class CustoProdutoTest {
 
     static BigDecimal r(String v) {
@@ -19,14 +20,11 @@ class CustoProdutoTest {
     @Test
     @DisplayName("Compra recalcula o custo médio ponderado: (10 x 2,00 + 15,00) / 15 = 2,3333")
     void custoMedioPonderado() {
-        // Arrange
         var p = new Produto("Bóton", r("6"), 10);
         p.setCustoUnitario(r("2"));
 
-        // Act
         p.registrarCompra(5, r("15.00"));
 
-        // Assert
         assertEquals(15, p.getQuantidade());
         assertEquals(r("2.3333"), p.getCustoUnitario());
     }

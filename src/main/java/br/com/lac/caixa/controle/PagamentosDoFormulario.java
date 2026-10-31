@@ -10,11 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-/**
- * Lê as partes do pagamento do formulário da venda: pag_forma_N, pag_valor_N,
- * pag_descricao_N e pag_recebido_N (N = 0, 1, ...). Uma forma só, sem valor,
- * é o caso comum: paga o total.
- */
+/** Lê as partes do pagamento do formulário da venda. */
 final class PagamentosDoFormulario {
 
     private static final String FORMA = "pag_forma_";
@@ -42,7 +38,6 @@ final class PagamentosDoFormulario {
         return partes;
     }
 
-    /** pag_origem_N: MERCADO_PAGO ou MANUAL; vazio = manual. */
     private static OrigemPagamento origem(String texto) {
         if (texto == null || texto.isBlank()) return null;
         try {
@@ -52,7 +47,6 @@ final class PagamentosDoFormulario {
         }
     }
 
-    /** pag_parte_N: número estável da parte (não muda quando outra linha é removida); padrão N. */
     private static int parte(String texto, int padrao) {
         if (texto == null || texto.isBlank()) return padrao;
         try {

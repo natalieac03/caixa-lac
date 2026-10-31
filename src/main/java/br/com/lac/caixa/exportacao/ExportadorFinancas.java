@@ -7,17 +7,12 @@ import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-/**
- * CSV de cada tabela da tela de Finanças, no padrão dos outros CSVs: ';' como
- * separador, textos entre aspas, vírgula decimal (o BOM vem de RespostaCsv).
- * A primeira coluna de cada linha é o período, para o arquivo se explicar sozinho.
- */
+/** Gera o texto do CSV de cada tabela da tela de Finanças. */
 public final class ExportadorFinancas {
     private static final DateTimeFormatter DIA_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     private ExportadorFinancas() {}
 
-    /** Os nomes aceitos em /financas/exportar/{tabela}.csv. */
     public static final List<String> TABELAS = List.of(
             "demonstrativo", "serie", "produtos", "categorias", "formas", "mapa", "promocoes", "giro", "parados");
 
@@ -189,7 +184,6 @@ public final class ExportadorFinancas {
         }
     }
 
-    /** Vírgula decimal; vazio quando não se aplica. */
     private static String num(BigDecimal valor) {
         return valor == null ? "" : Dinheiro.numero(valor);
     }

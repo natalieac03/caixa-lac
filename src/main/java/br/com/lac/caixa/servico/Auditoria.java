@@ -13,20 +13,12 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-/**
- * Log de auditoria (logger "auditoria"): uma linha por venda, ajuste de valor,
- * correção de data, cancelamento e mudança de cadastro, no formato
- * {@code evento=venda id=12 ip=1.2.3.4 cobrado=18.00 ...}.
- * - Só grava depois do commit: o que foi desfeito não aparece.
- * - O IP é o da requisição (com X-Forwarded-For tratado pelo Tomcat em prod).
- * - Nunca recebe senha; quebras de linha e aspas dos valores são neutralizadas.
- */
+/** Log de auditoria: uma linha por venda, ajuste, correção, cancelamento e cadastro. */
 @Component
 public class Auditoria {
 
     private static final Logger LOG = LoggerFactory.getLogger("auditoria");
 
-    /** Campos em ordem: registrar("venda", "id", 12, "cobrado", "18.00"). */
     public void registrar(String evento, Object... chaveEValor) {
         Map<String, Object> campos = new LinkedHashMap<>();
         campos.put("evento", evento);
@@ -60,7 +52,6 @@ public class Auditoria {
 
     private static String valor(Object valor) {
         if (valor == null) return "-";
-        // Valores em reais sempre com 2 casas: 15 e 15.00 são o mesmo dinheiro.
         if (valor instanceof BigDecimal dinheiro)
             return dinheiro.setScale(2, RoundingMode.HALF_UP).toPlainString();
         String texto = valor.toString().replace('\r', ' ').replace('\n', ' ').replace("\"", "'");

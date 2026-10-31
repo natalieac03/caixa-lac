@@ -8,11 +8,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+/** Acesso às despesas, com o filtro da tela. */
 public interface DespesaRepository extends JpaRepository<Despesa, Long> {
 
-    // cast(... as LocalDate): no Postgres, "? is null" com data nula não tem tipo e é recusado.
-
-    /** Filtro da tela: com evento, as despesas ligadas a ele; sem, pelo período (datas inclusivas, vazio = aberto). */
     @Query("""
             select d from Despesa d join fetch d.categoria left join fetch d.evento
             where (:evento is null or d.evento.id = :evento)

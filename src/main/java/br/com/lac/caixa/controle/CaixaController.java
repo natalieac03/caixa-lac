@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+/** Tela de venda: formulário, prévia do preço e registro da venda. */
 @Controller
 public class CaixaController {
 
@@ -41,7 +42,6 @@ public class CaixaController {
         return "abrir-caixa";
     }
 
-    /** Cada formulário leva um token novo: reenviar o mesmo não cria outra venda. */
     @GetMapping("/venda/nova")
     public String novaVenda(Model model) {
         return tela(model, UUID.randomUUID().toString());
@@ -55,11 +55,6 @@ public class CaixaController {
         return "venda-nova";
     }
 
-    /**
-     * A venda não entrou (estoque acabou, Pix ainda não pago, conflito...): a tela
-     * volta com o mesmo carrinho e o mesmo token, para corrigir e confirmar de novo
-     * sem digitar tudo (e sem duplicar a venda se ela tiver entrado).
-     */
     private String telaDeNovo(
             Map<String, String> params, String token, String erro, Model model, HttpServletResponse resposta) {
         resposta.setStatus(HttpServletResponse.SC_CONFLICT);
@@ -77,7 +72,6 @@ public class CaixaController {
         return tela(model, token);
     }
 
-    /** Orçamento calculado no servidor; a tela só desenha o resultado. */
     @PostMapping("/venda/previa")
     @ResponseBody
     public Orcamento previa(@RequestParam Map<String, String> params) {
@@ -116,7 +110,6 @@ public class CaixaController {
                     model,
                     resposta);
         } catch (DataIntegrityViolationException ex) {
-            // Corrida: dois envios do mesmo token ao mesmo tempo; o segundo bate no índice único.
             if (!caixa.tokenRegistrado(token)) throw ex;
             flash.addFlashAttribute("sucesso", "Venda já registrada.");
             return "redirect:/historico";

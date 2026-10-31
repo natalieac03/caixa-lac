@@ -1,5 +1,4 @@
-/* Tela de venda (venda-nova.html): carrinho, busca, pagamentos, prévia e Pix. */
-/* --- normalização para a busca --- */
+/* Tela de venda: quantidades, busca, prévia do preço, pagamento dividido e Pix do Mercado Pago. */
 function sem(t) {
     return (t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 }
@@ -18,7 +17,6 @@ function filtrar() {
     document.getElementById('semResultado').classList.toggle('oculto', visiveis > 0);
 }
 
-/* Botões − e + ao lado da quantidade */
 function passo(botao, delta) {
     const inp = botao.parentNode.querySelector('.qtd');
     const max = parseInt(inp.getAttribute('max'));
@@ -29,12 +27,10 @@ function passo(botao, delta) {
     recalcular();
 }
 
-/* ---------- Pagamento ---------- */
 let unidades = 0, totalPrevia = null, dividido = false;
 const pixAutomatico = document.getElementById('formVenda').dataset.pixAutomatico === 'true';
 const tokenVenda = document.querySelector('input[name=token]').value;
 
-/* "12,50", "12.50" e "1.234,56" -> centavos; vazio ou inválido -> null (como o servidor). */
 function centavos(texto) {
     let t = (texto || '').trim();
     if (!t) return null;
@@ -42,7 +38,6 @@ function centavos(texto) {
     if (t.indexOf(',') !== -1) t = t.replace(/\./g, '').replace(',', '.');
     return Math.round(parseFloat(t) * 100);
 }
-/* Valores do JSON da prévia (ex.: 18.00) em centavos. */
 function centavosDoJson(v) {
     return Math.round(Number(v) * 100);
 }
@@ -51,7 +46,6 @@ function reaisCentavos(c) {
     return 'R$ ' + inteiro + ',' + String(Math.abs(c) % 100).padStart(2, '0');
 }
 
-/* Valor a cobrar: o ajustado, se preenchido; senão o total da prévia. */
 function alvo() {
     const ajuste = document.getElementById('valorTotal').value.trim();
     if (ajuste) return centavos(ajuste);
@@ -63,15 +57,12 @@ function formaUnica() {
     return r ? r.value : '';
 }
 
-/* Campo escondido fica desabilitado: não vai no envio. */
 function mostrar(el, sim) {
     el.classList.toggle('oculto', !sim);
     el.querySelectorAll('input').forEach(i => { i.disabled = !sim; });
 }
 
-/* ---------- Pix automático (Mercado Pago) ---------- */
 const paineisPix = new Set();
-// Ao sair da tela, para todas as consultas.
 window.addEventListener('pagehide', function () { paineisPix.forEach(p => p.parar()); });
 
 function botaoPequeno(texto, aoClicar) {
@@ -87,11 +78,6 @@ async function pedirJson(url, opcoes) {
     return {status: resposta.status, ok: resposta.ok, o: o};
 }
 
-/*
- * Painel do Pix de uma parte: "Gerar Pix" (Mercado Pago, confirma sozinho) ou
- * "Pix manual" (conferido no app). valorAtual() dá o valor da parte em centavos.
- * ok() = a parte está fechada: paga no Mercado Pago com o mesmo valor, ou manual.
- */
 function criarPainelPix(parte, valorAtual) {
     const raiz = document.createElement('div'); raiz.className = 'painel-pix';
     const origem = document.createElement('input'); origem.type = 'hidden'; origem.className = 'origem';
@@ -106,14 +92,12 @@ function criarPainelPix(parte, valorAtual) {
         if (!codigo) return;
         navigator.clipboard?.writeText(codigo).then(() => { copiar.textContent = 'Código copiado'; });
     });
-    // Com o Pix aguardando, dá para desistir e conferir no app (Pix manual).
     const manualNoQr = botaoPequeno('Usar Pix manual', function () { usarManual(); });
     area.append(img, valorTexto, copiar, manualNoQr);
     const situacao = document.createElement('p'); situacao.className = 'ajuda situacao-pix'; situacao.setAttribute('aria-live', 'polite');
     raiz.append(origem, botoes, area, situacao);
 
     let estado = 'escolher', cobranca = null, codigo = null, intervalo = null, controle = null;
-    // Aviso do último acontecimento (expirou, valor mudou, erro): fica até a próxima ação.
     let aviso = '';
 
     function desenhar(mensagem) {
@@ -175,13 +159,12 @@ function criarPainelPix(parte, valorAtual) {
     }
 
     async function consultar() {
-        // Uma consulta por vez: com a anterior ainda em andamento, espera o próximo ciclo.
         if (controle) return;
         controle = new AbortController();
         try {
             const r = await pedirJson('/venda/pix/' + encodeURIComponent(tokenVenda) + '/' + parte, {signal: controle.signal});
             if (r.status === 401) { parar(); sessaoExpirada(); return; }
-            if (!r.ok || !r.o) return; // tenta de novo no próximo ciclo
+            if (!r.ok || !r.o) return;
             if (r.o.status === 'PENDENTE' && r.o.valorPago !== null && centavosDoJson(r.o.valorPago) !== cobranca) {
                 desenhar('Pago com valor diferente (' + reaisCentavos(centavosDoJson(r.o.valorPago)) + '): resolva à mão.');
                 return;
@@ -195,7 +178,6 @@ function criarPainelPix(parte, valorAtual) {
         }
     }
 
-    /* Cancela no servidor e devolve a situação real (PAGA, PENDENTE em processamento, CANCELADA...). */
     async function cancelarCobranca() {
         parar();
         try {
@@ -211,7 +193,6 @@ function criarPainelPix(parte, valorAtual) {
         if (estado === 'aguardando') {
             desenhar('Cancelando o Pix no Mercado Pago...');
             const status = await cancelarCobranca();
-            // Já pago: fica com o Pix do Mercado Pago, não troca para manual.
             if (status === 'PAGA') { aplicar('PAGA'); atualizarPagamento(); return; }
             if (status === 'PENDENTE') {
                 aplicar('PENDENTE');
@@ -224,7 +205,6 @@ function criarPainelPix(parte, valorAtual) {
         atualizarPagamento();
     }
 
-    /* Volta ao começo (outra forma escolhida): cancela a cobrança pendente. */
     function reiniciar() {
         if (estado === 'aguardando') cancelarCobranca();
         if (estado !== 'paga') { estado = 'escolher'; origem.value = ''; desenhar(); }
@@ -317,7 +297,6 @@ function adicionarLinha(forma) {
     const descricao = campo('Qual?', 'campo-descricao'); descricao.input.className = 'descricao'; descricao.input.maxLength = 255;
     const recebido = campo('Recebido (opcional)', 'campo-recebido'); recebido.input.className = 'recebido mono'; recebido.input.inputMode = 'decimal';
     const troco = document.createElement('p'); troco.className = 'ajuda troco'; recebido.div.append(troco);
-    // Número estável da parte: não muda quando outra linha é removida (a cobrança Pix é dela).
     const parte = proximaParte++;
     const numeroParte = document.createElement('input'); numeroParte.type = 'hidden'; numeroParte.className = 'parte';
     numeroParte.value = String(parte);
@@ -354,7 +333,6 @@ function ajustarLinha(linha) {
     if (linha.painelPix && forma !== 'PIX') linha.painelPix.reiniciar();
 }
 
-/* Nomes pag_forma_0, pag_valor_0, ... na ordem da tela. */
 function renumerar() {
     document.querySelectorAll('#linhasPagamento .linha-pagamento').forEach(function (linha, n) {
         linha.querySelector('select.forma').name = 'pag_forma_' + n;
@@ -367,7 +345,6 @@ function renumerar() {
     });
 }
 
-/* Troco ao vivo; devolve false se o recebido for inválido ou menor que o valor. */
 function mostrarTroco(saida, textoRecebido, valor) {
     saida.textContent = '';
     if (!textoRecebido.trim()) return true;
@@ -378,7 +355,6 @@ function mostrarTroco(saida, textoRecebido, valor) {
     return true;
 }
 
-/* Confere o pagamento como o servidor fará; o servidor confere de novo. */
 function pagamentoOk() {
     const saldo = document.getElementById('saldoPagamento');
     saldo.textContent = ''; saldo.className = 'saldo-pagamento';
@@ -423,7 +399,6 @@ function atualizarPagamento() {
     const ok = pagamentoOk();
     const botao = document.getElementById('botaoConfirmar');
     botao.disabled = enviando || unidades === 0 || !ok;
-    // O botão mostra quanto vai ser cobrado: "Confirmar R$ 18,00".
     const total = alvo();
     botao.textContent = unidades > 0 && total !== null ? 'Confirmar ' + reaisCentavos(total) : 'Confirmar venda';
 }
@@ -443,7 +418,6 @@ function linha(texto, valor) {
 }
 const SEM_PREVIA = 'Não foi possível calcular a prévia. Confira a conexão e tente novamente.';
 
-/* Sessão expirada: avisa e oferece o login, sem perder o que está na tela. */
 function sessaoExpirada() {
     totalPrevia = null; unidades = 0;
     const aviso = document.createElement('p');
@@ -459,7 +433,6 @@ function sessaoExpirada() {
     atualizarPagamento();
 }
 
-/* Prévia em andamento: cancelada quando outra é pedida (só a última desenha). */
 let previaEmAndamento = null;
 function recalcular() {
     clearTimeout(timer);
@@ -476,7 +449,6 @@ function recalcular() {
             const o = json ? await resposta.json() : null;
             if (atual !== versao) return;
             if (resposta.status === 401) { sessaoExpirada(); return; }
-            // Erro com mensagem do servidor ({"erro": "..."}) aparece como veio.
             if (!resposta.ok || !o || o.erro) throw new Error(o && o.erro ? o.erro : SEM_PREVIA);
             document.getElementById('carrinho').replaceChildren();
             unidades = 0;
@@ -501,7 +473,6 @@ function recalcular() {
     }, 200);
 }
 
-/* Atalho: "/" foca a busca */
 document.addEventListener('keydown', function (e) {
     const busca = document.getElementById('busca');
     if (e.key === '/' && busca && document.activeElement !== busca

@@ -35,21 +35,16 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.test.web.servlet.MockMvc;
 
-/**
- * O app grava e mostra a hora de Brasília mesmo com a máquina (ou o contêiner do
- * Railway) em UTC. O instante é fixo, mas o fuso vem do RelogioConfig de verdade.
- */
+/** Com a JVM em UTC, o app grava e mostra a hora de Brasília. */
 @SpringBootTest(
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:fuso_horario;DB_CLOSE_DELAY=-1"
         })
 @AutoConfigureMockMvc
 class FusoHorarioTest {
-    /** 00:30 de 08/03 em UTC = 21:30 de 07/03 em Brasília (UTC-3). */
     static final Instant INSTANTE = Instant.parse("2026-03-08T00:30:00Z");
 
     static TimeZone original;
 
-    /** A JVM em UTC, como num contêiner sem TZ (o contexto do Spring sobe depois disto). */
     @BeforeAll
     static void jvmEmUtc() {
         original = TimeZone.getDefault();
@@ -63,7 +58,6 @@ class FusoHorarioTest {
 
     @TestConfiguration
     static class RelogioParado {
-        /** O mesmo fuso do relógio da aplicação, parado no instante do teste. */
         @Bean
         @Primary
         Clock relogioParado() {
@@ -119,7 +113,6 @@ class FusoHorarioTest {
     @Test
     @DisplayName("Estoque: a data sugerida da compra é o dia de Brasília, pelo relógio da aplicação")
     void hojeDoEstoque() throws Exception {
-        // O formulário de entrada de estoque só aparece com algum produto cadastrado.
         estoque.criarNovo("Adesivo do Fuso", new BigDecimal("8"), 5, null);
         mvc.perform(get("/estoque").sessionAttr("autenticado", true))
                 .andExpect(content().string(containsString("name=\"data\" value=\"2026-03-07\"")));

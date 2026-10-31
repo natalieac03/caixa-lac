@@ -18,37 +18,7 @@ import java.util.TreeMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Calcula o preço de um carrinho com as promoções ativas. Classe pura: não
- * conhece Spring nem banco, e não altera os produtos recebidos.
- *
- * <p><b>Regra:</b> o cliente paga o menor total possível, e cada unidade entra
- * em no máximo uma promoção.
- * <ul>
- *   <li>A_PARTIR_DE: quando o carrinho atinge os mínimos de todas as
- *       categorias da promoção, todas as unidades dessas categorias podem sair
- *       pelo preço promocional, só nos produtos em que ele é mais barato que o
- *       normal. Essas unidades ficam "usadas" e não entram em pacote.</li>
- *   <li>PACOTE: as unidades que sobraram (preço normal) podem formar pacotes
- *       (BuscaDePacotes).</li>
- * </ul>
- *
- * <p><b>Busca:</b> A_PARTIR_DE que não compartilha categoria com nenhum PACOTE
- * ativo é aplicada direto (só baixa preço de unidades que nenhum pacote usaria).
- * Para cada subconjunto das demais A_PARTIR_DE ativadas, aplica as do
- * subconjunto e resolve os pacotes sobre as unidades restantes; fica o menor
- * total. Subconjuntos que deixam as mesmas unidades reaproveitam a busca de
- * pacotes. Empate: vale o primeiro subconjunto na ordem dos ids (o vazio
- * primeiro) e, nos pacotes, o primeiro por id. Valores em centavos (long).
- *
- * <p><b>Orçamento de trabalho:</b> a busca exata custa a soma dos estados das
- * buscas de pacotes distintas (no máximo {@value #ORCAMENTO_DE_ESTADOS}) e
- * enumera até 2^{@value #MAXIMO_A_PARTIR_DE_ENUMERADAS} subconjuntos. Acima disso
- * a venda NÃO é recusada: os pacotes são escolhidos pela melhor de duas
- * heurísticas gulosas (e, com A_PARTIR_DE demais, só alguns subconjuntos são
- * tentados), o orçamento sai marcado como aproximado e um aviso vai para o log.
- * O total aproximado nunca é menor que o exato; pode ficar um pouco acima.
- */
+/** Calcula o menor preço de um carrinho com as promoções ativas. */
 public class CalculadoraDePreco {
 
     static final long ORCAMENTO_DE_ESTADOS = 3_000_000;
@@ -58,10 +28,8 @@ public class CalculadoraDePreco {
     private static final Comparator<Promocao> POR_ID =
             Comparator.comparing(Promocao::getId, Comparator.nullsLast(Comparator.naturalOrder()));
 
-    /** Uma linha do carrinho, já em centavos. */
     private record Linha(Produto produto, Long categoria, int quantidade, long normal) {}
 
-    /** O que um subconjunto de A_PARTIR_DE produz antes dos pacotes. */
     private record Preparo(
             long total, long[] precoUnitario, Promocao[] promocaoUsada, TreeMap<Long, List<Long>> restantes) {}
 
@@ -85,7 +53,6 @@ public class CalculadoraDePreco {
         pacotes.forEach(p -> p.getItens()
                 .forEach(i -> categoriasDePacote.add(i.getCategoria().getId())));
 
-        // A_PARTIR_DE que o carrinho ativa e que baixam o preço de algum produto.
         List<Promocao> aPartirDe = ativas.stream()
                 .filter(p -> p.getTipo() == TipoPromocao.A_PARTIR_DE)
                 .filter(p -> p.combosDisponiveis(qtdPorCat) > 0)
@@ -100,7 +67,6 @@ public class CalculadoraDePreco {
         List<Promocao> enumeradas =
                 aPartirDe.stream().filter(p -> !diretas.contains(p)).toList();
 
-        // Subconjuntos a tentar: todos, ou só alguns se houver A_PARTIR_DE demais.
         boolean aproximado = enumeradas.size() > MAXIMO_A_PARTIR_DE_ENUMERADAS;
         List<BitSet> subconjuntos =
                 aproximado ? algunsSubconjuntos(enumeradas.size()) : todosSubconjuntos(enumeradas.size());
@@ -153,7 +119,6 @@ public class CalculadoraDePreco {
         return todos;
     }
 
-    /** Com A_PARTIR_DE demais: nenhuma, todas, e cada uma sozinha. */
     private static List<BitSet> algunsSubconjuntos(int n) {
         List<BitSet> alguns = new ArrayList<>();
         alguns.add(new BitSet());
@@ -174,7 +139,6 @@ public class CalculadoraDePreco {
             List<Promocao> enumeradas,
             BitSet subconjunto,
             Set<Long> categoriasDePacote) {
-        // Menor preço A_PARTIR_DE em cada categoria (diretas + as do subconjunto).
         Map<Long, Long> precoPromo = new HashMap<>();
         Map<Long, Promocao> vencedora = new HashMap<>();
         for (Promocao p : diretas) aplicar(p, precoPromo, vencedora);
@@ -197,12 +161,10 @@ public class CalculadoraDePreco {
                 for (int k = 0; k < l.quantidade(); k++) lista.add(l.normal());
             }
         }
-        // A assinatura não depende da ordem dos produtos.
         restantes.values().forEach(lista -> lista.sort(Comparator.reverseOrder()));
         return new Preparo(total, precoUnitario, promocaoUsada, restantes);
     }
 
-    /** Menor preço por categoria; no empate fica a promoção aplicada primeiro (menor id). */
     private static void aplicar(Promocao p, Map<Long, Long> precoPromo, Map<Long, Promocao> vencedora) {
         long preco = centavos(p.getPreco());
         for (PromocaoItem item : p.getItens()) {

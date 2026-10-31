@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.springframework.test.util.ReflectionTestUtils;
 
-/** Carrinhos grandes usados nos testes de desempenho da calculadora. */
+/** Carrinhos grandes para os testes de desempenho da calculadora. */
 final class CenariosDeDesempenho {
 
     record Cenario(Carrinho carrinho, List<Promocao> promocoes) {}
@@ -40,11 +40,6 @@ final class CenariosDeDesempenho {
         return p;
     }
 
-    /**
-     * Categorias com pacote: cada uma com dois produtos (preços diferentes) somando
-     * {@code unidades}, um pacote "3 por" na categoria e combos ligando as duas primeiras
-     * e a terceira com a quarta.
-     */
     private static void categoriasComPacote(
             int quantas, int unidades, List<Carrinho.Linha> linhas, List<Promocao> promocoes, long[] ids) {
         Categoria[] cats = new Categoria[quantas];
@@ -59,7 +54,6 @@ final class CenariosDeDesempenho {
         promocoes.add(promocao(ids[0]++, TipoPromocao.PACOTE, "18.00", cats[2], 1, cats[3], 2));
     }
 
-    /** 6 categorias x 10 unidades com pacotes + 6 A_PARTIR_DE em outras 6 categorias. */
     static Cenario seisPorDezComAPartirDe() {
         var linhas = new ArrayList<Carrinho.Linha>();
         var promocoes = new ArrayList<Promocao>();
@@ -73,7 +67,6 @@ final class CenariosDeDesempenho {
         return new Cenario(new Carrinho(linhas), promocoes);
     }
 
-    /** 7 categorias x 7 unidades com pacotes. */
     static Cenario setePorSete() {
         var linhas = new ArrayList<Carrinho.Linha>();
         var promocoes = new ArrayList<Promocao>();

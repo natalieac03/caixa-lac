@@ -20,11 +20,10 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.mock.env.MockEnvironment;
 
-/** Sem APP_SENHA válida o contexto não sobe, em qualquer perfil, e a senha não vai para o log. */
+/** Sem APP_SENHA válida o contexto não sobe e a senha não vai para o log. */
 @ExtendWith(OutputCaptureExtension.class)
 class SenhaObrigatoriaTest {
 
-    /** "ausente" = variável não definida; os outros valores vão como APP_SENHA. */
     @ParameterizedTest(name = "perfil {0}, APP_SENHA {1}")
     @CsvSource({"local, ausente", "prod, ausente", "local, vazia", "prod, vazia", "local, Sete7ch", "prod, Sete7ch"})
     void contextoNaoSobe(String perfil, String senha, CapturedOutput saida) {
@@ -34,7 +33,6 @@ class SenhaObrigatoriaTest {
                 "senha-local.properties existe nesta pasta");
         var args = new ArrayList<String>(java.util.List.of(
                 "--spring.profiles.active=" + perfil,
-                // Nunca abre o H2 em arquivo do desenvolvedor nem o Postgres.
                 "--spring.datasource.url=jdbc:h2:mem:senha_" + perfil + "_" + senha.hashCode() + ";DB_CLOSE_DELAY=-1",
                 "--spring.datasource.driver-class-name=org.h2.Driver",
                 "--spring.datasource.username=sa",

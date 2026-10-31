@@ -26,6 +26,7 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+/** Sessão de 12 horas e as respostas de erro para tela e para o JS. */
 @SpringBootTest(
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:sessao;DB_CLOSE_DELAY=-1"})
 @AutoConfigureMockMvc
@@ -75,8 +76,6 @@ class SessaoEErrosHttpTest {
     @Test
     @DisplayName("Erro de programa (NumberFormatException) não vira mensagem: log com a pilha e \"Algo deu errado\"")
     void erroDeProgramaVaiParaOLog(CapturedOutput log) throws Exception {
-        // Produto que não é número no carrinho é erro de negócio (o erro de programa tem o
-        // próprio teste em ErroDeProgramaHttpTest): mensagem clara, nada vai para o log como erro.
         long antes = vendas.count();
         mvc.perform(post("/venda")
                         .sessionAttr("autenticado", true)

@@ -9,12 +9,7 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
-/**
- * Abre um Chromium do Playwright para os testes de sistema. Tenta o navegador
- * baixado pelo Playwright e, se não houver, o Google Chrome instalado na máquina.
- * Sem navegador: no computador o teste é pulado; no CI (CI=true) é erro, como
- * os testes com Docker (ExigeDocker).
- */
+/** Abre o Chromium dos testes de sistema; sem navegador, pula no computador e falha no CI. */
 public class Navegador implements BeforeAllCallback {
 
     private static Playwright playwright;
@@ -29,8 +24,6 @@ public class Navegador implements BeforeAllCallback {
         if (browser != null) return;
         RuntimeException falha = null;
         try {
-            // Sem download automático (seria ~1 GB): usa o navegador já instalado pelo
-            // Playwright (no CI, pelo passo "playwright install") ou o Google Chrome.
             Map<String, String> ambiente = new HashMap<>(System.getenv());
             ambiente.put("PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD", "1");
             playwright = Playwright.create(new Playwright.CreateOptions().setEnv(ambiente));
@@ -51,7 +44,6 @@ public class Navegador implements BeforeAllCallback {
         conferir(false, "true".equalsIgnoreCase(System.getenv("CI")), falha);
     }
 
-    /** Com navegador segue; sem: erro no CI, pulado fora dele. */
     static void conferir(boolean temNavegador, boolean ci, RuntimeException falha) {
         if (temNavegador) return;
         if (ci)
@@ -67,7 +59,6 @@ public class Navegador implements BeforeAllCallback {
         playwright = null;
     }
 
-    // O navegador é reaproveitado entre as classes de teste e fecha no fim da JVM.
     static {
         Runtime.getRuntime().addShutdownHook(new Thread(Navegador::fechar));
     }

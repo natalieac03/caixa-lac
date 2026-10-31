@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.data.jpa.domain.Specification;
 
-/** Implementação de VendaConsultas, encontrada pelo Spring Data pelo sufixo Impl. */
+/** Implementação de VendaConsultas com Criteria. */
 class VendaConsultasImpl implements VendaConsultas {
 
     private final EntityManager em;
@@ -27,7 +27,6 @@ class VendaConsultasImpl implements VendaConsultas {
         this.em = em;
     }
 
-    /** Valor cobrado (sempre preenchido desde a V7). */
     static Expression<BigDecimal> cobrado(CriteriaBuilder cb, Root<Venda> v) {
         return v.get("valorCobrado");
     }
@@ -36,7 +35,6 @@ class VendaConsultasImpl implements VendaConsultas {
     public IndicadoresHistorico indicadores(Specification<Venda> filtro) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
 
-        // Sem JOIN nos itens: o total não se multiplica pela quantidade de itens.
         CriteriaQuery<Tuple> vendas = cb.createTupleQuery();
         Root<Venda> v = vendas.from(Venda.class);
         vendas.multiselect(cb.count(v), cb.coalesce(cb.sum(cobrado(cb, v)), BigDecimal.ZERO))
@@ -77,7 +75,6 @@ class VendaConsultasImpl implements VendaConsultas {
         CriteriaQuery<Tuple> q = cb.createTupleQuery();
         Root<Venda> v = q.from(Venda.class);
         Expression<BigDecimal> cobrado = cobrado(cb, v);
-        // Sem valor calculado, o ajuste conta zero (calculado = cobrado).
         Expression<BigDecimal> calculado = cb.coalesce(v.<BigDecimal>get("valorCalculado"), cobrado);
         q.multiselect(
                         cb.count(v),

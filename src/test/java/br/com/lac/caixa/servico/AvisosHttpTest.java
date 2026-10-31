@@ -25,7 +25,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** Sininho: o JSON /avisos, os ids estáveis e o sino em todas as telas logadas. */
+/** Sininho: o JSON /avisos, ids estáveis e o sino em todas as telas. */
 @SpringBootTest(
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:avisos;DB_CLOSE_DELAY=-1"})
 @AutoConfigureMockMvc

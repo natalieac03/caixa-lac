@@ -28,7 +28,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-/** Webhook do Mercado Pago: assinatura x-signature, atualização da cobrança e idempotência. */
+/** Webhook do Mercado Pago: assinatura, atualização da cobrança e idempotência. */
 @SpringBootTest(
         properties = {
             "spring.profiles.active=test",
@@ -61,14 +61,12 @@ class WebhookHttpTest {
     @Autowired
     JdbcTemplate jdbc;
 
-    /** HMAC-SHA256 em hexadecimal, calculado aqui de forma independente do código do app. */
     static String assinar(String segredo, String manifesto) throws Exception {
         Mac mac = Mac.getInstance("HmacSHA256");
         mac.init(new SecretKeySpec(segredo.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
         return HexFormat.of().formatHex(mac.doFinal(manifesto.getBytes(StandardCharsets.UTF_8)));
     }
 
-    /** Aviso como o Mercado Pago manda: data.id na URL, x-request-id e x-signature "ts=...,v1=...". */
     static MockHttpServletRequestBuilder aviso(String orderId, String requestId, long ts, String v1) {
         String corpo = "{\"action\":\"order.processed\",\"type\":\"order\",\"data\":{\"id\":\"" + orderId + "\"}}";
         return post("/webhooks/mercadopago")
@@ -81,7 +79,6 @@ class WebhookHttpTest {
     }
 
     static MockHttpServletRequestBuilder avisoAssinado(String orderId, String requestId, long ts) throws Exception {
-        // Manifesto da documentação, com o data.id em minúsculas.
         String manifesto = "id:" + orderId.toLowerCase() + ";request-id:" + requestId + ";ts:" + ts + ";";
         return aviso(orderId, requestId, ts, assinar(SEGREDO, manifesto));
     }
@@ -107,15 +104,12 @@ class WebhookHttpTest {
     @Test
     @DisplayName("Assinatura válida: 200 sem login, consulta a order no Mercado Pago e marca PAGA")
     void assinaturaValida() throws Exception {
-        // Arrange
         String order = gerarPix();
         FAKE.pagar(order, "18.00");
         long agora = Instant.now().getEpochSecond();
 
-        // Act
         mvc.perform(avisoAssinado(order, UUID.randomUUID().toString(), agora)).andExpect(status().isOk());
 
-        // Assert
         assertEquals("PAGA", situacao(order));
     }
 
@@ -134,25 +128,20 @@ class WebhookHttpTest {
     @Test
     @DisplayName("Assinatura inválida, ausente ou fora da tolerância: 401 sem corpo e nada muda")
     void assinaturaInvalida() throws Exception {
-        // Arrange
         String order = gerarPix();
         FAKE.pagar(order, "18.00");
         long agora = Instant.now().getEpochSecond();
         int consultas = FAKE.consultas.get();
 
-        // Act / Assert
         mvc.perform(aviso(order, "req-1", agora, "00" + "ab".repeat(31)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().string(""));
         mvc.perform(post("/webhooks/mercadopago").param("data.id", order)).andExpect(status().isUnauthorized());
-        // Assinado com outro segredo
         String manifesto = "id:" + order.toLowerCase() + ";request-id:req-2;ts:" + agora + ";";
         mvc.perform(aviso(order, "req-2", agora, assinar("outro-segredo", manifesto)))
                 .andExpect(status().isUnauthorized());
-        // Assinatura certa de outra order (data.id trocado)
         mvc.perform(aviso("ORD9999", "req-3", agora, assinar(SEGREDO, manifesto)))
                 .andExpect(status().isUnauthorized());
-        // Velho demais (mais de 10 minutos)
         mvc.perform(avisoAssinado(order, "req-4", agora - 3600)).andExpect(status().isUnauthorized());
 
         assertEquals("PENDENTE", situacao(order));
@@ -166,7 +155,6 @@ class WebhookHttpTest {
         FAKE.pagar(order, "18.00");
         long agora = Instant.now().getEpochSecond();
         String requestId = UUID.randomUUID().toString();
-        // Assinatura válida para um aviso sem id (o manifesto fica sem a parte "id:")
         String v1 = assinar(SEGREDO, "request-id:" + requestId + ";ts:" + agora + ";");
         mvc.perform(post("/webhooks/mercadopago")
                         .param("type", "order")
@@ -182,7 +170,6 @@ class WebhookHttpTest {
     @Test
     @DisplayName("O mesmo aviso duas vezes não muda nada na segunda (idempotente)")
     void avisoRepetido() throws Exception {
-        // Arrange
         String order = gerarPix();
         FAKE.pagar(order, "18.00");
         long agora = Instant.now().getEpochSecond();
@@ -191,10 +178,8 @@ class WebhookHttpTest {
                 "select cast(paga_em as varchar) from cobranca_pix where order_id = ?", String.class, order);
         int consultas = FAKE.consultas.get();
 
-        // Act
         mvc.perform(avisoAssinado(order, "req-repetido", agora)).andExpect(status().isOk());
 
-        // Assert
         assertEquals("PAGA", situacao(order));
         assertEquals(
                 pagaEm,
@@ -239,7 +224,6 @@ class WebhookHttpTest {
     void simulacaoDoPainel(org.springframework.boot.test.system.CapturedOutput saida) throws Exception {
         long agora = Instant.now().getEpochSecond();
         int consultas = FAKE.consultas.get();
-        // Como o painel manda: data.id numérico, type=order e o corpo com action/data.id
         String manifesto = "id:123456;request-id:req-simulado;ts:" + agora + ";";
         mvc.perform(post("/webhooks/mercadopago")
                         .param("data.id", "123456")
@@ -271,7 +255,6 @@ class WebhookHttpTest {
     @Test
     @DisplayName("O endpoint é exatamente POST /webhooks/mercadopago e fica fora do login; o resto pede login")
     void caminhoEForaDoLogin() throws Exception {
-        // Única rota de webhook da aplicação
         var webhooks = rotas.getHandlerMethods().keySet().stream()
                 .filter(r -> r.getPatternValues().stream().anyMatch(x -> x.contains("webhook")))
                 .toList();
@@ -280,11 +263,9 @@ class WebhookHttpTest {
         assertEquals(
                 java.util.Set.of(org.springframework.web.bind.annotation.RequestMethod.POST),
                 webhooks.get(0).getMethodsCondition().getMethods());
-        // Sem sessão: chega ao controller (401 da assinatura, não o redirecionamento do login)
         mvc.perform(post("/webhooks/mercadopago").param("data.id", "1"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(header().doesNotExist("Location"));
-        // Qualquer outro caminho parecido continua atrás do login
         for (String outro : new String[] {"/webhooks/mercadopago/x", "/webhooks/outro", "/webhooks"}) {
             mvc.perform(post(outro))
                     .andExpect(status().is3xxRedirection())

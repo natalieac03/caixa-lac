@@ -30,6 +30,7 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
+/** As linhas do log de auditoria de venda, ajuste, correção de data e cancelamento. */
 @SpringBootTest(
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:auditoria;DB_CLOSE_DELAY=-1"})
 @AutoConfigureMockMvc

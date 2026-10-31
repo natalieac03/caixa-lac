@@ -20,21 +20,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Uma venda registrada no caixa. O id funciona como numero da compra.
- * Guarda o total calculado, desconto promocional e valor cobrado com eventual
- * motivo de ajuste. O valor cobrado é sempre preenchido (desde a V7 também nas
- * vendas antigas, que tinham só valor_total).
- *
- * O pagamento fica em PagamentoVenda (uma linha por forma; venda dividida tem
- * várias). A soma das linhas é exatamente o valor cobrado; cortesia (cobrado
- * zero) não tem linha. As colunas antigas forma_pagamento, forma_pagamento_outro
- * e valor_total foram apagadas na V7.
- */
+/** Uma venda: itens, valores calculado e cobrado, partes do pagamento e cancelamento. */
 @Entity
 public class Venda {
 
-    /** Limite de partes num pagamento dividido. */
     public static final int MAXIMO_DE_PAGAMENTOS = 10;
 
     @Id
@@ -67,16 +56,11 @@ public class Venda {
     private LocalDateTime dataCancelamento;
     private String motivoCancelamento;
 
-    /** Descontos promocionais da venda, congelados (vendas anteriores à V12 não têm). */
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "venda_id", nullable = false)
     @OrderBy("id")
     private List<VendaDesconto> descontosAplicados = new ArrayList<>();
 
-    /**
-     * true nas vendas anteriores à V12: o rateio por item foi reconstruído a
-     * partir dos totais (preço unitário gravado e valor cobrado), não na hora da venda.
-     */
     @Column(nullable = false)
     private boolean rateioRetroativo;
 
@@ -88,8 +72,6 @@ public class Venda {
 
     public Venda() {}
 
-    /** Venda nova, com a hora de agora. */
-    /** Venda nova na data e hora dada (o caixa passa a hora do relógio da aplicação). */
     public static Venda nova(LocalDateTime quando) {
         Venda v = new Venda();
         v.dataHora = quando;
@@ -108,7 +90,6 @@ public class Venda {
         return motivoCancelamento;
     }
 
-    /** Cancela uma vez; os valores e o token originais continuam no histórico. */
     public void cancelar(String motivo, LocalDateTime quando) {
         if (cancelada) return;
         if (motivo == null || motivo.isBlank() || motivo.trim().length() > 255)
@@ -150,11 +131,6 @@ public class Venda {
         this.motivoAjuste = motivo;
     }
 
-    /**
-     * Troca as partes do pagamento. Regras: soma exatamente igual ao valor
-     * cobrado, ao centavo; cortesia (cobrado zero) não tem pagamento e exige
-     * motivo do ajuste; no máximo MAXIMO_DE_PAGAMENTOS partes.
-     */
     public void registrarPagamentos(List<PagamentoVenda> partes) {
         BigDecimal cobrado = getValorCobrado();
         if (cobrado == null) throw new IllegalStateException("Registre os valores da venda antes do pagamento.");
@@ -193,13 +169,11 @@ public class Venda {
         return pagamentos.size() > 1;
     }
 
-    /** "Pix R$ 10,00 + Dinheiro R$ 8,00 (troco R$ 2,00)", ou "Cortesia". */
     public String getPagamentoTexto() {
         if (pagamentos.isEmpty()) return "Cortesia";
         return pagamentos.stream().map(PagamentoVenda::getTexto).collect(Collectors.joining(" + "));
     }
 
-    /** Soma das partes pagas numa forma (zero se não usou). */
     public BigDecimal valorPago(FormaPagamento forma) {
         return pagamentos.stream()
                 .filter(p -> p.getForma() == forma)
@@ -224,12 +198,6 @@ public class Venda {
         return rateioRetroativo;
     }
 
-    /**
-     * Rateia (soma dos brutos - valor cobrado) entre os itens, proporcional ao
-     * valor bruto, em centavos pelo maior resto (Rateio). Cobre promoções e
-     * ajuste manual (com sinal); na cortesia todo líquido fica zero. Itens de
-     * bruto zero só recebem parte se todos forem zero (aí pela quantidade).
-     */
     public void ratearDesconto() {
         if (valorCobrado == null) throw new IllegalStateException("Registre os valores da venda antes do rateio.");
         long[] brutos = itens.stream()
@@ -241,7 +209,6 @@ public class Venda {
         for (int i = 0; i < itens.size(); i++) itens.get(i).registrarRateio(Rateio.reais(partes[i]));
     }
 
-    /** Soma os subtotais de todos os itens. */
     public BigDecimal calcularTotal() {
         return itens.stream().map(ItemVenda::getSubtotal).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
@@ -250,7 +217,6 @@ public class Venda {
         return itens.stream().mapToInt(ItemVenda::getQuantidade).sum();
     }
 
-    /** Texto curto para a tabela do historico: "X-Burger x2, Agua x1". */
     public String getResumoProdutos() {
         return itens.stream()
                 .map(i -> i.getProduto().getNome() + " x" + i.getQuantidade())

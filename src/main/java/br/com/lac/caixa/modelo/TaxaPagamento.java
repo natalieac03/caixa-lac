@@ -15,10 +15,7 @@ import java.time.LocalDateTime;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/**
- * Taxa de uma forma de pagamento a partir de uma data: percentual sobre o valor
- * da parte + valor fixo por transação (ex.: crédito 3,5% + R$ 0,00).
- */
+/** Taxa de uma forma de pagamento a partir de uma data: percentual mais valor fixo. */
 @Entity
 public class TaxaPagamento {
 
@@ -31,7 +28,6 @@ public class TaxaPagamento {
     @Column(nullable = false, length = 20)
     private FormaPagamento forma;
 
-    /** Em pontos percentuais: 3.5 = 3,5%. */
     @Column(nullable = false, precision = 7, scale = 4)
     private BigDecimal percentual;
 
@@ -59,7 +55,6 @@ public class TaxaPagamento {
         alterar(percentual, valorFixo, agora);
     }
 
-    /** Mesma forma e mesma vigência: troca os valores (só para vigência de hoje em diante). */
     public void alterar(BigDecimal percentual, BigDecimal valorFixo, LocalDateTime agora) {
         BigDecimal p = percentual == null ? BigDecimal.ZERO : percentual;
         BigDecimal f = valorFixo == null ? BigDecimal.ZERO : valorFixo;
@@ -74,10 +69,6 @@ public class TaxaPagamento {
         this.registradaEm = agora;
     }
 
-    /**
-     * Taxa estimada de uma parte: valor x percentual / 100 + fixo, arredondada
-     * ao centavo, com meio centavo para o par (HALF_EVEN), como o resto das finanças.
-     */
     public BigDecimal estimar(BigDecimal valor) {
         return valor.multiply(percentual)
                 .divide(BigDecimal.valueOf(100))

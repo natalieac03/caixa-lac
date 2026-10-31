@@ -12,7 +12,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** O estoque nas finanças (painel e alertas): giro, cobertura, produtos parados e o valor do estoque. */
+/** O estoque nas finanças: giro, cobertura, produtos parados e valor do estoque. */
 @Service
 @Transactional(readOnly = true)
 public class EstoqueFinanceiro {
@@ -22,7 +22,6 @@ public class EstoqueFinanceiro {
         this.consultas = consultas;
     }
 
-    /** Giro e cobertura de cada produto ativo (do filtro de categoria, se houver). */
     public List<LinhaGiro> giro(FiltroFinancas f) {
         long dias = f.dias();
         List<LinhaGiro> linhas = new ArrayList<>();
@@ -52,7 +51,6 @@ public class EstoqueFinanceiro {
         return linhas;
     }
 
-    /** Produtos ativos com estoque e sem venda no período. */
     public List<LinhaGiro> parados(FiltroFinancas f) {
         List<LinhaGiro> linhas = new ArrayList<>();
         for (var e : consultas.parados(f)) {
@@ -73,7 +71,6 @@ public class EstoqueFinanceiro {
         return linhas;
     }
 
-    /** Valor do estoque de agora a custo e a preço (produtos ativos do filtro de categoria). */
     public Financas.ValorEstoque valorDoEstoque(FiltroFinancas f) {
         var v = consultas.valorDoEstoque(f);
         return new Financas.ValorEstoque(dinheiro(v.aCusto()), dinheiro(v.aPreco()), v.produtosSemCusto());

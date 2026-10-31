@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+/** Tela de despesas e das categorias de despesa. */
 @Controller
 public class DespesaController {
     private final DespesaService despesas;

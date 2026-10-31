@@ -16,13 +16,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-/**
- * Erros viram mensagem na tela de origem, em vez de página de erro. A prévia
- * da venda (chamada pelo JS) e quem pede JSON recebem {"erro": "..."}.
- * - RegraDeNegocioException e validação: a mensagem é para a pessoa no caixa.
- * - IllegalArgumentException (inclui NumberFormatException): erro de programa;
- *   vai para o log com a pilha e a tela mostra só "Algo deu errado".
- */
+/** Transforma erros em mensagem na tela de origem ou em JSON para o JS. */
 @ControllerAdvice
 public class ErrosDeNegocio {
 
@@ -35,7 +29,6 @@ public class ErrosDeNegocio {
         return responder(ex.getMessage(), HttpStatus.BAD_REQUEST, request, flash);
     }
 
-    /** Mercado Pago fora do ar ou recusando: a tela oferece o Pix manual. */
     @ExceptionHandler(MercadoPagoException.class)
     public Object mercadoPagoFora(MercadoPagoException ex, HttpServletRequest request, RedirectAttributes flash) {
         return responder(
@@ -51,7 +44,6 @@ public class ErrosDeNegocio {
         return responder(ALGO_DEU_ERRADO, HttpStatus.INTERNAL_SERVER_ERROR, request, flash);
     }
 
-    /** Parâmetros anotados nos controllers (ex.: @Min na quantidade). */
     @ExceptionHandler(HandlerMethodValidationException.class)
     public Object parametroInvalido(
             HandlerMethodValidationException ex, HttpServletRequest request, RedirectAttributes flash) {
@@ -76,11 +68,6 @@ public class ErrosDeNegocio {
                 || (accept != null && accept.contains("application/json"));
     }
 
-    /**
-     * Volta para a página de onde veio (o Referer), mantendo filtros como os do
-     * histórico, se ela for do próprio site. Só o caminho e a busca são usados,
-     * nunca o endereço de outro site. Sem Referer válido, a lista da área.
-     */
     static String origem(HttpServletRequest request) {
         String referer = request.getHeader("Referer");
         if (referer != null) {
@@ -97,7 +84,6 @@ public class ErrosDeNegocio {
                     return caminho + (uri.getRawQuery() == null ? "" : "?" + uri.getRawQuery());
                 }
             } catch (IllegalArgumentException refererMalFormado) {
-                // cai na lista da área
             }
         }
         String uri = request.getRequestURI();

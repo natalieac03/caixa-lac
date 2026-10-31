@@ -20,23 +20,14 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
-/**
- * Pix pela Orders API do Mercado Pago (POST/GET /v1/orders, POST
- * /v1/orders/{id}/cancel), no formato da documentação oficial:
- * type=online, processing_mode=automatic, pagamento pix/bank_transfer com
- * expiration_time ISO 8601 (mínimo 30 minutos) e payer.email obrigatório.
- * Timeout de 5 s; um 429 é repetido uma vez depois do Retry-After. Qualquer
- * falha vira MercadoPagoException, e o log nunca mostra o token.
- */
+/** Cliente do Pix pela Orders API do Mercado Pago: criar, consultar e cancelar. */
 @Component
 public class MercadoPagoPix {
 
     private static final Logger LOG = LoggerFactory.getLogger(MercadoPagoPix.class);
 
-    /** QR do Pix criado. status/statusDetail como vieram (ex.: action_required/waiting_transfer). */
     public record Cobranca(String orderId, String status, String statusDetail, String qrCode, String qrCodeBase64) {}
 
-    /** Situação da order. valorPago = total_paid_amount (ou soma dos paid_amount), null se não veio. */
     public record Situacao(
             String orderId, String status, String statusDetail, BigDecimal valorPago, String externalReference) {}
 
@@ -60,10 +51,6 @@ public class MercadoPagoPix {
         return config.isLigado();
     }
 
-    /**
-     * Cria o Pix. A referência vai como X-Idempotency-Key e external_reference:
-     * pedir de novo com a mesma referência devolve a mesma order.
-     */
     public Cobranca criarPix(BigDecimal valor, String referencia) {
         exigirLigado();
         String quantia = valor.setScale(2, RoundingMode.UNNECESSARY).toPlainString();
@@ -113,7 +100,6 @@ public class MercadoPagoPix {
         return situacao(order);
     }
 
-    /** Cancela a order pendente (só created/action_required; outra situação dá 409). */
     public Situacao cancelar(String orderId) {
         exigirLigado();
         JsonNode order = executar(
@@ -169,7 +155,6 @@ public class MercadoPagoPix {
         }
     }
 
-    /** Executa a chamada; um 429 é repetido uma vez, depois do Retry-After (limitado). */
     private JsonNode executar(String operacao, Supplier<JsonNode> chamada) {
         for (int tentativa = 1; ; tentativa++) {
             try {
@@ -192,7 +177,6 @@ public class MercadoPagoPix {
                 LOG.warn(mensagem);
                 throw new MercadoPagoException(mensagem, 0, null, null);
             } catch (RestClientException e) {
-                // Resposta que não dá para ler (não é JSON, proxy no meio...).
                 String mensagem = "Mercado Pago: " + operacao + " devolveu uma resposta inválida";
                 LOG.warn(mensagem);
                 throw new MercadoPagoException(mensagem, 0, null, null);
@@ -207,7 +191,6 @@ public class MercadoPagoPix {
             try {
                 espera = Duration.ofSeconds(Long.parseLong(valor.trim()));
             } catch (NumberFormatException ignorado) {
-                // Retry-After em data HTTP: usa a espera padrão
             }
         }
         return espera.compareTo(config.getEsperaMaximaRetry()) > 0 ? config.getEsperaMaximaRetry() : espera;
@@ -221,7 +204,6 @@ public class MercadoPagoPix {
         }
     }
 
-    /** O "code" do primeiro erro do corpo ({"errors":[{"code":"..."}]}), se houver. */
     private String codigoDoErro(String corpo) {
         try {
             JsonNode no = json.readTree(corpo);

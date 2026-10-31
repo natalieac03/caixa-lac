@@ -4,6 +4,7 @@ import java.util.TimeZone;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+/** Ponto de entrada: fixa o fuso de Brasília e sobe o Spring Boot. */
 @SpringBootApplication
 public class CaixaApplication {
     public static void main(String[] args) {
@@ -11,10 +12,6 @@ public class CaixaApplication {
         SpringApplication.run(CaixaApplication.class, args);
     }
 
-    /**
-     * A JVM em Brasília antes de subir o Spring: o que ainda usar o fuso padrão
-     * (logs, bibliotecas) fica igual ao relógio da aplicação (RelogioConfig).
-     */
     static void fixarFuso() {
         TimeZone.setDefault(TimeZone.getTimeZone("America/Sao_Paulo"));
     }

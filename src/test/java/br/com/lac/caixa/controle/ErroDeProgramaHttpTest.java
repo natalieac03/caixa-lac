@@ -23,7 +23,7 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** Erro de programa (exceção inesperada): a pilha vai para o log e a tela mostra só "Algo deu errado". */
+/** Erro de programa: pilha no log e "Algo deu errado" na tela. */
 @SpringBootTest(
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:erro_programa;DB_CLOSE_DELAY=-1"
         })

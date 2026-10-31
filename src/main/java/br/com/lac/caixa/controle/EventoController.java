@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+/** Tela de eventos e os botões "Iniciar evento" e "Encerrar". */
 @Controller
 public class EventoController {
     private final EventoService eventos;
@@ -30,7 +31,6 @@ public class EventoController {
         return "eventos";
     }
 
-    /** "Iniciar evento" (topo e tela inicial): só o nome; começa agora, sem fim. */
     @PostMapping("/eventos/iniciar")
     public String iniciar(
             @RequestParam(required = false) String nome, HttpServletRequest request, RedirectAttributes flash) {
@@ -40,7 +40,6 @@ public class EventoController {
         return "redirect:" + ErrosDeNegocio.origem(request);
     }
 
-    /** "Encerrar": grava o fim agora. */
     @PostMapping("/eventos/{id}/encerrar")
     public String encerrar(@PathVariable Long id, HttpServletRequest request, RedirectAttributes flash) {
         var e = eventos.encerrar(id);
@@ -80,7 +79,6 @@ public class EventoController {
             @RequestParam(required = false) String metaReceita,
             @RequestParam(required = false) String metaLucro,
             RedirectAttributes flash) {
-        // Campos de meta vazios = sem meta.
         var e = eventos.editar(
                 id,
                 nome,
@@ -95,12 +93,10 @@ public class EventoController {
 
     private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm");
 
-    /** Fim vazio = evento em andamento. */
     static LocalDateTime fimOpcional(String texto) {
         return texto == null || texto.isBlank() ? null : dataHora(texto);
     }
 
-    /** "2024-06-01T10:00" (campo datetime-local). */
     static LocalDateTime dataHora(String texto) {
         if (texto == null || texto.isBlank()) throw new RegraDeNegocioException("Informe o início do evento.");
         try {

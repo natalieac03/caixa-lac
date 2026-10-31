@@ -5,12 +5,7 @@ import java.math.RoundingMode;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * Gráficos como imagem estática (SVG gerado no servidor) para o relatório
- * impresso: sai igual no papel e no PDF, sem JavaScript. Os rótulos e os
- * valores escritos vêm prontos; aqui só se converte valor em comprimento de barra.
- * Cores fixas (boas no papel); a segunda série vai listrada, para não depender de cor.
- */
+/** Gráficos em SVG gerados no servidor para o relatório impresso. */
 public final class GraficoSvg {
     private static final String ROXO = "#8a00f4";
     private static final String LARANJA = "#f48d00";
@@ -37,7 +32,6 @@ public final class GraficoSvg {
         return valor.divide(maximo, 6, RoundingMode.HALF_EVEN).doubleValue();
     }
 
-    /** Barras horizontais (valores >= 0), uma por rótulo, com o valor escrito ao lado. */
     public static String barrasHorizontais(
             String titulo, List<String> rotulos, List<BigDecimal> valores, List<String> textos) {
         int linha = 26;
@@ -81,10 +75,6 @@ public final class GraficoSvg {
         return svg.append("</svg>").toString();
     }
 
-    /**
-     * Duas séries por grupo (ex.: receita e lucro por evento), em colunas, com a
-     * linha do zero (aceita lucro negativo) e a legenda escrita.
-     */
     public static String colunasAgrupadas(
             String titulo,
             List<String> grupos,
@@ -119,7 +109,6 @@ public final class GraficoSvg {
                 .append("\"/>")
                 .append(
                         "<line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"6\" stroke=\"#ffffff\" stroke-width=\"2\"/></pattern></defs>");
-        // Legenda
         svg.append("<rect x=\"20\" y=\"28\" width=\"14\" height=\"14\" fill=\"")
                 .append(ROXO)
                 .append("\"/>")

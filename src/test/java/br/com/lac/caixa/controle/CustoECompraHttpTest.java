@@ -26,7 +26,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** Custo no cadastro/edição, selo "sem custo", entrada de estoque e custo congelado na venda. */
+/** Custo no cadastro e na edição, entrada por compra e custo congelado na venda. */
 @SpringBootTest(
         properties = {"spring.profiles.active=test", "spring.datasource.url=jdbc:h2:mem:custo;DB_CLOSE_DELAY=-1"})
 @AutoConfigureMockMvc
@@ -98,14 +98,12 @@ class CustoECompraHttpTest {
     @Test
     @DisplayName("Edição: custo vazio mantém o atual (4 casas), novo valor troca, \"sem custo\" apaga")
     void edicaoDoCusto() throws Exception {
-        // Arrange: custo médio com 4 casas
         var p = new Produto("Editar Custo " + UUID.randomUUID(), new BigDecimal("6"), 3);
         p.setCategoria(cat);
         p.setCustoUnitario(new BigDecimal("2.3333"));
         p = produtos.save(p);
         String url = "/estoque/" + p.getId() + "/editar";
 
-        // Act / Assert
         mvc.perform(post(url)
                 .sessionAttr("autenticado", true)
                 .param("nome", p.getNome())
@@ -136,12 +134,10 @@ class CustoECompraHttpTest {
     @Test
     @DisplayName("Entrada de estoque: soma ao estoque, recalcula o custo médio e guarda a compra")
     void entradaDeEstoque() throws Exception {
-        // Arrange: 10 un. a R$ 2,00
         var p = new Produto("Compra " + UUID.randomUUID(), new BigDecimal("6"), 10);
         p.setCustoUnitario(new BigDecimal("2"));
         p = produtos.save(p);
 
-        // Act: compra 5 un. por R$ 15,00
         mvc.perform(post("/estoque/compra")
                         .sessionAttr("autenticado", true)
                         .param("produtoId", p.getId().toString())
@@ -152,7 +148,6 @@ class CustoECompraHttpTest {
                 .andExpect(redirectedUrl("/estoque"))
                 .andExpect(flash().attribute("sucesso", containsString("Custo médio: R$ 2,33")));
 
-        // Assert
         var depois = produtos.findById(p.getId()).orElseThrow();
         assertEquals(15, depois.getQuantidade());
         assertEquals(new BigDecimal("2.3333"), depois.getCustoUnitario());

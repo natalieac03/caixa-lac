@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Layout comum: cabeçalho, barra superior, menu, sininho, evento em andamento e avisos. -->
 <html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
 <head th:fragment="head(titulo)">
     <meta charset="UTF-8">
@@ -11,14 +12,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=JetBrains+Mono:wght@500;600&family=Nunito+Sans:ital,wght@0,400;0,600;0,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/estilo.css}">
     <script th:inline="none">
-        /* Tema claro/escuro: aplica a escolha salva antes de desenhar a página (sem piscar). */
         (function () {
             try {
                 var t = localStorage.getItem('lac-tema');
                 if (t === 'claro' || t === 'escuro') document.documentElement.setAttribute('data-tema', t);
             } catch (e) {}
         })();
-        /* Menu Finanças e "Iniciar evento": fecham ao clicar fora ou com Esc. */
         document.addEventListener('click', function (e) {
             document.querySelectorAll('details.menu-grupo[open], details.iniciar-evento[open]').forEach(function (d) {
                 if (!d.contains(e.target)) d.removeAttribute('open');
@@ -43,7 +42,6 @@
 </head>
 <body>
 
-<!--/* Barra superior. Ícones: Lucide, desenhados inline com currentColor. */-->
 <nav th:fragment="nav(ativo)" class="topo" aria-label="Navegação principal">
     <div class="topo-interno">
         <a class="marca" th:href="@{/}">Caixa LAC</a>
@@ -76,7 +74,6 @@
                 <svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>
                 Fechamento
             </a>
-            <!--/* Finanças agrupa o painel, eventos, despesas e taxas (details: abre sem JavaScript). */-->
             <details class="menu-grupo" th:with="noGrupo=${ativo == 'financas' or ativo == 'eventos' or ativo == 'despesas' or ativo == 'taxas'}">
                 <summary th:classappend="${noGrupo} ? 'ativo'">
                     <svg class="icone" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>
@@ -105,8 +102,6 @@
     </div>
 </nav>
 
-<!--/* Evento em andamento: selo "Nome, desde 14:00" com Encerrar (confirmação); sem evento aberto,
-     "Iniciar evento" pede só o nome e começa agora. */-->
 <div th:fragment="evento-topo" class="evento-topo" th:with="ev=${eventoDaTela.aberto}">
     <th:block th:if="${ev != null}">
         <span class="selo-evento" id="selo-evento" role="status">
@@ -133,8 +128,6 @@
     </details>
 </div>
 
-<!--/* Sininho: avisos calculados no servidor (AlertasService via AvisosNaTela); o painel já vem
-     desenhado e o avisos.js só conta os novos (localStorage), abre/fecha e atualiza a cada 60 s. */-->
 <div th:fragment="sino" class="avisos" th:with="al=${avisosDaTela.alertas}">
     <button type="button" id="botao-sino" class="botao-sino" aria-expanded="false" aria-controls="painel-avisos"
             th:attr="data-url=@{/avisos}" title="Avisos">
