@@ -25,6 +25,7 @@ import br.com.lac.caixa.servico.PagamentoInformado;
 import br.com.lac.caixa.servico.TaxaService;
 import br.com.lac.caixa.servico.financas.ResumoFinanceiro;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -64,6 +65,9 @@ class PostgresBancoNovoTest {
 
     @Autowired
     JdbcTemplate jdbc;
+
+    @Autowired
+    Clock relogio;
 
     @Autowired
     MockMvc mvc;
@@ -170,7 +174,7 @@ class PostgresBancoNovoTest {
                 .venda();
 
         caixa.cancelarVenda(v.getId(), "Ensaio");
-        estoque.registrarCompra(p.getId(), 5, new BigDecimal("10.00"), LocalDate.now(), "fornecedor");
+        estoque.registrarCompra(p.getId(), 5, new BigDecimal("10.00"), LocalDate.now(relogio), "fornecedor");
         estoque.adicionarUnidades(p.getId(), 2);
         estoque.removerUnidades(p.getId(), 4);
 
@@ -228,11 +232,11 @@ class PostgresBancoNovoTest {
                 despesas.filtrar(new DespesaService.Filtro(null, LocalDate.of(2024, 6, 1), null))
                         .size());
 
-        taxas.definir(FormaPagamento.CREDITO, new BigDecimal("3.5"), null, LocalDate.now());
+        taxas.definir(FormaPagamento.CREDITO, new BigDecimal("3.5"), null, LocalDate.now(relogio));
         assertEquals(
                 0,
                 new BigDecimal("3.5")
-                        .compareTo(taxas.vigente(FormaPagamento.CREDITO, LocalDate.now())
+                        .compareTo(taxas.vigente(FormaPagamento.CREDITO, LocalDate.now(relogio))
                                 .orElseThrow()
                                 .getPercentual()));
         assertEquals(0, taxas.vendasSemTaxaRegistrada());
@@ -256,7 +260,7 @@ class PostgresBancoNovoTest {
                         null,
                         UUID.randomUUID().toString())
                 .venda();
-        antes.setDataHora(LocalDateTime.now().minusMinutes(10));
+        antes.setDataHora(LocalDateTime.now(relogio).minusMinutes(10));
         vendas.saveAndFlush(antes);
         var feira = eventos.iniciar("Feira PG aberta");
         try {
@@ -271,8 +275,8 @@ class PostgresBancoNovoTest {
             assertEquals(
                     feira.getId(),
                     eventos.doMomento(durante.getDataHora()).orElseThrow().getId());
-            var hoje = LocalDate.now();
-            var agora = LocalDateTime.now();
+            var hoje = LocalDate.now(relogio);
+            var agora = LocalDateTime.now(relogio);
             var desde = antes.getDataHora().toLocalDate();
             var diaADia = new FiltroHistorico(null, desde, hoje, "").comDiaADia(agora);
             var ids = consultaHistorico
@@ -292,7 +296,7 @@ class PostgresBancoNovoTest {
         } finally {
             jdbc.update(
                     "update evento set fim = ? where id = ?",
-                    LocalDateTime.now().plusSeconds(1),
+                    LocalDateTime.now(relogio).plusSeconds(1),
                     feira.getId());
         }
     }
