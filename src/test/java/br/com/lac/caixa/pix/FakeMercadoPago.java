@@ -2,6 +2,7 @@ package br.com.lac.caixa.pix;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -60,6 +61,12 @@ public class FakeMercadoPago extends Dispatcher {
         return orders.get(id);
     }
 
+    public List<Order> ordersDoToken(String token) {
+        return orders.values().stream()
+                .filter(o -> o.referencia.startsWith(token))
+                .toList();
+    }
+
     public void pagar(String id, String valor) {
         Order o = orders.get(id);
         o.status = "processed";
@@ -80,6 +87,8 @@ public class FakeMercadoPago extends Dispatcher {
     }
 
     public volatile Runnable aoConsultar;
+
+    public volatile Runnable aoCriar;
 
     public void expirar(String id) {
         Order o = orders.get(id);
@@ -129,6 +138,8 @@ public class FakeMercadoPago extends Dispatcher {
         ultimaCriacao = corpo;
         String existente = chave == null ? null : porIdempotencia.get(chave);
         if (existente != null) return resposta(201, corpo(orders.get(existente)));
+        Runnable gancho = aoCriar;
+        if (gancho != null) gancho.run();
         criacoes.incrementAndGet();
         String id = "ORD" + String.format("%04d", sequencia.incrementAndGet());
         Order o = new Order(

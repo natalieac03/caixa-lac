@@ -36,6 +36,17 @@ class CobrancaPixTest {
         assertEquals("ORD1", c.getOrderId());
     }
 
+    @Test
+    @DisplayName("Pendente com order: não aceita outra order por cima (a corrida não sobrescreve)")
+    void registrarOrderRecusaPendenteComOrder() {
+        var c = pendente("10");
+        var erro = assertThrows(
+                RegraDeNegocioException.class,
+                () -> c.registrarOrder(new BigDecimal("12"), "ORD2", "qr", "b64", AGORA));
+        assertTrue(erro.getMessage().contains("já tem um Pix"), erro.getMessage());
+        assertEquals("ORD1", c.getOrderId());
+    }
+
     @ParameterizedTest(name = "{0} -> ESTORNADA")
     @DisplayName("Estorno e contestação no Mercado Pago: a cobrança vira ESTORNADA (nunca PAGA)")
     @ValueSource(strings = {"refunded", "charged_back"})

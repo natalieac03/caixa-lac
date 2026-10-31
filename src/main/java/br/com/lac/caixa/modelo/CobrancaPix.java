@@ -93,6 +93,9 @@ public class CobrancaPix {
             throw new RegraDeNegocioException(
                     "Esta parte foi paga no Pix com valor diferente; resolva à mão antes de gerar outro.");
         }
+        if (status == StatusCobranca.PENDENTE && orderId != null) {
+            throw new RegraDeNegocioException("Esta parte já tem um Pix aguardando pagamento; cancele-o antes.");
+        }
         exigirValor(novoValor);
         this.valor = novoValor;
         this.tentativa++;

@@ -12,16 +12,23 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import br.com.lac.caixa.RelogioDeTeste;
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
+import br.com.lac.caixa.modelo.CobrancaPix;
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.modelo.OrigemPagamento;
 import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.modelo.StatusCobranca;
 import br.com.lac.caixa.pix.FakeMercadoPago;
+import br.com.lac.caixa.repositorio.CobrancaPixRepository;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.sql.DataSource;
 import okhttp3.mockwebserver.MockWebServer;
@@ -101,6 +108,69 @@ class PixQueSomeTest {
     @AfterEach
     void semGancho() {
         FAKE.aoConsultar = null;
+        FAKE.aoCriar = null;
+    }
+
+    @Autowired
+    CobrancaPixRepository repositorio;
+
+    /** Segura no Mercado Pago falso a primeira criação de order até o teste liberar. */
+    CountDownLatch[] segurarPrimeiraCriacao() {
+        var chegou = new CountDownLatch(1);
+        var liberar = new CountDownLatch(1);
+        var primeira = new AtomicBoolean(true);
+        FAKE.aoCriar = () -> {
+            if (!primeira.compareAndSet(true, false)) return;
+            chegou.countDown();
+            try {
+                liberar.await(10, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        };
+        return new CountDownLatch[] {chegou, liberar};
+    }
+
+    void corrida(String token) throws Exception {
+        var travas = segurarPrimeiraCriacao();
+        var executor = Executors.newSingleThreadExecutor();
+        try {
+            Future<CobrancaPix> primeira = executor.submit(() -> cobrancas.gerar(token, 0, new BigDecimal("10")));
+            assertTrue(travas[0].await(10, TimeUnit.SECONDS), "a primeira criação não chegou ao Mercado Pago");
+            CobrancaPix segunda = cobrancas.gerar(token, 0, new BigDecimal("12"));
+            travas[1].countDown();
+            CobrancaPix daPrimeira = primeira.get(10, TimeUnit.SECONDS);
+
+            CobrancaPix linha = repositorio.findByTokenAndParte(token, 0).orElseThrow();
+            assertEquals(segunda.getOrderId(), linha.getOrderId(), "a linha tem a order que a tela mostrou");
+            assertEquals(linha.getOrderId(), daPrimeira.getOrderId(), "as duas telas mostram a mesma order");
+            assertEquals(StatusCobranca.PENDENTE, linha.getStatus());
+            assertEquals(0, new BigDecimal("12").compareTo(linha.getValor()));
+            var perdedora = FAKE.ordersDoToken(token).stream()
+                    .filter(o -> o.valor.compareTo(new BigDecimal("10")) == 0)
+                    .findFirst()
+                    .orElseThrow();
+            assertEquals("canceled", perdedora.status, "a order que perdeu foi cancelada no Mercado Pago");
+        } finally {
+            travas[1].countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    @DisplayName(
+            "Dois gerar da mesma parte ao mesmo tempo, sem linha: a segunda linha bate na chave única e cancela a sua order")
+    void corridaComLinhaNova() throws Exception {
+        corrida(UUID.randomUUID().toString());
+    }
+
+    @Test
+    @DisplayName("Dois gerar da mesma parte ao mesmo tempo, com o Pix anterior expirado: não sobrescreve a order nova")
+    void corridaComLinhaExistente() throws Exception {
+        String token = UUID.randomUUID().toString();
+        FAKE.expirar(cobrancas.gerar(token, 0, new BigDecimal("8")).getOrderId());
+        avancarSegundos(10);
+        corrida(token);
     }
 
     void avancarSegundos(long s) {

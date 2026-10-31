@@ -19,6 +19,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -114,22 +115,46 @@ public class CobrancaPixService {
         return criarOrder(c, valor);
     }
 
+    private record Gravacao(CobrancaPix cobranca, boolean descartouOrder) {}
+
     private CobrancaPix criarOrder(CobrancaPix base, BigDecimal valor) {
         String referencia = base.referenciaDaProximaTentativa(valor);
         var order = mp.criarPix(valor, referencia);
         if (order.orderId() == null || order.qrCode() == null) {
             throw new MercadoPagoException("Mercado Pago: criar Pix respondeu sem order ou sem QR", 0, null, null);
         }
-        return transacao.execute(st -> {
-            CobrancaPix c = base.getId() == null
-                    ? base
-                    : cobrancas.buscarPorIdParaAtualizar(base.getId()).orElseThrow();
-            if (order.orderId().equals(c.getOrderId())) return c;
-            c.registrarOrder(valor, order.orderId(), order.qrCode(), order.qrCodeBase64(), agora());
-            CobrancaPix salva = cobrancas.save(c);
-            auditoria.registrar("pix_gerado", "order", order.orderId(), "valor", valor, "parte", c.getParte());
-            return salva;
-        });
+        Gravacao gravacao;
+        try {
+            gravacao = transacao.execute(st -> {
+                CobrancaPix c = base.getId() == null
+                        ? base
+                        : cobrancas.buscarPorIdParaAtualizar(base.getId()).orElseThrow();
+                if (order.orderId().equals(c.getOrderId())) return new Gravacao(c, false);
+                if (c.getStatus() == StatusCobranca.PENDENTE && c.getOrderId() != null) return new Gravacao(c, true);
+                c.registrarOrder(valor, order.orderId(), order.qrCode(), order.qrCodeBase64(), agora());
+                CobrancaPix salva = cobrancas.saveAndFlush(c);
+                auditoria.registrar("pix_gerado", "order", order.orderId(), "valor", valor, "parte", c.getParte());
+                return new Gravacao(salva, false);
+            });
+        } catch (DataIntegrityViolationException outraLinhaDaMesmaParte) {
+            if (base.getId() != null) throw outraLinhaDaMesmaParte;
+            descartar(order.orderId());
+            return cobrancas
+                    .findByTokenAndParte(base.getToken(), base.getParte())
+                    .orElseThrow(() -> outraLinhaDaMesmaParte);
+        }
+        if (gravacao.descartouOrder()) descartar(order.orderId());
+        return gravacao.cobranca();
+    }
+
+    private void descartar(String orderId) {
+        try {
+            mp.cancelar(orderId);
+            auditoria.registrar("pix_descartado", "order", orderId);
+        } catch (MercadoPagoException e) {
+            LOG.warn(
+                    "Pix {} criado numa corrida e não cancelado no Mercado Pago: {}", paraLog(orderId), e.getMessage());
+        }
     }
 
     public CobrancaPix consultar(String token, int parte) {
