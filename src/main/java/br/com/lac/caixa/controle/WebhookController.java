@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
 /** Webhook do Mercado Pago: confere a assinatura e atualiza a cobrança em segundo plano. */
@@ -28,17 +27,19 @@ public class WebhookController {
     private final CobrancaPixService cobrancas;
     private final Executor avisos;
     private final Clock relogio;
-    private final ObjectMapper json = new JsonMapper();
+    private final JsonMapper json;
 
     public WebhookController(
             MercadoPagoConfig config,
             CobrancaPixService cobrancas,
             @Qualifier("avisosMercadoPago") Executor avisos,
-            Clock relogio) {
+            Clock relogio,
+            JsonMapper json) {
         this.config = config;
         this.cobrancas = cobrancas;
         this.avisos = avisos;
         this.relogio = relogio;
+        this.json = json;
     }
 
     @PostMapping("/webhooks/mercadopago")

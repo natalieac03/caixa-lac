@@ -59,6 +59,32 @@ adiantadas: confira as poucas que foram corrigidas e ajuste na tela. **O relógi
 novo e a V20 têm de subir juntos.** Não suba só uma parte, senão as vendas feitas
 nesse intervalo seriam deslocadas de novo.
 
+#### Eventos dos botões Iniciar e Encerrar entre 30/10 21h27 e a V20
+
+Entre o deploy de 30/10 às 21h27 e o deploy que aplicou a V20, os botões
+**Iniciar evento** e **Encerrar** gravaram a hora UTC (3 h adiantada) em
+`evento.inicio` e `evento.fim`. A V20 **não** converte esses campos, porque eles
+normalmente são digitados no formulário. Confira e corrija à mão:
+
+1. Rode `scripts/conferir-producao.sql`. A seção 6 mostra quando a V20 foi
+   aplicada (`installed_on`) e os eventos com início ou fim depois de 30/10 21h27.
+2. Nos **Logs** do serviço do app no Railway, filtre o intervalo entre os dois
+   deploys pelas linhas de auditoria `evento=evento_iniciado` e
+   `evento=evento_encerrado`. Anote os ids:
+   - `evento_iniciado id=N`: o início do evento N foi gravado pelo botão;
+   - `evento_encerrado id=N fim=...`: o fim do evento N foi gravado pelo botão,
+     a não ser que esse fim seja o início do evento seguinte (aí ele foi digitado
+     e está certo).
+3. Para cada id, tire 3 h **só do campo que o botão gravou**, numa sessão
+   própria (o script de conferência é só leitura e traz o exemplo comentado):
+
+   ```sql
+   UPDATE evento SET inicio = inicio - INTERVAL '3 hours' WHERE id = N;  -- evento_iniciado
+   UPDATE evento SET fim    = fim    - INTERVAL '3 hours' WHERE id = N;  -- evento_encerrado
+   ```
+4. Rode a conferência de novo e confira na tela Eventos que nenhum evento se
+   sobrepõe ao vizinho. O arquivo da V20 não muda.
+
 ## 2. `railway.json` e o painel do Railway
 
 O `railway.json` na raiz define o deploy:

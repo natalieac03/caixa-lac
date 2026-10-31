@@ -20,7 +20,7 @@
     <properties>
         <java.version>21</java.version>
         <h2.version>2.3.232</h2.version>
-        <!-- Flyway, Jackson e Testcontainers vêm nas versões do Boot 3.5 (sem forçar). -->
+        <!-- Flyway, Jackson e Testcontainers vêm nas versões do Spring Boot 4.1 (sem forçar); o H2 fica fixo (veja docs/DECISOES.md). -->
     </properties>
 
     <dependencies>

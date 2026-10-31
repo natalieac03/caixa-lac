@@ -16,6 +16,7 @@ BEGIN TRANSACTION READ ONLY;
 SELECT to_regclass('public.pagamento_venda') IS NOT NULL       AS tem_pagamento_venda,
        to_regclass('public.flyway_schema_history') IS NOT NULL AS tem_flyway,
        to_regclass('public.venda_itens') IS NOT NULL           AS tem_venda_itens,
+       to_regclass('public.evento') IS NOT NULL                AS tem_evento,
        EXISTS (SELECT 1 FROM information_schema.columns
                WHERE table_schema = 'public' AND table_name = 'venda' AND column_name = 'cancelada')     AS tem_cancelada,
        EXISTS (SELECT 1 FROM information_schema.columns
@@ -102,5 +103,30 @@ FROM item_venda i WHERE NOT EXISTS (SELECT 1 FROM venda_itens vi WHERE vi.itens_
 \echo
 \echo '== 5. Vendas por hora do dia (pico de madrugada = horas gravadas em UTC; pico à noite = Brasília)'
 SELECT EXTRACT(HOUR FROM data_hora) h, COUNT(*) FROM venda GROUP BY 1 ORDER BY 1;
+
+\echo
+\echo '== 6. Eventos dos botões Iniciar/Encerrar entre o deploy de 30/10 21h27 e a V20'
+\echo 'Nesse intervalo o relógio gravava a hora UTC, e a V20 não converte evento.inicio nem evento.fim.'
+\echo 'Cruze os ids abaixo com as linhas de auditoria evento_iniciado e evento_encerrado dos logs do Railway.'
+\if :tem_flyway
+SELECT version, installed_on AS aplicada_em FROM flyway_schema_history WHERE version = '20';
+\endif
+\if :tem_evento
+SELECT id, nome, inicio, fim FROM evento
+WHERE inicio >= TIMESTAMP '2026-10-30 21:27' OR fim >= TIMESTAMP '2026-10-30 21:27'
+ORDER BY id;
+\endif
+
+-- Correção (NÃO roda aqui: este script é só leitura). Use só os ids que aparecem nos logs
+-- do Railway, e só no campo que o botão gravou, numa sessão própria:
+--
+--   Linha "evento=evento_iniciado id=N": o início foi gravado pelo botão Iniciar.
+--     UPDATE evento SET inicio = inicio - INTERVAL '3 hours' WHERE id = N;
+--
+--   Linha "evento=evento_encerrado id=N fim=...": o fim foi gravado pelo botão Encerrar,
+--   a não ser que esse fim seja o início do evento seguinte (aí ele foi digitado e está certo).
+--     UPDATE evento SET fim = fim - INTERVAL '3 hours' WHERE id = N;
+--
+-- Depois de corrigir, rode este script de novo e confira que os eventos não se sobrepõem.
 
 ROLLBACK;
