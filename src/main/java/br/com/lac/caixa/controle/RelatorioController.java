@@ -1,14 +1,7 @@
 package br.com.lac.caixa.controle;
 
-import br.com.lac.caixa.consulta.FiltroFinancas;
-import br.com.lac.caixa.servico.DespesaService;
-import br.com.lac.caixa.servico.EventoService;
-import br.com.lac.caixa.servico.financas.Financas.LinhaCategoria;
-import br.com.lac.caixa.servico.financas.Financas.LinhaForma;
-import br.com.lac.caixa.servico.financas.Financas.Metrica;
 import br.com.lac.caixa.servico.financas.Financas.ResumoDoEvento;
-import br.com.lac.caixa.servico.financas.OcorrenciasFinanceiras;
-import br.com.lac.caixa.servico.financas.PainelFinancas;
+import br.com.lac.caixa.servico.financas.RelatorioDoEvento;
 import br.com.lac.caixa.servico.financas.ResumoFinanceiro;
 import br.com.lac.caixa.util.Dinheiro;
 import br.com.lac.caixa.util.GraficoSvg;
@@ -21,74 +14,28 @@ import org.springframework.web.bind.annotation.PathVariable;
 /** Relatório do evento para imprimir e o comparativo entre eventos. */
 @Controller
 public class RelatorioController {
-    private final EventoService eventos;
-    private final PainelFinancas painel;
-    private final OcorrenciasFinanceiras ocorrencias;
+    private final RelatorioDoEvento relatorio;
     private final ResumoFinanceiro resumos;
-    private final DespesaService despesas;
 
-    public RelatorioController(
-            EventoService eventos,
-            PainelFinancas painel,
-            OcorrenciasFinanceiras ocorrencias,
-            ResumoFinanceiro resumos,
-            DespesaService despesas) {
-        this.eventos = eventos;
-        this.painel = painel;
-        this.ocorrencias = ocorrencias;
+    public RelatorioController(RelatorioDoEvento relatorio, ResumoFinanceiro resumos) {
+        this.relatorio = relatorio;
         this.resumos = resumos;
-        this.despesas = despesas;
     }
 
     @GetMapping("/eventos/{id}/relatorio")
     public String relatorio(@PathVariable Long id, Model model) {
-        var evento = eventos.buscar(id);
-        var filtro = FiltroFinancas.doEvento(eventos.periodo(id));
-        var p = painel.montar(filtro, Metrica.RECEITA);
-        var top = p.produtos().stream()
-                .limit(10)
-                .map(PainelFinancas.ProdutoAbc::produto)
-                .toList();
-        var filtroDespesas = new DespesaService.Filtro(id, null, null);
-        model.addAttribute("evento", evento);
-        model.addAttribute("periodo", eventos.periodo(evento));
-        model.addAttribute("painel", p);
-        model.addAttribute("top", top);
-        model.addAttribute("despesas", despesas.filtrar(filtroDespesas));
-        model.addAttribute("totalDespesas", p.resumo().despesas());
-        model.addAttribute("cancelamentos", ocorrencias.cancelamentos(filtro));
-        model.addAttribute("ajustes", ocorrencias.ajustesManuais(filtro));
-        model.addAttribute(
-                "graficoProdutos",
-                GraficoSvg.barrasHorizontais(
-                        "Top 10 produtos por receita líquida",
-                        top.stream().map(x -> x.nome()).toList(),
-                        top.stream().map(x -> x.receitaLiquida()).toList(),
-                        top.stream()
-                                .map(x -> Dinheiro.reais(x.receitaLiquida()))
-                                .toList()));
-        model.addAttribute(
-                "graficoCategorias",
-                GraficoSvg.barrasHorizontais(
-                        "Receita líquida por categoria",
-                        p.categorias().stream().map(LinhaCategoria::categoria).toList(),
-                        p.categorias().stream()
-                                .map(LinhaCategoria::receitaLiquida)
-                                .toList(),
-                        p.categorias().stream()
-                                .map(c -> Dinheiro.reais(c.receitaLiquida()))
-                                .toList()));
-        var formas = p.formas().stream().filter(l -> l.vendas() > 0).toList();
-        model.addAttribute(
-                "graficoFormas",
-                GraficoSvg.barrasHorizontais(
-                        "Valor recebido por forma de pagamento",
-                        formas.stream().map(l -> l.forma().getRotulo()).toList(),
-                        formas.stream().map(LinhaForma::valor).toList(),
-                        formas.stream()
-                                .map(l -> Dinheiro.reais(l.valor()) + " (" + l.vendas()
-                                        + (l.vendas() == 1 ? " venda)" : " vendas)"))
-                                .toList()));
+        var r = relatorio.montar(id);
+        model.addAttribute("evento", r.evento());
+        model.addAttribute("periodo", r.periodo());
+        model.addAttribute("painel", r.painel());
+        model.addAttribute("top", r.top());
+        model.addAttribute("despesas", r.despesas());
+        model.addAttribute("totalDespesas", r.totalDespesas());
+        model.addAttribute("cancelamentos", r.cancelamentos());
+        model.addAttribute("ajustes", r.ajustes());
+        model.addAttribute("graficoProdutos", r.graficoProdutos());
+        model.addAttribute("graficoCategorias", r.graficoCategorias());
+        model.addAttribute("graficoFormas", r.graficoFormas());
         return "relatorio-evento";
     }
 

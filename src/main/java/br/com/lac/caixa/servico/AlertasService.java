@@ -159,18 +159,35 @@ public class AlertasService {
         LocalDate hoje = agora.toLocalDate();
         List<Produto> ativos =
                 estoque.listar().stream().filter(Produto::isAtivo).toList();
+        var acabando = estoqueAcabando(ativos, agora);
+        var semCusto = semCusto(ativos);
+        var ajustes = ocorrencias.ajustesManuais(FiltroFinancas.periodo(hoje, hoje));
+        var fechado = fechamento.consultar(hoje, hoje);
+        return new Alertas(
+                acabando,
+                semCusto,
+                ajustes,
+                !fechado.isConfere(),
+                fechado.total(),
+                fechado.totalFormas(),
+                hoje,
+                eventosEsquecidos(agora));
+    }
 
+    private record GiroDoUltimoEvento(Map<Long, LinhaGiro> porProduto, long dias, String evento) {}
+
+    private GiroDoUltimoEvento giroDoUltimoEvento(LocalDateTime agora) {
         Map<Long, LinhaGiro> giro = new HashMap<>();
-        long dias = 0;
-        String evento = null;
         var ultimo = eventos.findFirstByFimLessThanEqualOrderByFimDesc(agora);
-        if (ultimo.isPresent()) {
-            var e = ultimo.get();
-            var f = FiltroFinancas.doEvento(new PeriodoDoEvento(e.getId(), e.getNome(), e.getInicio(), e.getFim()));
-            dias = f.dias();
-            evento = e.getNome();
-            estoqueFinanceiro.giro(f).forEach(l -> giro.put(l.produtoId(), l));
-        }
+        if (ultimo.isEmpty()) return new GiroDoUltimoEvento(giro, 0, null);
+        var e = ultimo.get();
+        var f = FiltroFinancas.doEvento(new PeriodoDoEvento(e.getId(), e.getNome(), e.getInicio(), e.getFim()));
+        estoqueFinanceiro.giro(f).forEach(l -> giro.put(l.produtoId(), l));
+        return new GiroDoUltimoEvento(giro, f.dias(), e.getNome());
+    }
+
+    private List<EstoqueAcabando> estoqueAcabando(List<Produto> ativos, LocalDateTime agora) {
+        var giro = giroDoUltimoEvento(agora);
         List<EstoqueAcabando> acabando = new ArrayList<>();
         for (Produto p : ativos) {
             if (p.getEstoqueMinimo() != null) {
@@ -180,34 +197,31 @@ public class AlertasService {
                 }
                 continue;
             }
-            LinhaGiro g = giro.get(p.getId());
-            if (g != null && g.vendidas() > 0 && (long) p.getQuantidade() * dias < g.vendidas()) {
+            LinhaGiro g = giro.porProduto().get(p.getId());
+            if (g != null && g.vendidas() > 0 && (long) p.getQuantidade() * giro.dias() < g.vendidas()) {
                 acabando.add(new EstoqueAcabando(
                         p.getId(),
                         p.getNome(),
                         p.getQuantidade(),
-                        "média de " + g.mediaPorDia().toPlainString().replace('.', ',') + " un./dia em " + evento));
+                        "média de " + g.mediaPorDia().toPlainString().replace('.', ',') + " un./dia em "
+                                + giro.evento()));
             }
         }
-        List<SemCusto> semCusto = ativos.stream()
+        return acabando;
+    }
+
+    private static List<SemCusto> semCusto(List<Produto> ativos) {
+        return ativos.stream()
                 .filter(Produto::isSemCusto)
                 .map(p -> new SemCusto(p.getId(), p.getNome()))
                 .toList();
-        var ajustes = ocorrencias.ajustesManuais(FiltroFinancas.periodo(hoje, hoje));
-        var fechado = fechamento.consultar(hoje, hoje);
-        var esquecidos = servicoDeEventos
+    }
+
+    private List<EventoEsquecido> eventosEsquecidos(LocalDateTime agora) {
+        return servicoDeEventos
                 .aberto()
                 .filter(e -> e.getInicio().plusHours(HORAS_EVENTO_ABERTO).isBefore(agora))
                 .map(e -> List.of(new EventoEsquecido(e.getId(), e.getNome(), e.getInicio())))
                 .orElse(List.of());
-        return new Alertas(
-                acabando,
-                semCusto,
-                ajustes,
-                !fechado.isConfere(),
-                fechado.total(),
-                fechado.totalFormas(),
-                hoje,
-                esquecidos);
     }
 }

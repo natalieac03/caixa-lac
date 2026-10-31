@@ -228,54 +228,65 @@ public class PainelFinancas {
         };
     }
 
+    private record Contexto(Resumo r, Map<String, Variacao> variacoes, String contra) {
+        Cartao cartao(String id, String rotulo, String valor, String indicador, boolean pontos, String nota) {
+            return PainelFinancas.cartao(id, rotulo, valor, variacoes.get(indicador), contra, pontos, nota);
+        }
+    }
+
     private List<Cartao> cartoes(Comparacao c) {
-        Resumo r = c.atual();
         Map<String, Variacao> v = new HashMap<>();
         c.variacoes().forEach(x -> v.put(x.indicador(), x));
-        String contra = c.periodoAnterior() == null ? null : "em relação a " + c.periodoAnterior();
-        List<Cartao> lista = new ArrayList<>();
-        lista.add(cartao(
-                "receita",
-                "Receita líquida",
-                Dinheiro.reais(r.receitaLiquida()),
-                v.get("receitaLiquida"),
-                contra,
-                false,
-                null));
-        lista.add(cartao(
+        var ctx =
+                new Contexto(c.atual(), v, c.periodoAnterior() == null ? null : "em relação a " + c.periodoAnterior());
+        return List.of(
+                cartaoReceita(ctx),
+                cartaoLucro(ctx),
+                cartaoMargem(ctx),
+                cartaoTicket(ctx),
+                cartaoVendas(ctx),
+                cartaoItens(ctx));
+    }
+
+    private static Cartao cartaoReceita(Contexto c) {
+        return c.cartao(
+                "receita", "Receita líquida", Dinheiro.reais(c.r().receitaLiquida()), "receitaLiquida", false, null);
+    }
+
+    private static Cartao cartaoLucro(Contexto c) {
+        BigDecimal lucro = c.r().lucroLiquido();
+        return c.cartao(
                 "lucro",
                 "Lucro líquido",
-                r.lucroLiquido() == null ? "—" : Dinheiro.reais(r.lucroLiquido()),
-                v.get("lucroLiquido"),
-                contra,
+                lucro == null ? "—" : Dinheiro.reais(lucro),
+                "lucroLiquido",
                 false,
-                r.lucroLiquido() == null ? "Não se aplica com filtro de categoria ou de forma." : null));
-        lista.add(cartao(
+                lucro == null ? "Não se aplica com filtro de categoria ou de forma." : null);
+    }
+
+    private static Cartao cartaoMargem(Contexto c) {
+        BigDecimal margem = c.r().margemBrutaPercentual();
+        return c.cartao(
                 "margem",
                 "Margem bruta",
-                r.margemBrutaPercentual() == null ? "—" : percentual(r.margemBrutaPercentual()),
-                v.get("margemBrutaPercentual"),
-                contra,
+                margem == null ? "—" : percentual(margem),
+                "margemBrutaPercentual",
                 true,
-                null));
-        lista.add(cartao(
-                "ticket",
-                "Ticket médio",
-                r.ticketMedio() == null ? "—" : Dinheiro.reais(r.ticketMedio()),
-                v.get("ticketMedio"),
-                contra,
-                false,
-                null));
-        lista.add(cartao("vendas", "Vendas", String.valueOf(r.vendas()), v.get("vendas"), contra, false, null));
-        lista.add(cartao(
-                "itens",
-                "Itens vendidos",
-                String.valueOf(r.itensVendidos()),
-                v.get("itensVendidos"),
-                contra,
-                false,
-                null));
-        return lista;
+                null);
+    }
+
+    private static Cartao cartaoTicket(Contexto c) {
+        BigDecimal ticket = c.r().ticketMedio();
+        return c.cartao(
+                "ticket", "Ticket médio", ticket == null ? "—" : Dinheiro.reais(ticket), "ticketMedio", false, null);
+    }
+
+    private static Cartao cartaoVendas(Contexto c) {
+        return c.cartao("vendas", "Vendas", String.valueOf(c.r().vendas()), "vendas", false, null);
+    }
+
+    private static Cartao cartaoItens(Contexto c) {
+        return c.cartao("itens", "Itens vendidos", String.valueOf(c.r().itensVendidos()), "itensVendidos", false, null);
     }
 
     private static Cartao cartao(

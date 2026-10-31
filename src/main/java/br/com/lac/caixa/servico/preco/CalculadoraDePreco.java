@@ -35,7 +35,27 @@ public class CalculadoraDePreco {
 
     private record Cenario(long total, Preparo preparo, BuscaDePacotes.Resultado pacotes) {}
 
+    private record Itens(List<Linha> linhas, Map<Long, Integer> qtdPorCat) {}
+
+    private record Subconjuntos(
+            List<Promocao> pacotes,
+            Set<Long> categoriasDePacote,
+            List<Promocao> diretas,
+            List<Promocao> enumeradas,
+            List<BitSet> lista,
+            boolean aproximado) {}
+
+    private record Cenarios(
+            List<Preparo> preparos, Map<TreeMap<Long, List<Long>>, BuscaDePacotes> buscas, boolean aproximado) {}
+
     public Orcamento calcular(Carrinho carrinho, List<Promocao> ativas) {
+        Itens itens = ler(carrinho);
+        Subconjuntos subconjuntos = escolherSubconjuntos(ativas, itens);
+        Cenarios cenarios = prepararCenarios(itens, subconjuntos);
+        return orcamento(itens.linhas(), escolherMelhor(cenarios), cenarios.aproximado());
+    }
+
+    private static Itens ler(Carrinho carrinho) {
         List<Linha> linhas = new ArrayList<>();
         Map<Long, Integer> qtdPorCat = new HashMap<>();
         for (Carrinho.Linha l : carrinho.itens()) {
@@ -44,7 +64,10 @@ public class CalculadoraDePreco {
             linhas.add(new Linha(p, cat, l.quantidade(), centavos(p.getPreco())));
             if (cat != null) qtdPorCat.merge(cat, l.quantidade(), Integer::sum);
         }
+        return new Itens(linhas, qtdPorCat);
+    }
 
+    private static Subconjuntos escolherSubconjuntos(List<Promocao> ativas, Itens itens) {
         List<Promocao> pacotes = ativas.stream()
                 .filter(p -> p.getTipo() == TipoPromocao.PACOTE)
                 .sorted(POR_ID)
@@ -55,8 +78,8 @@ public class CalculadoraDePreco {
 
         List<Promocao> aPartirDe = ativas.stream()
                 .filter(p -> p.getTipo() == TipoPromocao.A_PARTIR_DE)
-                .filter(p -> p.combosDisponiveis(qtdPorCat) > 0)
-                .filter(p -> baixaAlgumPreco(p, linhas))
+                .filter(p -> p.combosDisponiveis(itens.qtdPorCat()) > 0)
+                .filter(p -> baixaAlgumPreco(p, itens.linhas()))
                 .sorted(POR_ID)
                 .toList();
         List<Promocao> diretas = aPartirDe.stream()
@@ -68,39 +91,47 @@ public class CalculadoraDePreco {
                 aPartirDe.stream().filter(p -> !diretas.contains(p)).toList();
 
         boolean aproximado = enumeradas.size() > MAXIMO_A_PARTIR_DE_ENUMERADAS;
-        List<BitSet> subconjuntos =
-                aproximado ? algunsSubconjuntos(enumeradas.size()) : todosSubconjuntos(enumeradas.size());
+        List<BitSet> lista = aproximado ? algunsSubconjuntos(enumeradas.size()) : todosSubconjuntos(enumeradas.size());
+        return new Subconjuntos(pacotes, categoriasDePacote, diretas, enumeradas, lista, aproximado);
+    }
 
+    private Cenarios prepararCenarios(Itens itens, Subconjuntos sub) {
         Map<TreeMap<Long, List<Long>>, BuscaDePacotes> buscas = new HashMap<>();
         List<Preparo> preparos = new ArrayList<>();
-        for (BitSet s : subconjuntos) {
-            Preparo preparo = preparar(linhas, diretas, enumeradas, s, categoriasDePacote);
+        for (BitSet s : sub.lista()) {
+            Preparo preparo = preparar(itens.linhas(), sub.diretas(), sub.enumeradas(), s, sub.categoriasDePacote());
             preparos.add(preparo);
-            buscas.computeIfAbsent(preparo.restantes(), r -> new BuscaDePacotes(r, pacotes));
+            buscas.computeIfAbsent(preparo.restantes(), r -> new BuscaDePacotes(r, sub.pacotes()));
         }
         long trabalho = 0;
         for (BuscaDePacotes b : buscas.values()) trabalho = Math.min(Long.MAX_VALUE / 2, trabalho + b.estados());
-        if (trabalho > ORCAMENTO_DE_ESTADOS) aproximado = true;
+        boolean aproximado = sub.aproximado() || trabalho > ORCAMENTO_DE_ESTADOS;
         if (aproximado) {
             LOG.warn(
                     "Carrinho grande para a busca exata ({} unidades, {} A_PARTIR_DE enumeráveis, {} estados): "
                             + "pacotes escolhidos por heurística; orçamento marcado como aproximado.",
-                    qtdPorCat.values().stream().mapToInt(Integer::intValue).sum(),
-                    enumeradas.size(),
+                    itens.qtdPorCat().values().stream()
+                            .mapToInt(Integer::intValue)
+                            .sum(),
+                    sub.enumeradas().size(),
                     trabalho);
         }
+        return new Cenarios(preparos, buscas, aproximado);
+    }
 
+    private static Cenario escolherMelhor(Cenarios cenarios) {
         Map<TreeMap<Long, List<Long>>, BuscaDePacotes.Resultado> resolvidas = new HashMap<>();
         Cenario melhor = null;
-        for (Preparo preparo : preparos) {
-            final boolean heuristica = aproximado;
+        for (Preparo preparo : cenarios.preparos()) {
             var pac = resolvidas.computeIfAbsent(
                     preparo.restantes(),
-                    r -> heuristica ? buscas.get(r).gulosa() : buscas.get(r).exata());
+                    r -> cenarios.aproximado()
+                            ? cenarios.buscas().get(r).gulosa()
+                            : cenarios.buscas().get(r).exata());
             long total = preparo.total() - pac.economia();
             if (melhor == null || total < melhor.total()) melhor = new Cenario(total, preparo, pac);
         }
-        return orcamento(linhas, melhor, aproximado);
+        return melhor;
     }
 
     private static boolean baixaAlgumPreco(Promocao promo, List<Linha> linhas) {

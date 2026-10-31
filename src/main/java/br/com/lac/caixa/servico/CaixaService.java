@@ -99,21 +99,7 @@ public class CaixaService {
         venda.setToken(token);
         List<Promocao> ativas = promocoes.listarAtivas();
 
-        Map<Long, Produto> selecionados = new LinkedHashMap<>();
-
-        for (Map.Entry<Long, Integer> e : quantidades.entrySet()) {
-            int qtd = e.getValue() == null ? 0 : e.getValue();
-            if (qtd < 0) throw new RegraDeNegocioException("Quantidade inválida.");
-            if (qtd == 0) continue;
-            Produto p = estoque.buscar(e.getKey());
-            if (!p.isAtivo()) throw new RegraDeNegocioException("Produto arquivado.");
-            selecionados.put(e.getKey(), p);
-        }
-
-        if (selecionados.isEmpty()) {
-            throw new RegraDeNegocioException("Selecione ao menos um produto.");
-        }
-
+        Map<Long, Produto> selecionados = resolverProdutos(quantidades);
         var carrinho = new Carrinho(selecionados.values().stream()
                 .map(p -> new Carrinho.Linha(p, quantidades.get(p.getId())))
                 .toList());
@@ -128,18 +114,8 @@ public class CaixaService {
                 orcamento.descontos().stream().map(Orcamento.Desconto::valor).reduce(BigDecimal.ZERO, BigDecimal::add),
                 total,
                 motivoAjuste);
-        venda.registrarPagamentos(partes(pagamentos, total, token));
-        for (PagamentoVenda parte : venda.getPagamentos()) {
-            parte.registrarTaxa(
-                    taxas.vigente(parte.getForma(), venda.getDataHora().toLocalDate())
-                            .orElse(null));
-        }
-
-        for (var item : orcamento.itens()) {
-            Produto p = selecionados.get(item.produtoId());
-            estoque.darBaixa(p, item.quantidade());
-            venda.adicionarItem(new ItemVenda(p, item.quantidade(), item.precoUnitario()));
-        }
+        registrarPagamentosComTaxa(venda, partes(pagamentos, total, token));
+        baixarEstoque(venda, orcamento, selecionados);
         venda.ratearDesconto();
         venda.registrarDescontos(orcamento.descontos().stream()
                 .map(d -> new VendaDesconto(d.promocaoId(), d.descricao(), d.valor()))
@@ -147,6 +123,49 @@ public class CaixaService {
 
         Venda salva = vendas.save(venda);
         estoque.registrarSaidasDaVenda(salva);
+        auditarVenda(salva, calculado, total, motivoAjuste);
+        return new ResultadoVenda(
+                salva,
+                PagamentoFactory.mensagem(salva.getPagamentos().stream()
+                        .map(PagamentoVenda::dados)
+                        .toList()),
+                false);
+    }
+
+    private Map<Long, Produto> resolverProdutos(Map<Long, Integer> quantidades) {
+        Map<Long, Produto> selecionados = new LinkedHashMap<>();
+        for (Map.Entry<Long, Integer> e : quantidades.entrySet()) {
+            int qtd = e.getValue() == null ? 0 : e.getValue();
+            if (qtd < 0) throw new RegraDeNegocioException("Quantidade inválida.");
+            if (qtd == 0) continue;
+            Produto p = estoque.buscar(e.getKey());
+            if (!p.isAtivo()) throw new RegraDeNegocioException("Produto arquivado.");
+            selecionados.put(e.getKey(), p);
+        }
+        if (selecionados.isEmpty()) {
+            throw new RegraDeNegocioException("Selecione ao menos um produto.");
+        }
+        return selecionados;
+    }
+
+    private void registrarPagamentosComTaxa(Venda venda, List<PagamentoVenda> partes) {
+        venda.registrarPagamentos(partes);
+        for (PagamentoVenda parte : venda.getPagamentos()) {
+            parte.registrarTaxa(
+                    taxas.vigente(parte.getForma(), venda.getDataHora().toLocalDate())
+                            .orElse(null));
+        }
+    }
+
+    private void baixarEstoque(Venda venda, Orcamento orcamento, Map<Long, Produto> selecionados) {
+        for (var item : orcamento.itens()) {
+            Produto p = selecionados.get(item.produtoId());
+            estoque.darBaixa(p, item.quantidade());
+            venda.adicionarItem(new ItemVenda(p, item.quantidade(), item.precoUnitario()));
+        }
+    }
+
+    private void auditarVenda(Venda salva, BigDecimal calculado, BigDecimal total, String motivoAjuste) {
         auditoria.registrar(
                 "venda",
                 "id",
@@ -165,12 +184,6 @@ public class CaixaService {
             auditoria.registrar(
                     "ajuste_valor", "id", salva.getId(), "antes", calculado, "depois", total, "motivo", motivoAjuste);
         }
-        return new ResultadoVenda(
-                salva,
-                PagamentoFactory.mensagem(salva.getPagamentos().stream()
-                        .map(PagamentoVenda::dados)
-                        .toList()),
-                false);
     }
 
     private static boolean tokenValido(String token) {
