@@ -14,7 +14,7 @@
         </div>
     </div>
 
-    <form th:action="@{/venda}" method="post" id="formVenda" th:attr="data-pix-automatico=${pixAutomatico}">
+    <form th:action="@{/venda}" method="post" id="formVenda" th:attr="data-pix-automatico=${pixAutomatico},data-token=${tokenVenda}">
     <input type="hidden" name="token" th:value="${tokenVenda}">
     <div class="venda-grade">
 
@@ -152,6 +152,7 @@
     </form>
 </main>
 
+<script th:src="@{/js/venda-pix.js}"></script>
 <script th:src="@{/js/venda.js}"></script>
 </body>
 </html>
