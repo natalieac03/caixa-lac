@@ -57,6 +57,10 @@ usuário `sa`, senha em branco).
 
 ## Subir no Railway (com Postgres que não perde dados)
 
+> Roteiro completo, com variáveis, migrações, backup, ensaio, deploy, conferência
+> e rollback: **[docs/DEPLOY.md](docs/DEPLOY.md)**. Conferência só de leitura,
+> para rodar antes e depois: `scripts/conferir-producao.sql`.
+
 1. **Suba o código para um repositório no GitHub.**
 
 2. No [Railway](https://railway.app): **New Project → Deploy from GitHub repo**

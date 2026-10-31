@@ -21,3 +21,16 @@ dados/
 
 # Senha do desenvolvimento local (veja senha-local.properties.exemplo)
 senha-local.properties
+
+# Dumps e backups de banco (produção ou ensaio): nunca no git
+*.dump
+*.sql.gz
+*.backup
+
+# Variáveis de ambiente locais (segredos)
+.env
+.env.*
+!.env.exemplo
+
+# Cópia original do projeto (já coberta por *.zip; explícita para não sumir)
+caixa lac.zip

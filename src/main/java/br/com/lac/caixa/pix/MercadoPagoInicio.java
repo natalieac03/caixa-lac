@@ -38,19 +38,23 @@ class MercadoPagoInicio {
         return executor;
     }
 
+    /**
+     * Duas linhas fixas no log ao subir, sem nenhum segredo (dá para conferir no
+     * Railway depois do deploy): "Mercado Pago: ligado|desligado" e
+     * "webhook: assinatura configurada|não configurada".
+     */
     @EventListener(ApplicationReadyEvent.class)
     void avisar() {
-        if (config.isLigado()) {
-            LOG.info(
-                    "Pix automático (Mercado Pago) ligado. Webhook {}.",
-                    config.isWebhookConfigurado()
-                            ? "com assinatura configurada"
-                            : "sem MP_WEBHOOK_SECRET: avisos serão recusados");
-        } else if (!config.getAccessToken().isBlank()) {
+        LOG.info("Mercado Pago: {}", config.isLigado() ? "ligado" : "desligado");
+        LOG.info("webhook: assinatura {}", config.isWebhookConfigurado() ? "configurada" : "não configurada");
+        if (!config.isLigado() && !config.getAccessToken().isBlank()) {
             LOG.warn(
-                    "Pix automático desligado: MP_ACCESS_TOKEN definido, mas falta MP_PAYER_EMAIL. O caixa usa Pix manual.");
-        } else {
-            LOG.info("Pix automático desligado (sem MP_ACCESS_TOKEN). O caixa usa Pix manual.");
+                    "Mercado Pago desligado: MP_ACCESS_TOKEN definido, mas falta MP_PAYER_EMAIL. O caixa usa Pix manual.");
+        } else if (!config.isLigado()) {
+            LOG.info("Sem MP_ACCESS_TOKEN: o caixa usa Pix manual.");
+        } else if (!config.isWebhookConfigurado()) {
+            LOG.warn(
+                    "Sem MP_WEBHOOK_SECRET: os avisos do Mercado Pago serão recusados (a tela ainda consulta a cobrança).");
         }
     }
 }
