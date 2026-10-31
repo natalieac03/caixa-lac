@@ -87,4 +87,18 @@ class BuscaDePacotesTest {
             assertTrue(busca.gulosa().economia() <= busca.exata().economia(), "caso " + caso);
         }
     }
+
+    @Test
+    @DisplayName("50.000 unidades e pacote de 2: a busca exata não estoura a pilha (DP iterativa)")
+    void muitasUnidadesSemStackOverflow() {
+        var precos = new java.util.ArrayList<Long>();
+        for (int i = 0; i < 50_000; i++) precos.add(600L);
+        var doisPor10 = pacote(1, "10.00", a, 2);
+        var busca = new BuscaDePacotes(Map.of(1L, precos), List.of(doisPor10));
+
+        var r = busca.exata();
+
+        assertEquals(25_000L * 200, r.economia()); // cada par de 12,00 sai por 10,00
+        assertEquals(Map.of(doisPor10, 25_000), r.usados());
+    }
 }

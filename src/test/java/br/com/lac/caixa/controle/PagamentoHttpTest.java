@@ -8,7 +8,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.repositorio.ProdutoRepository;
@@ -133,8 +135,8 @@ class PagamentoHttpTest {
                         "DINHEIRO",
                         "pag_valor_1",
                         "7"))
-                .andExpect(redirectedUrl("/venda/nova"))
-                .andExpect(flash().attribute("erro", containsString("falta R$ 1,00")));
+                .andExpect(status().isConflict())
+                .andExpect(model().attribute("erro", containsString("falta R$ 1,00")));
         mvc.perform(venda(
                         UUID.randomUUID().toString(),
                         "pag_forma_0",
@@ -145,7 +147,7 @@ class PagamentoHttpTest {
                         "PIX",
                         "pag_valor_1",
                         "9"))
-                .andExpect(flash().attribute("erro", containsString("sobra R$ 1,00")));
+                .andExpect(model().attribute("erro", containsString("sobra R$ 1,00")));
         mvc.perform(venda(
                         UUID.randomUUID().toString(),
                         "pag_forma_0",
@@ -154,7 +156,7 @@ class PagamentoHttpTest {
                         "18",
                         "pag_forma_1",
                         "DINHEIRO"))
-                .andExpect(flash().attribute("erro", "Informe o valor de cada parte do pagamento."));
+                .andExpect(model().attribute("erro", "Informe o valor de cada parte do pagamento."));
         assertEquals(antes, vendas.count());
         assertEquals(100, produtos.findById(p.getId()).orElseThrow().getQuantidade());
     }
@@ -162,8 +164,8 @@ class PagamentoHttpTest {
     @Test
     void outroSemDescricaoERecebidoMenorSaoRecusados() throws Exception {
         mvc.perform(venda(UUID.randomUUID().toString(), "pag_forma_0", "OUTRO"))
-                .andExpect(redirectedUrl("/venda/nova"))
-                .andExpect(flash().attribute("erro", containsString("Outro precisa de descrição")));
+                .andExpect(status().isConflict())
+                .andExpect(model().attribute("erro", containsString("Outro precisa de descrição")));
         mvc.perform(venda(
                         UUID.randomUUID().toString(),
                         "pag_forma_0",
@@ -176,15 +178,15 @@ class PagamentoHttpTest {
                         "9",
                         "pag_descricao_1",
                         " "))
-                .andExpect(flash().attribute("erro", containsString("Outro precisa de descrição")));
+                .andExpect(model().attribute("erro", containsString("Outro precisa de descrição")));
         mvc.perform(venda(UUID.randomUUID().toString(), "pag_forma_0", "DINHEIRO", "pag_recebido_0", "15"))
-                .andExpect(flash().attribute("erro", containsString("menor que o valor em dinheiro")));
+                .andExpect(model().attribute("erro", containsString("menor que o valor em dinheiro")));
         mvc.perform(venda(UUID.randomUUID().toString(), "pag_forma_0", "PIX", "pag_recebido_0", "20"))
-                .andExpect(flash().attribute("erro", "Valor recebido só vale para pagamento em dinheiro."));
+                .andExpect(model().attribute("erro", "Valor recebido só vale para pagamento em dinheiro."));
         mvc.perform(venda(UUID.randomUUID().toString(), "pag_forma_0", "CHEQUE"))
-                .andExpect(flash().attribute("erro", "Forma de pagamento inválida: CHEQUE"));
+                .andExpect(model().attribute("erro", "Forma de pagamento inválida: CHEQUE"));
         mvc.perform(venda(UUID.randomUUID().toString()))
-                .andExpect(flash().attribute("erro", "Escolha a forma de pagamento."));
+                .andExpect(model().attribute("erro", "Escolha a forma de pagamento."));
         assertEquals(100, produtos.findById(p.getId()).orElseThrow().getQuantidade());
     }
 
@@ -200,8 +202,8 @@ class PagamentoHttpTest {
     @Test
     void cortesiaSemPagamentoEComMotivoObrigatorio() throws Exception {
         mvc.perform(venda(UUID.randomUUID().toString(), "pag_forma_0", "PIX", "valorTotal", "0"))
-                .andExpect(redirectedUrl("/venda/nova"))
-                .andExpect(flash().attribute("erro", "Informe o motivo do ajuste de valor."));
+                .andExpect(status().isConflict())
+                .andExpect(model().attribute("erro", "Informe o motivo do ajuste de valor."));
         String token = UUID.randomUUID().toString();
         mvc.perform(venda(token, "pag_forma_0", "PIX", "valorTotal", "0", "motivoAjuste", "Brinde do evento"))
                 .andExpect(flash().attribute("sucesso", containsString("Cortesia: nada a receber.")));
@@ -218,7 +220,7 @@ class PagamentoHttpTest {
                         "0",
                         "motivoAjuste",
                         "Brinde"))
-                .andExpect(flash().attribute("erro", "Cortesia (valor zero) não tem pagamento."));
+                .andExpect(model().attribute("erro", "Cortesia (valor zero) não tem pagamento."));
     }
 
     @Test

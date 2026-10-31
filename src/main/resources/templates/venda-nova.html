@@ -62,7 +62,8 @@
                             <td class="num">
                                 <div class="passo">
                                     <button type="button" onclick="passo(this, -1)" aria-label="Menos um">−</button>
-                                    <input type="number" min="0" th:max="${p.quantidade}" value="0"
+                                    <input type="number" min="0" th:max="${p.quantidade}"
+                                           th:value="${carrinho != null and carrinho.get('' + p.id) != null} ? ${carrinho.get('' + p.id)} : 0"
                                            class="qtd"
                                            th:name="'qtd_' + ${p.id}"
                                            th:attr="data-nome=${p.nome},data-catnome=${p.nomeCategoria},aria-label='Quantidade de ' + ${p.nome}"
@@ -95,30 +96,30 @@
             <div class="cartao">
                 <div class="campo">
                     <label for="valorTotal">Valor ajustado (opcional)</label>
-                    <input type="text" id="valorTotal" name="valorTotal" class="mono" inputmode="decimal"
+                    <input type="text" id="valorTotal" name="valorTotal" class="mono" inputmode="decimal" th:value="${valorTotalDigitado}"
                            oninput="atualizarPagamento()">
                     <p class="ajuda" style="margin:0;">Deixe vazio para cobrar o total calculado. Zero = cortesia (sem pagamento).</p>
                 </div>
-                <div class="campo"><label for="motivoAjuste">Motivo do ajuste</label><input id="motivoAjuste" name="motivoAjuste" type="text"></div>
+                <div class="campo"><label for="motivoAjuste">Motivo do ajuste</label><input id="motivoAjuste" name="motivoAjuste" type="text" th:value="${motivoDigitado}"></div>
 
                 <!-- Caso comum: uma forma, paga o total (o servidor preenche o valor). -->
                 <div id="pagamentoUnico" style="margin-top:16px;">
                     <fieldset class="pilulas">
                         <legend>Forma de pagamento</legend>
                         <label class="pilula" th:each="f, st : ${formas}">
-                            <input type="radio" name="pag_forma_0" th:value="${f}" th:checked="${st.first}"
+                            <input type="radio" name="pag_forma_0" th:value="${f}" th:checked="${formaEscolhida != null} ? ${formaEscolhida == f.name()} : ${st.first}"
                                    onchange="alternarUnico(true)">
                             <span th:text="${f.rotulo}">Pix</span>
                         </label>
                     </fieldset>
                     <div class="campo oculto" id="campoOutro" style="margin-top:14px;">
                         <label for="pagDescricaoUnico">Qual?</label>
-                        <input type="text" id="pagDescricaoUnico" name="pag_descricao_0" maxlength="255"
+                        <input type="text" id="pagDescricaoUnico" name="pag_descricao_0" maxlength="255" th:value="${descricaoDigitada}"
                                placeholder="Ex.: vale, permuta" oninput="atualizarPagamento()">
                     </div>
                     <div class="campo oculto" id="campoRecebido" style="margin-top:14px;">
                         <label for="pagRecebidoUnico">Recebido em dinheiro (opcional)</label>
-                        <input type="text" id="pagRecebidoUnico" name="pag_recebido_0" class="mono" inputmode="decimal"
+                        <input type="text" id="pagRecebidoUnico" name="pag_recebido_0" class="mono" inputmode="decimal" th:value="${recebidoDigitado}"
                                oninput="atualizarPagamento()">
                         <p class="ajuda troco" id="trocoUnico" aria-live="polite" style="margin:0;"></p>
                     </div>

@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -74,22 +75,21 @@ class SessaoEErrosHttpTest {
     @Test
     @DisplayName("Erro de programa (NumberFormatException) não vira mensagem: log com a pilha e \"Algo deu errado\"")
     void erroDeProgramaVaiParaOLog(CapturedOutput log) throws Exception {
+        // Produto que não é número no carrinho é erro de negócio (o erro de programa tem o
+        // próprio teste em ErroDeProgramaHttpTest): mensagem clara, nada vai para o log como erro.
         long antes = vendas.count();
-
         mvc.perform(post("/venda")
                         .sessionAttr("autenticado", true)
                         .param("token", UUID.randomUUID().toString())
                         .param("qtd_abc", "1")
                         .param("pag_forma_0", "PIX"))
-                .andExpect(redirectedUrl("/venda/nova"))
-                .andExpect(flash().attribute("erro", "Algo deu errado. Tente de novo."));
-
+                .andExpect(status().isConflict())
+                .andExpect(model().attribute("erro", "Produto inválido no carrinho."));
         assertEquals(antes, vendas.count());
-        assertTrue(log.getAll().contains("Erro inesperado em POST /venda"));
-        assertTrue(log.getAll().contains("java.lang.NumberFormatException"), "a pilha vai para o log");
+        assertTrue(!log.getAll().contains("Erro inesperado em POST /venda"));
         mvc.perform(post("/venda/previa").sessionAttr("autenticado", true).param("qtd_abc", "1"))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.erro").value("Algo deu errado. Tente de novo."));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.erro").value("Produto inválido no carrinho."));
     }
 
     @Test

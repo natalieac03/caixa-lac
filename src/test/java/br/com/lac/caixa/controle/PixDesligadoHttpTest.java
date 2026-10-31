@@ -5,8 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -92,8 +92,8 @@ class PixDesligadoHttpTest {
                         .param("qtd_" + p.getId(), "1")
                         .param("pag_forma_0", "PIX")
                         .param("pag_origem_0", "MERCADO_PAGO"))
-                .andExpect(redirectedUrl("/venda/nova"))
-                .andExpect(flash().attribute("erro", containsString("Não há Pix do Mercado Pago gerado")));
+                .andExpect(status().isConflict())
+                .andExpect(model().attribute("erro", containsString("Não há Pix do Mercado Pago gerado")));
     }
 
     @Test

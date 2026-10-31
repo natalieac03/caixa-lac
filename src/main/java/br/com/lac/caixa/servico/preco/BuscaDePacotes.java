@@ -3,7 +3,6 @@ package br.com.lac.caixa.servico.preco;
 import br.com.lac.caixa.modelo.Promocao;
 import br.com.lac.caixa.modelo.PromocaoItem;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -94,7 +93,6 @@ public final class BuscaDePacotes {
             throw new IllegalStateException("Estados demais para a busca exata: " + estados);
         long[] memo = new long[(int) estados];
         int[] escolha = new int[(int) estados];
-        Arrays.fill(memo, -1);
         int inicial = inicial();
         economia(inicial, memo, escolha);
 
@@ -118,38 +116,43 @@ public final class BuscaDePacotes {
         return e;
     }
 
-    private long economia(int estado, long[] memo, int[] escolha) {
-        if (memo[estado] >= 0) return memo[estado];
-        long melhor = 0;
-        int melhorPacote = -1;
-        for (int p = 0; p < pacotes.size(); p++) {
-            long normal = 0;
-            int proximo = estado;
-            boolean cabe = true;
-            for (int c = 0; c < total.length; c++) {
-                int q = usoPorPacote[p][c];
-                if (q == 0) continue;
-                int resta = (int) ((estado / base[c]) % (total[c] + 1));
-                if (resta < q) {
-                    cabe = false;
-                    break;
+    /**
+     * DP iterativa (sem recursão, então sem estourar a pilha com milhares de
+     * unidades): cada pacote só diminui o índice do estado, então percorrer os
+     * estados em ordem crescente garante que memo[proximo] já está pronto.
+     */
+    private void economia(int ultimo, long[] memo, int[] escolha) {
+        for (int estado = 0; estado <= ultimo; estado++) {
+            long melhor = 0;
+            int melhorPacote = -1;
+            for (int p = 0; p < pacotes.size(); p++) {
+                long normal = 0;
+                int proximo = estado;
+                boolean cabe = true;
+                for (int c = 0; c < total.length; c++) {
+                    int q = usoPorPacote[p][c];
+                    if (q == 0) continue;
+                    int resta = (int) ((estado / base[c]) % (total[c] + 1));
+                    if (resta < q) {
+                        cabe = false;
+                        break;
+                    }
+                    int inicio = total[c] - resta;
+                    normal += acumulado[c][inicio + q] - acumulado[c][inicio];
+                    proximo -= q * (int) base[c];
                 }
-                int inicio = total[c] - resta;
-                normal += acumulado[c][inicio + q] - acumulado[c][inicio];
-                proximo -= q * (int) base[c];
+                if (!cabe) continue;
+                long ganho = normal - precoPacote[p];
+                if (ganho <= 0) continue;
+                long candidato = ganho + memo[proximo];
+                if (candidato > melhor) {
+                    melhor = candidato;
+                    melhorPacote = p;
+                }
             }
-            if (!cabe) continue;
-            long ganho = normal - precoPacote[p];
-            if (ganho <= 0) continue;
-            long candidato = ganho + economia(proximo, memo, escolha);
-            if (candidato > melhor) {
-                melhor = candidato;
-                melhorPacote = p;
-            }
+            memo[estado] = melhor;
+            escolha[estado] = melhorPacote;
         }
-        memo[estado] = melhor;
-        escolha[estado] = melhorPacote;
-        return melhor;
     }
 
     // ---------- heurísticas ----------

@@ -6,8 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -237,8 +237,8 @@ class PixHttpTest {
         gerar(0, "18,00");
 
         mvc.perform(venda("pag_forma_0", "PIX", "pag_origem_0", "MERCADO_PAGO"))
-                .andExpect(redirectedUrl("/venda/nova"))
-                .andExpect(flash().attribute("erro", "O Pix de R$ 18,00 ainda não foi pago."));
+                .andExpect(status().isConflict())
+                .andExpect(model().attribute("erro", "O Pix de R$ 18,00 ainda não foi pago."));
         assertEquals(100, produtos.findById(p.getId()).orElseThrow().getQuantidade());
     }
 
@@ -269,10 +269,10 @@ class PixHttpTest {
         FAKE.pagar(order, "17.99");
 
         mvc.perform(venda("pag_forma_0", "PIX", "pag_origem_0", "MERCADO_PAGO"))
-                .andExpect(flash().attribute("erro", containsString("diferente do valor da cobrança")));
+                .andExpect(model().attribute("erro", containsString("diferente do valor da cobrança")));
         mvc.perform(venda(
                         "pag_forma_0", "PIX", "pag_origem_0", "MERCADO_PAGO", "valorTotal", "15", "motivoAjuste", "x"))
-                .andExpect(flash().attribute("erro", containsString("diferente do valor da cobrança")));
+                .andExpect(model().attribute("erro", containsString("diferente do valor da cobrança")));
     }
 
     @Test
@@ -290,7 +290,7 @@ class PixHttpTest {
                         "15",
                         "motivoAjuste",
                         "Desconto"))
-                .andExpect(flash().attribute("erro", containsString("não bate com o valor da parte")));
+                .andExpect(model().attribute("erro", containsString("não bate com o valor da parte")));
     }
 
     @Test

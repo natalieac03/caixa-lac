@@ -7,9 +7,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -103,8 +103,8 @@ class VendaHttpTest {
 
         // Act / Assert
         mvc.perform(venda(novoToken(), "qtd_" + p.getId(), "3", "pag_forma_0", "PIX", "valorTotal", "1"))
-                .andExpect(redirectedUrl("/venda/nova"))
-                .andExpect(flash().attributeExists("erro"));
+                .andExpect(status().isConflict())
+                .andExpect(model().attributeExists("erro"));
         assertEquals(antes, vendas.count());
         assertEquals(10, estoque(p));
     }
@@ -163,8 +163,8 @@ class VendaHttpTest {
                         "-1",
                         "motivoAjuste",
                         "Teste"))
-                .andExpect(redirectedUrl("/venda/nova"))
-                .andExpect(flash().attributeExists("erro"));
+                .andExpect(status().isConflict())
+                .andExpect(model().attributeExists("erro"));
     }
 
     // ---------- estoque e envio duplicado ----------
@@ -178,8 +178,8 @@ class VendaHttpTest {
 
         // Act / Assert
         mvc.perform(venda(novoToken(), "qtd_" + p.getId(), "4", "qtd_" + pouco.getId(), "2", "pag_forma_0", "PIX"))
-                .andExpect(redirectedUrl("/venda/nova"))
-                .andExpect(flash().attribute("erro", containsString("Estoque insuficiente de Pouco")));
+                .andExpect(status().isConflict())
+                .andExpect(model().attribute("erro", containsString("Estoque insuficiente de Pouco")));
         assertEquals(antes, vendas.count());
         assertEquals(10, estoque(p));
         assertEquals(1, estoque(pouco));
@@ -189,8 +189,8 @@ class VendaHttpTest {
     @DisplayName("Quantidade não numérica vira mensagem clara")
     void quantidadeNaoNumericaViraMensagem() throws Exception {
         mvc.perform(venda(novoToken(), "qtd_" + p.getId(), "abc", "pag_forma_0", "PIX"))
-                .andExpect(redirectedUrl("/venda/nova"))
-                .andExpect(flash().attribute("erro", "Quantidade inválida: abc"));
+                .andExpect(status().isConflict())
+                .andExpect(model().attribute("erro", "Quantidade inválida: abc"));
     }
 
     @Test

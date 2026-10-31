@@ -1,5 +1,6 @@
 package br.com.lac.caixa.servico;
 
+import br.com.lac.caixa.dominio.EstoqueInsuficienteException;
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.Categoria;
 import br.com.lac.caixa.modelo.CompraEstoque;
@@ -27,6 +28,9 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class EstoqueService {
+
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager em;
 
     private final ProdutoRepository produtos;
     private final ItemVendaRepository itensVenda;
@@ -208,8 +212,20 @@ public class EstoqueService {
     /** Da baixa no estoque ao confirmar uma venda (o movimento é gravado depois, com a venda salva). */
     @Transactional
     public void darBaixa(Produto produto, int quantidade) {
-        produto.baixar(quantidade);
-        produtos.save(produto);
+        if (quantidade < 1) throw new RegraDeNegocioException("Quantidade deve ser maior que zero.");
+        if (produtos.baixarSeHouver(produto.getId(), quantidade) == 0) {
+            throw new EstoqueInsuficienteException("Estoque insuficiente de " + produto.getNome() + " (disponível: "
+                    + produtos.quantidadeAtual(produto.getId()) + ").");
+        }
+        recarregar(produto);
+    }
+
+    /**
+     * Depois do UPDATE atômico, o objeto em memória ainda tem a quantidade e a
+     * versão antigas: recarrega do banco (sem marcar como alterado).
+     */
+    private void recarregar(Produto produto) {
+        if (em.contains(produto)) em.refresh(produto);
     }
 
     /** Um SAIDA_VENDA por item da venda já salva, com o custo congelado no item. */
@@ -232,8 +248,8 @@ public class EstoqueService {
     public void devolverItensDaVenda(Venda venda) {
         for (ItemVenda item : venda.getItens()) {
             Produto p = buscar(item.getProduto().getId());
-            p.repor(item.getQuantidade());
-            produtos.save(p);
+            produtos.reporAtomico(p.getId(), item.getQuantidade());
+            recarregar(p);
             movimento(
                     p,
                     TipoMovimento.DEVOLUCAO_CANCELAMENTO,
