@@ -264,7 +264,9 @@
             if (!codigo) return;
             navigator.clipboard?.writeText(codigo).then(() => { copiar.textContent = 'Código copiado'; });
         });
-        area.append(img, valorTexto, copiar);
+        // Com o Pix aguardando, dá para desistir e conferir no app (Pix manual).
+        const manualNoQr = botaoPequeno('Usar Pix manual', function () { usarManual(); });
+        area.append(img, valorTexto, copiar, manualNoQr);
         const situacao = document.createElement('p'); situacao.className = 'ajuda situacao-pix'; situacao.setAttribute('aria-live', 'polite');
         raiz.append(origem, botoes, area, situacao);
 
@@ -275,6 +277,7 @@
         function desenhar(mensagem) {
             area.classList.toggle('oculto', !(estado === 'aguardando' || estado === 'paga'));
             botoes.classList.toggle('oculto', estado === 'aguardando' || estado === 'paga' || estado === 'gerando');
+            manualNoQr.classList.toggle('oculto', estado !== 'aguardando');
             const v = valorAtual();
             gerar.disabled = !(v > 0) || unidades === 0;
             if (mensagem !== undefined) aviso = mensagem;
@@ -323,12 +326,15 @@
                 if (!intervalo) intervalo = setInterval(consultar, 3000);
             } else {
                 estado = 'escolher'; parar(); origem.value = '';
-                desenhar(status === 'EXPIRADA' ? 'O Pix expirou: gere outro.' : 'O Pix foi cancelado: gere outro.');
+                desenhar(status === 'EXPIRADA' ? 'O Pix expirou: gere outro.'
+                    : status === 'ESTORNADA' ? 'O Pix foi estornado no Mercado Pago: gere outro ou use Pix manual.'
+                    : 'O Pix foi cancelado: gere outro.');
             }
         }
 
         async function consultar() {
-            if (controle) controle.abort();
+            // Uma consulta por vez: com a anterior ainda em andamento, espera o próximo ciclo.
+            if (controle) return;
             controle = new AbortController();
             try {
                 const r = await pedirJson('/venda/pix/' + encodeURIComponent(tokenVenda) + '/' + parte, {signal: controle.signal});
@@ -342,17 +348,35 @@
                 atualizarPagamento();
             } catch (e) {
                 if (e.name !== 'AbortError') desenhar('Sem resposta do servidor; tentando de novo...');
+            } finally {
+                controle = null;
             }
         }
 
-        function cancelarCobranca() {
+        /* Cancela no servidor e devolve a situação real (PAGA, PENDENTE em processamento, CANCELADA...). */
+        async function cancelarCobranca() {
             parar();
-            fetch('/venda/pix/cancelar', {method: 'POST', headers: {'Accept': 'application/json'},
-                body: new URLSearchParams({token: tokenVenda, parte: String(parte)})}).catch(() => {});
+            try {
+                const r = await pedirJson('/venda/pix/cancelar', {method: 'POST',
+                    body: new URLSearchParams({token: tokenVenda, parte: String(parte)})});
+                return r.ok && r.o ? r.o.status : null;
+            } catch (e) {
+                return null;
+            }
         }
 
-        function usarManual() {
-            if (estado === 'aguardando') cancelarCobranca();
+        async function usarManual() {
+            if (estado === 'aguardando') {
+                desenhar('Cancelando o Pix no Mercado Pago...');
+                const status = await cancelarCobranca();
+                // Já pago: fica com o Pix do Mercado Pago, não troca para manual.
+                if (status === 'PAGA') { aplicar('PAGA'); atualizarPagamento(); return; }
+                if (status === 'PENDENTE') {
+                    aplicar('PENDENTE');
+                    desenhar('O Mercado Pago ainda está processando este Pix; espere alguns segundos.');
+                    return;
+                }
+            }
             aviso = '';
             estado = 'manual'; origem.value = 'MANUAL'; desenhar();
             atualizarPagamento();
@@ -367,8 +391,12 @@
         function ok() {
             const v = valorAtual();
             if (estado === 'aguardando' && v !== cobranca) {
-                cancelarCobranca(); estado = 'escolher'; origem.value = '';
+                estado = 'escolher'; origem.value = '';
                 desenhar('O valor mudou: o Pix anterior foi cancelado. Gere outro.');
+                cancelarCobranca().then(function (status) {
+                    if (status === 'PAGA') { aplicar('PAGA'); atualizarPagamento(); }
+                    else if (status === 'PENDENTE') desenhar('O Pix anterior ainda está em processamento no Mercado Pago; espere alguns segundos antes de gerar outro.');
+                });
             }
             if (estado === 'paga' && v !== cobranca) {
                 desenhar('Este Pix já foi pago (' + reaisCentavos(cobranca) + '): ajuste o valor das partes.');

@@ -121,9 +121,13 @@ class MigracaoFusoPostgresTest {
     }
 
     @Test
-    @DisplayName("Venda das 01:30 UTC vira 22:30 de 10/05 (dia certo); o Postgres termina na V20")
+    @DisplayName("Venda das 01:30 UTC vira 22:30 de 10/05 (dia certo); a V20 foi aplicada no Postgres")
     void vendas() throws Exception {
-        assertEquals("20", versaoFinal);
+        try (var s = c.createStatement();
+                var r = s.executeQuery("SELECT COUNT(*) FROM flyway_schema_history WHERE version = '20' AND success")) {
+            r.next();
+            assertEquals(1, r.getInt(1));
+        }
         assertEquals(t("2024-05-10T22:30"), hora("SELECT data_hora FROM venda WHERE id = " + noturna));
         assertEquals(t("2024-05-10T17:00"), hora("SELECT data_hora FROM venda WHERE id = " + cancelada));
         assertEquals(t("2024-05-10T23:15"), hora("SELECT data_cancelamento FROM venda WHERE id = " + cancelada));

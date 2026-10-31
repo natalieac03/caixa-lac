@@ -68,6 +68,23 @@ public class FakeMercadoPago extends Dispatcher {
         o.pago = new BigDecimal(valor);
     }
 
+    /** Pago no banco, mas o Mercado Pago ainda está processando (cancelar responde 409). */
+    public void processando(String id) {
+        Order o = orders.get(id);
+        o.status = "processing";
+        o.detalhe = "in_process";
+    }
+
+    /** Pago e devolvido: refunded (estorno) ou charged_back (contestação). */
+    public void estornar(String id, String status) {
+        Order o = orders.get(id);
+        o.status = status;
+        o.detalhe = status;
+    }
+
+    /** Roda dentro do atendimento de cada consulta (GET /v1/orders/{id}), antes de responder. */
+    public volatile Runnable aoConsultar;
+
     public void expirar(String id) {
         Order o = orders.get(id);
         o.status = "canceled";
@@ -83,6 +100,8 @@ public class FakeMercadoPago extends Dispatcher {
             if ("POST".equals(req.getMethod()) && "/v1/orders".equals(caminho)) return criar(req);
             if ("GET".equals(req.getMethod()) && caminho.startsWith("/v1/orders/")) {
                 consultas.incrementAndGet();
+                Runnable gancho = aoConsultar;
+                if (gancho != null) gancho.run();
                 Order o = orders.get(caminho.substring("/v1/orders/".length()));
                 return o == null
                         ? resposta(404, "{\"errors\":[{\"code\":\"order_not_found\"}]}")

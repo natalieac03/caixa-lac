@@ -157,6 +157,11 @@ class PixHttpTest {
                 .andExpect(jsonPath("$.erro", containsString("já foi paga")));
     }
 
+    /** O servidor só pergunta ao Mercado Pago de novo depois de 5 s da última consulta. */
+    void passaramCincoSegundos() {
+        jdbc.update("update cobranca_pix set consultada_em = null");
+    }
+
     @Test
     @DisplayName("Consulta: o servidor pergunta ao Mercado Pago e só marca PAGA com o valor certo")
     void consultaMarcaPagaSoComValorCerto() throws Exception {
@@ -167,12 +172,14 @@ class PixHttpTest {
 
         // Act / Assert: pago com valor diferente não confirma
         FAKE.pagar(order, "10.00");
+        passaramCincoSegundos();
         mvc.perform(logado(get(url)))
                 .andExpect(jsonPath("$.status").value("PENDENTE"))
                 .andExpect(jsonPath("$.valorPago").value(10.0));
 
         // Act / Assert: com o valor certo, PAGA
         FAKE.pagar(order, "18.00");
+        passaramCincoSegundos();
         mvc.perform(logado(get(url))).andExpect(jsonPath("$.status").value("PAGA"));
         int consultas = FAKE.consultas.get();
         mvc.perform(logado(get(url))).andExpect(jsonPath("$.status").value("PAGA"));

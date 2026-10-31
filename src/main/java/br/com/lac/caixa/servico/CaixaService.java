@@ -230,10 +230,10 @@ public class CaixaService {
     }
     /** O bloqueio da venda serializa cancelamentos; a versão protege o estoque. */
     @Transactional
-    public void cancelarVenda(Long id, String motivo) {
+    public BigDecimal cancelarVenda(Long id, String motivo) {
         Venda venda = vendas.buscarParaCancelar(id)
                 .orElseThrow(() -> new RegraDeNegocioException("Venda não encontrada: " + id));
-        if (venda.isCancelada()) return;
+        if (venda.isCancelada()) return BigDecimal.ZERO;
         venda.cancelar(motivo, LocalDateTime.now(relogio));
         estoque.devolverItensDaVenda(venda);
         vendas.save(venda);
@@ -247,5 +247,10 @@ public class CaixaService {
                 venda.getMotivoCancelamento(),
                 "itens",
                 venda.getResumoProdutos());
+        // O Pix do Mercado Pago já entrou na conta: cancelar a venda não devolve o dinheiro.
+        return venda.getPagamentos().stream()
+                .filter(p -> p.getOrigem() == OrigemPagamento.MERCADO_PAGO)
+                .map(PagamentoVenda::getValor)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

@@ -17,6 +17,7 @@ import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
 /**
@@ -188,6 +189,11 @@ public class MercadoPagoPix {
                 throw new MercadoPagoException(mensagem, e.getStatusCode().value(), codigo, null);
             } catch (ResourceAccessException e) {
                 String mensagem = "Mercado Pago: " + operacao + " sem resposta (timeout ou rede)";
+                LOG.warn(mensagem);
+                throw new MercadoPagoException(mensagem, 0, null, null);
+            } catch (RestClientException e) {
+                // Resposta que não dá para ler (não é JSON, proxy no meio...).
+                String mensagem = "Mercado Pago: " + operacao + " devolveu uma resposta inválida";
                 LOG.warn(mensagem);
                 throw new MercadoPagoException(mensagem, 0, null, null);
             }

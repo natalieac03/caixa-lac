@@ -63,6 +63,9 @@ public class CobrancaPix {
 
     private String resolucao;
 
+    /** Última vez que o Mercado Pago foi consultado (a tela não pergunta de novo em menos de 5 s). */
+    private LocalDateTime consultadaEm;
+
     protected CobrancaPix() {}
 
     public CobrancaPix(String token, int parte, BigDecimal valor) {
@@ -97,6 +100,10 @@ public class CobrancaPix {
         if (status == StatusCobranca.PAGA) {
             throw new RegraDeNegocioException("Esta parte já foi paga no Pix; não dá para gerar outro.");
         }
+        if (valorPago != null) {
+            throw new RegraDeNegocioException(
+                    "Esta parte foi paga no Pix com valor diferente; resolva à mão antes de gerar outro.");
+        }
         exigirValor(novoValor);
         this.valor = novoValor;
         this.tentativa++;
@@ -106,6 +113,8 @@ public class CobrancaPix {
         this.status = StatusCobranca.PENDENTE;
         this.valorPago = null;
         this.criadaEm = agora;
+        // A resposta da criação já é a situação de agora; a próxima consulta pergunta ao Mercado Pago.
+        this.consultadaEm = null;
         this.pagaEm = null;
     }
 
@@ -130,6 +139,11 @@ public class CobrancaPix {
                 valorPago = pagoMp;
                 return mudou;
             }
+            case "refunded", "charged_back" -> {
+                // Devolvido ou contestado: o dinheiro não ficou com a LAC.
+                status = StatusCobranca.ESTORNADA;
+                return true;
+            }
             case "canceled", "failed" -> {
                 status = "expired".equals(detalheMp) ? StatusCobranca.EXPIRADA : StatusCobranca.CANCELADA;
                 return true;
@@ -141,6 +155,14 @@ public class CobrancaPix {
     }
 
     /** Cancelada do nosso lado (o Mercado Pago confirmou o cancelamento). */
+    public void marcarConsultada(LocalDateTime agora) {
+        this.consultadaEm = agora;
+    }
+
+    public LocalDateTime getConsultadaEm() {
+        return consultadaEm;
+    }
+
     public void marcarCancelada() {
         if (status == StatusCobranca.PENDENTE) status = StatusCobranca.CANCELADA;
     }

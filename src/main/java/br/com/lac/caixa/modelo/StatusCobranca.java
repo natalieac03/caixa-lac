@@ -5,5 +5,7 @@ public enum StatusCobranca {
     PENDENTE,
     PAGA,
     EXPIRADA,
-    CANCELADA
+    CANCELADA,
+    /** O Mercado Pago devolveu o dinheiro (refunded) ou o pagador contestou (charged_back). */
+    ESTORNADA
 }

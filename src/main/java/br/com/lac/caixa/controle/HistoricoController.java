@@ -8,7 +8,9 @@ import br.com.lac.caixa.servico.CaixaService;
 import br.com.lac.caixa.servico.CobrancaPixService;
 import br.com.lac.caixa.servico.ConsultaHistorico;
 import br.com.lac.caixa.servico.EventoService;
+import br.com.lac.caixa.util.Dinheiro;
 import br.com.lac.caixa.util.ExportadorCSV;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.DateTimeException;
 import java.time.LocalDate;
@@ -71,7 +73,9 @@ public class HistoricoController {
         var filtro = filtro(forma, inicio, fim, dia, produto, sel);
         var resultado = consulta.consultar(filtro, pagina);
         model.addAttribute("vendas", resultado.pagina().getContent());
-        model.addAttribute("pixSemVenda", cobrancasPix.pixSemVenda());
+        var pixSemVenda = cobrancasPix.pixSemVenda();
+        model.addAttribute("pixSemVenda", pixSemVenda);
+        model.addAttribute("pixParaEstornar", cobrancasPix.deVendaCancelada(pixSemVenda));
         model.addAttribute("pagina", resultado.pagina());
         model.addAttribute("resumo", resultado.resumo());
         model.addAttribute("formas", FormaPagamento.values());
@@ -137,8 +141,12 @@ public class HistoricoController {
 
     @PostMapping("/historico/{id}/cancelar")
     public String cancelar(@PathVariable Long id, @RequestParam String motivo, RedirectAttributes flash) {
-        caixa.cancelarVenda(id, motivo);
-        flash.addFlashAttribute("sucesso", "Venda #" + id + " cancelada. Estoque devolvido.");
+        BigDecimal pixMercadoPago = caixa.cancelarVenda(id, motivo);
+        String aviso = pixMercadoPago.signum() > 0
+                ? " Esta venda tinha " + Dinheiro.reais(pixMercadoPago) + " de Pix pelo Mercado Pago: estorne no app do"
+                        + " Mercado Pago e depois marque como resolvido em \"Pix recebido sem venda\"."
+                : "";
+        flash.addFlashAttribute("sucesso", "Venda #" + id + " cancelada. Estoque devolvido." + aviso);
         return "redirect:/historico";
     }
 

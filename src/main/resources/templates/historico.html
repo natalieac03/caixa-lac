@@ -20,7 +20,7 @@
                     <td th:text="${#temporals.format(c.pagaEm != null ? c.pagaEm : c.criadaEm, 'dd/MM/yyyy HH:mm')}">01/01 10:00</td>
                     <td class="num" th:text="${T(br.com.lac.caixa.util.Dinheiro).reais(c.valorPago)}">R$ 18,00</td>
                     <td class="mono" th:text="${c.orderId}">ORD...</td>
-                    <td th:text="${c.valorDivergente} ? 'Pago com valor diferente da cobrança (' + ${T(br.com.lac.caixa.util.Dinheiro).reais(c.valor)} + ')' : 'Pago, sem venda'">Pago</td>
+                    <td th:text="${pixParaEstornar.contains(c.orderId)} ? 'Venda cancelada: estorne o Pix no Mercado Pago' : (${c.valorDivergente} ? 'Pago com valor diferente da cobrança (' + ${T(br.com.lac.caixa.util.Dinheiro).reais(c.valor)} + ')' : 'Pago, sem venda')">Pago</td>
                     <td>
                         <form method="post" th:action="@{'/historico/pix/' + ${c.id} + '/resolver'}" class="acoes-linha">
                             <input type="text" name="como" required maxlength="255" placeholder="Como foi resolvido"

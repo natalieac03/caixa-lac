@@ -247,4 +247,12 @@ class MercadoPagoPixTest {
         var corpo = new ObjectMapper().readTree(servidor.takeRequest().getBody().readUtf8());
         assertEquals("APRO", corpo.path("payer").path("first_name").asText());
     }
+
+    @Test
+    @DisplayName("Resposta que não é JSON (proxy, página de erro): vira MercadoPagoException, não RestClientException")
+    void respostaQueNaoEJson() {
+        servidor.enqueue(json(200, "<html>Bad gateway</html>"));
+        var erro = assertThrows(MercadoPagoException.class, () -> mp.consultar("ORD01TESTE"));
+        org.junit.jupiter.api.Assertions.assertTrue(erro.getMessage().contains("consultar order"), erro.getMessage());
+    }
 }

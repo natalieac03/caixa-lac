@@ -62,6 +62,8 @@ class PixNoNavegadorTest {
 
     @BeforeEach
     void abrir() {
+        // Cada teste começa sem cobrança pendente de outro teste (o banco é o mesmo da classe).
+        jdbc.update("update cobranca_pix set status = 'CANCELADA' where status = 'PENDENTE'");
         boton = produtos.save(new Produto("Bóton Pix " + System.nanoTime(), new BigDecimal("6.00"), 50));
         contexto = Navegador.browser().newContext();
         pagina = contexto.newPage();
@@ -112,9 +114,11 @@ class PixNoNavegadorTest {
         pagina.waitForURL(Pattern.compile(".*/historico$"));
         assertThat(pagina.locator(".aviso-sucesso")).containsText("Recebido R$ 18,00 via Pix.");
         assertEquals(
-                order,
+                1,
                 jdbc.queryForObject(
-                        "select mp_order_id from pagamento_venda where origem = 'MERCADO_PAGO'", String.class));
+                        "select count(*) from pagamento_venda where origem = 'MERCADO_PAGO' and mp_order_id = ?",
+                        Integer.class,
+                        order));
     }
 
     @Test
@@ -137,7 +141,8 @@ class PixNoNavegadorTest {
         pagina.waitForCondition(() -> "canceled".equals(FAKE.order(order).status));
 
         // Act / Assert: Pix manual libera o confirmar e grava como manual
-        painel.getByText("Pix manual").click();
+        painel.getByText("Pix manual", new com.microsoft.playwright.Locator.GetByTextOptions().setExact(true))
+                .click();
         assertThat(pagina.locator("#botaoConfirmar")).isEnabled();
         pagina.locator("#botaoConfirmar").click();
         pagina.waitForURL(Pattern.compile(".*/historico$"));
@@ -145,5 +150,47 @@ class PixNoNavegadorTest {
                 1,
                 jdbc.queryForObject(
                         "select count(*) from pagamento_venda where origem = 'MANUAL' and valor = 18", Integer.class));
+    }
+
+    @Test
+    @DisplayName("Usar Pix manual com o Pix já pago: a tela fica com o pago (Mercado Pago), não troca para manual")
+    void usarManualComPixJaPago() {
+        pagina.getByLabel("Quantidade de " + boton.getNome()).fill("1");
+        var painel = pagina.locator("#pixUnico");
+        painel.getByText("Gerar Pix").click();
+        assertThat(painel.locator(".situacao-pix")).hasText("Aguardando pagamento...");
+        String order = jdbc.queryForObject(
+                "select order_id from cobranca_pix where status = 'PENDENTE' and valor = 6", String.class);
+        FAKE.pagar(order, "6.00");
+
+        // Antes da próxima consulta da tela (3 s), a pessoa desiste e pede Pix manual
+        painel.getByText("Usar Pix manual").click();
+
+        assertThat(painel.locator(".situacao-pix")).hasText("Pix recebido (Mercado Pago).");
+        assertThat(painel.locator("input.origem")).hasValue("MERCADO_PAGO");
+        pagina.locator("#botaoConfirmar").click();
+        pagina.waitForURL(Pattern.compile(".*/historico$"));
+        assertEquals(
+                order,
+                jdbc.queryForObject(
+                        "select mp_order_id from pagamento_venda where origem = 'MERCADO_PAGO' and valor = 6",
+                        String.class));
+    }
+
+    @Test
+    @DisplayName("A tela não dispara uma consulta nova com a anterior ainda em andamento")
+    void semConsultasSobrepostas() {
+        pagina.getByLabel("Quantidade de " + boton.getNome()).fill("2");
+        var painel = pagina.locator("#pixUnico");
+        // Segura as consultas da situação (GET /venda/pix/{token}/0) sem responder
+        java.util.List<com.microsoft.playwright.Route> presas = new java.util.ArrayList<>();
+        pagina.route(Pattern.compile(".*/venda/pix/[0-9a-f-]{36}/0$"), presas::add);
+        painel.getByText("Gerar Pix").click();
+        assertThat(painel.locator(".situacao-pix")).hasText("Aguardando pagamento...");
+        pagina.waitForTimeout(7000); // passaria por dois ciclos de 3 s
+        int disparadas = presas.size();
+        presas.forEach(com.microsoft.playwright.Route::resume);
+        pagina.unroute(Pattern.compile(".*/venda/pix/[0-9a-f-]{36}/0$"));
+        assertEquals(1, disparadas, "uma consulta por vez");
     }
 }

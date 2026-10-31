@@ -12,17 +12,12 @@ import org.springframework.data.repository.query.Param;
 
 public interface CobrancaPixRepository extends JpaRepository<CobrancaPix, Long> {
 
-    /** Com bloqueio: duas consultas ou um webhook ao mesmo tempo não se atropelam. */
-    @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
-    @Query("select c from CobrancaPix c where c.token = :token and c.parte = :parte")
-    Optional<CobrancaPix> buscarParaAtualizar(@Param("token") String token, @Param("parte") int parte);
-
+    /** Sem bloqueio: para decidir e consultar o Mercado Pago (o bloqueio vem depois, só para aplicar). */
     Optional<CobrancaPix> findByTokenAndParte(String token, int parte);
 
-    @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
-    @Query("select c from CobrancaPix c where c.orderId = :orderId")
-    Optional<CobrancaPix> buscarPorOrderParaAtualizar(@Param("orderId") String orderId);
+    Optional<CobrancaPix> findByOrderId(String orderId);
 
+    /** Com bloqueio: duas consultas ou um webhook ao mesmo tempo não se atropelam ao aplicar. */
     @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from CobrancaPix c where c.id = :id")
     Optional<CobrancaPix> buscarPorIdParaAtualizar(@Param("id") Long id);
@@ -30,16 +25,26 @@ public interface CobrancaPixRepository extends JpaRepository<CobrancaPix, Long> 
     List<CobrancaPix> findByStatusAndCriadaEmBefore(StatusCobranca status, LocalDateTime limite);
 
     /**
-     * Dinheiro que entrou sem venda: Pix PAGO (ou pago com valor diferente) que
-     * nenhuma parte de venda usa, ainda não resolvido, criado antes do limite
-     * (quem está com a tela aberta ainda pode confirmar).
+     * Dinheiro que entrou sem venda válida: Pix PAGO (ou pago com valor diferente,
+     * e não estornado) que nenhuma parte de venda NÃO cancelada usa, ainda não
+     * resolvido, criado antes do limite (quem está com a tela aberta ainda pode
+     * confirmar). Pix de venda cancelada aparece: é para estornar.
      */
     @Query("""
             select c from CobrancaPix c
             where c.resolvidaEm is null and c.criadaEm < :limite
+              and c.status <> br.com.lac.caixa.modelo.StatusCobranca.ESTORNADA
               and (c.status = br.com.lac.caixa.modelo.StatusCobranca.PAGA or c.valorPago is not null)
-              and not exists (select p.id from PagamentoVenda p where p.mpOrderId = c.orderId)
+              and not exists (select p.id from Venda v join v.pagamentos p
+                              where p.mpOrderId = c.orderId and v.cancelada = false)
             order by c.criadaEm
             """)
     List<CobrancaPix> pixSemVenda(@Param("limite") LocalDateTime limite);
+
+    /** Das orders dadas, as que estão numa parte de pagamento de venda cancelada. */
+    @Query("""
+            select distinct p.mpOrderId from Venda v join v.pagamentos p
+            where v.cancelada = true and p.mpOrderId in :orders
+            """)
+    List<String> ordersDeVendaCancelada(@Param("orders") List<String> orders);
 }
