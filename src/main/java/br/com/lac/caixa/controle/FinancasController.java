@@ -2,6 +2,7 @@ package br.com.lac.caixa.controle;
 
 import br.com.lac.caixa.controle.csv.ExportadorFinancas;
 import br.com.lac.caixa.controle.csv.RespostaCsv;
+import br.com.lac.caixa.controle.csv.TabelaCsv;
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.servico.CategoriaService;
@@ -97,11 +98,11 @@ public class FinancasController {
             @RequestParam(required = false) Long categoria,
             @RequestParam(required = false) FormaPagamento forma,
             @RequestParam(required = false) String metrica) {
-        var parte = ExportadorFinancas.parte(tabela);
-        if (parte == null) throw new RegraDeNegocioException("Tabela desconhecida.");
+        var tabelaCsv =
+                TabelaCsv.porNome(tabela).orElseThrow(() -> new RegraDeNegocioException("Tabela desconhecida."));
         var resolvido = filtros.resolver(atalho, inicio, fim, evento, categoria, forma);
-        var dados = painel.tabela(resolvido.filtro(), metrica(metrica), parte);
+        var dados = painel.tabela(resolvido.filtro(), metrica(metrica), tabelaCsv.parte());
         return RespostaCsv.arquivo(
-                ExportadorFinancas.gerar(tabela, dados, resolvido.periodo()), "financas-" + tabela + ".csv");
+                ExportadorFinancas.gerar(tabelaCsv, dados, resolvido.periodo()), "financas-" + tabela + ".csv");
     }
 }

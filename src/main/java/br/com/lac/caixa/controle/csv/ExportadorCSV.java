@@ -5,9 +5,10 @@ import br.com.lac.caixa.modelo.PagamentoVenda;
 import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.modelo.Venda;
 import br.com.lac.caixa.servico.Fechamento;
-import br.com.lac.caixa.util.Dinheiro;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,17 +21,9 @@ public final class ExportadorCSV {
     private ExportadorCSV() {}
 
     public static String doEstoque(List<Produto> produtos) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Nome;Categoria;Preço;Quantidade\n");
+        StringBuilder sb = new StringBuilder("Nome;Categoria;Preço;Quantidade\n");
         for (Produto p : produtos) {
-            sb.append(campo(p.getNome()))
-                    .append(';')
-                    .append(campo(p.getNomeCategoria()))
-                    .append(';')
-                    .append(Dinheiro.numero(p.getPreco()))
-                    .append(';')
-                    .append(p.getQuantidade())
-                    .append('\n');
+            sb.append(LinhaCsv.de(p.getNome(), p.getNomeCategoria(), p.getPreco(), p.getQuantidade()));
         }
         return sb.toString();
     }
@@ -41,76 +34,38 @@ public final class ExportadorCSV {
         sb.append(";Descrição do Outro\n");
         for (Venda v : vendas) {
             if (v.isCancelada()) continue;
-            sb.append(v.getId())
-                    .append(';')
-                    .append(v.getDataHora().format(DATA))
-                    .append(';')
-                    .append(v.getDataHora().format(HORA))
-                    .append(';')
-                    .append(campo(v.getResumoProdutos()))
-                    .append(';')
-                    .append(v.getQuantidadeTotal())
-                    .append(';')
-                    .append(Dinheiro.numero(v.getValorCobrado()));
-            for (FormaPagamento forma : FormaPagamento.values()) {
-                sb.append(';').append(Dinheiro.numero(v.valorPago(forma)));
-            }
-            String outros = v.getPagamentos().stream()
+            List<Object> campos = new ArrayList<>(Arrays.asList(
+                    v.getId(),
+                    LinhaCsv.cru(v.getDataHora().format(DATA)),
+                    LinhaCsv.cru(v.getDataHora().format(HORA)),
+                    v.getResumoProdutos(),
+                    v.getQuantidadeTotal(),
+                    v.getValorCobrado()));
+            for (FormaPagamento forma : FormaPagamento.values()) campos.add(v.valorPago(forma));
+            campos.add(v.getPagamentos().stream()
                     .filter(p -> p.getForma() == FormaPagamento.OUTRO)
                     .map(PagamentoVenda::getNomeForma)
-                    .collect(Collectors.joining(" / "));
-            sb.append(';').append(campo(outros)).append('\n');
+                    .collect(Collectors.joining(" / ")));
+            sb.append(LinhaCsv.de(campos.toArray()));
         }
         return sb.toString();
     }
 
     public static String doFechamento(Fechamento fechamento, LocalDate inicio, LocalDate fim) {
         StringBuilder csv = new StringBuilder("Início;Fim;Item;Quantidade de vendas;Valor\n");
-        String intervalo = campo(inicio == null ? "" : inicio.format(DATA)) + ";"
-                + campo(fim == null ? "" : fim.format(DATA)) + ";";
+        String de = inicio == null ? "" : inicio.format(DATA);
+        String ate = fim == null ? "" : fim.format(DATA);
         for (var linha : fechamento.formas()) {
-            csv.append(intervalo)
-                    .append(campo(linha.forma().getRotulo()))
-                    .append(';')
-                    .append(linha.vendas())
-                    .append(';')
-                    .append(Dinheiro.numero(linha.total()))
-                    .append('\n');
+            csv.append(LinhaCsv.de(de, ate, linha.forma().getRotulo(), linha.vendas(), linha.total()));
         }
-        csv.append(intervalo)
-                .append("\"Pix pelo Mercado Pago\";;")
-                .append(Dinheiro.numero(fechamento.pixMercadoPago()))
-                .append('\n');
-        csv.append(intervalo)
-                .append("\"Pix manual\";;")
-                .append(Dinheiro.numero(fechamento.pixManual()))
-                .append('\n');
-        csv.append(intervalo)
-                .append("\"Soma das formas\";;")
-                .append(Dinheiro.numero(fechamento.totalFormas()))
-                .append('\n');
-        csv.append(intervalo)
-                .append("TOTAL;")
-                .append(fechamento.quantidade())
-                .append(';')
-                .append(Dinheiro.numero(fechamento.total()))
-                .append('\n');
-        csv.append(intervalo)
-                .append("\"Descontos promocionais\";;")
-                .append(Dinheiro.numero(fechamento.descontos()))
-                .append('\n');
-        csv.append(intervalo)
-                .append("\"Ajustes manuais\";;")
-                .append(Dinheiro.numero(fechamento.ajustes()))
-                .append('\n');
-        csv.append(intervalo)
-                .append("\"Vendas com pagamento dividido\";")
-                .append(fechamento.divididas())
-                .append(";\n");
-        csv.append(intervalo)
-                .append("\"Cortesias\";")
-                .append(fechamento.cortesias())
-                .append(";\n");
+        csv.append(LinhaCsv.de(de, ate, "Pix pelo Mercado Pago", null, fechamento.pixMercadoPago()));
+        csv.append(LinhaCsv.de(de, ate, "Pix manual", null, fechamento.pixManual()));
+        csv.append(LinhaCsv.de(de, ate, "Soma das formas", null, fechamento.totalFormas()));
+        csv.append(LinhaCsv.de(de, ate, LinhaCsv.cru("TOTAL"), fechamento.quantidade(), fechamento.total()));
+        csv.append(LinhaCsv.de(de, ate, "Descontos promocionais", null, fechamento.descontos()));
+        csv.append(LinhaCsv.de(de, ate, "Ajustes manuais", null, fechamento.ajustes()));
+        csv.append(LinhaCsv.de(de, ate, "Vendas com pagamento dividido", fechamento.divididas(), null));
+        csv.append(LinhaCsv.de(de, ate, "Cortesias", fechamento.cortesias(), null));
         return csv.toString();
     }
 
