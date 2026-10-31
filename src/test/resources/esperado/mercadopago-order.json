@@ -1,0 +1,1 @@
+{"type":"online","processing_mode":"automatic","total_amount":"18.00","external_reference":"11111111-2222-3333-4444-555555555555-p0-1800-t1","payer":{"email":"caixa@lac.test"},"transactions":{"payments":[{"amount":"18.00","expiration_time":"PT30M","payment_method":{"id":"pix","type":"bank_transfer"}}]}}

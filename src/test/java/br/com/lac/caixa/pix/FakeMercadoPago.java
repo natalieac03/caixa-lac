@@ -42,6 +42,8 @@ public class FakeMercadoPago extends Dispatcher {
 
     public volatile JsonNode ultimaCriacao;
 
+    public volatile String ultimoCorpoCru;
+
     public static MockWebServer iniciar(FakeMercadoPago fake) {
         try {
             var servidor = new MockWebServer();
@@ -120,7 +122,9 @@ public class FakeMercadoPago extends Dispatcher {
 
     private MockResponse criar(RecordedRequest req) throws Exception {
         String chave = req.getHeader("X-Idempotency-Key");
-        var corpo = json.readTree(req.getBody().readUtf8());
+        String cru = req.getBody().readUtf8();
+        ultimoCorpoCru = cru;
+        var corpo = json.readTree(cru);
         ultimaCriacao = corpo;
         String existente = chave == null ? null : porIdempotencia.get(chave);
         if (existente != null) return resposta(201, corpo(orders.get(existente)));

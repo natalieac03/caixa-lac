@@ -1,0 +1,4 @@
+HTTP 400
+Content-Type: application/json
+
+{"erro":"Quantidade inválida: -1"}

@@ -1,0 +1,4 @@
+HTTP 200
+Content-Type: application/json
+
+{"parte":0,"status":"PENDENTE","valor":18.00,"valorPago":null,"qrCode":"00020126PIX-ORD0001","qrCodeBase64":"iVBORw0KGgoORD0001","orderId":"ORD0001"}

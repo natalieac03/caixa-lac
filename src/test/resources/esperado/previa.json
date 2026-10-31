@@ -1,0 +1,4 @@
+HTTP 200
+Content-Type: application/json
+
+{"itens":[{"produtoId":1,"nome":"Bóton 1","categoria":"Bóton","quantidade":4,"precoUnitario":5.00},{"produtoId":11,"nome":"Caneca 2","categoria":"Caneca","quantidade":1,"precoUnitario":30.00},{"produtoId":13,"nome":"Pôster 1","categoria":"Pôster","quantidade":1,"precoUnitario":15.00}],"descontos":[{"descricao":"A partir de: Bóton 1","valor":4.00,"promocaoId":1}],"total":65.00,"aproximado":false}
