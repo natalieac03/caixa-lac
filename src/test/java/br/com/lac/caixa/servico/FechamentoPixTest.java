@@ -3,12 +3,12 @@ package br.com.lac.caixa.servico;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import br.com.lac.caixa.exportacao.ExportadorCSV;
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.modelo.OrigemPagamento;
 import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.pix.FakeMercadoPago;
 import br.com.lac.caixa.repositorio.ProdutoRepository;
-import br.com.lac.caixa.util.ExportadorCSV;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;

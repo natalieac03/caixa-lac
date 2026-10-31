@@ -3,12 +3,13 @@ package br.com.lac.caixa.controle;
 import br.com.lac.caixa.repositorio.FiltroFinancas;
 import br.com.lac.caixa.servico.DespesaService;
 import br.com.lac.caixa.servico.EventoService;
+import br.com.lac.caixa.servico.financas.ComparativoDeEventos;
 import br.com.lac.caixa.servico.financas.Financas.LinhaCategoria;
 import br.com.lac.caixa.servico.financas.Financas.LinhaForma;
 import br.com.lac.caixa.servico.financas.Financas.Metrica;
 import br.com.lac.caixa.servico.financas.Financas.ResumoDoEvento;
-import br.com.lac.caixa.servico.financas.FinancasService;
 import br.com.lac.caixa.servico.financas.PainelFinancas;
+import br.com.lac.caixa.servico.financas.RelatorioDoEvento;
 import br.com.lac.caixa.util.Dinheiro;
 import br.com.lac.caixa.util.GraficoSvg;
 import java.math.BigDecimal;
@@ -22,14 +23,20 @@ import org.springframework.web.bind.annotation.PathVariable;
 public class RelatorioController {
     private final EventoService eventos;
     private final PainelFinancas painel;
-    private final FinancasService financas;
+    private final RelatorioDoEvento relatorio;
+    private final ComparativoDeEventos comparativo;
     private final DespesaService despesas;
 
     public RelatorioController(
-            EventoService eventos, PainelFinancas painel, FinancasService financas, DespesaService despesas) {
+            EventoService eventos,
+            PainelFinancas painel,
+            RelatorioDoEvento relatorio,
+            ComparativoDeEventos comparativo,
+            DespesaService despesas) {
         this.eventos = eventos;
         this.painel = painel;
-        this.financas = financas;
+        this.relatorio = relatorio;
+        this.comparativo = comparativo;
         this.despesas = despesas;
     }
 
@@ -50,8 +57,8 @@ public class RelatorioController {
         model.addAttribute("top", top);
         model.addAttribute("despesas", despesas.filtrar(filtroDespesas));
         model.addAttribute("totalDespesas", despesas.total(filtroDespesas));
-        model.addAttribute("cancelamentos", financas.cancelamentos(filtro));
-        model.addAttribute("ajustes", financas.ajustesManuais(filtro));
+        model.addAttribute("cancelamentos", relatorio.cancelamentos(filtro));
+        model.addAttribute("ajustes", relatorio.ajustesManuais(filtro));
         model.addAttribute(
                 "graficoProdutos",
                 GraficoSvg.barrasHorizontais(
@@ -88,7 +95,7 @@ public class RelatorioController {
 
     @GetMapping("/eventos/comparativo")
     public String comparativo(Model model) {
-        var lista = financas.comparativoDeEventos();
+        var lista = comparativo.eventos();
         model.addAttribute("eventos", lista);
         model.addAttribute(
                 "grafico",

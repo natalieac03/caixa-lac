@@ -23,6 +23,8 @@ import br.com.lac.caixa.servico.EventoService;
 import br.com.lac.caixa.servico.FechamentoService;
 import br.com.lac.caixa.servico.PromocaoService;
 import br.com.lac.caixa.servico.TaxaService;
+import br.com.lac.caixa.servico.financas.ComparativoDeEventos;
+import br.com.lac.caixa.servico.financas.EstoqueFinanceiro;
 import br.com.lac.caixa.servico.financas.Financas.ClasseAbc;
 import br.com.lac.caixa.servico.financas.Financas.LinhaAbc;
 import br.com.lac.caixa.servico.financas.Financas.LinhaCategoria;
@@ -33,6 +35,7 @@ import br.com.lac.caixa.servico.financas.Financas.Metrica;
 import br.com.lac.caixa.servico.financas.Financas.Ponto;
 import br.com.lac.caixa.servico.financas.Financas.Resumo;
 import br.com.lac.caixa.servico.financas.FinancasService;
+import br.com.lac.caixa.servico.financas.RelatorioDoEvento;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -78,6 +81,15 @@ import org.springframework.context.ApplicationContext;
 abstract class MassaFinanceira {
     @Autowired
     FinancasService financas;
+
+    @Autowired
+    EstoqueFinanceiro estoqueFinanceiro;
+
+    @Autowired
+    ComparativoDeEventos comparativo;
+
+    @Autowired
+    RelatorioDoEvento relatorio;
 
     @Autowired
     FechamentoService fechamento;
@@ -453,7 +465,7 @@ abstract class MassaFinanceira {
     @Test
     @DisplayName("Giro, cobertura e produtos parados (cancelada e arquivado não contam)")
     void estoque() {
-        var giro = financas.giro(MARCO);
+        var giro = estoqueFinanceiro.giro(MARCO);
         assertEquals(14, giro.size()); // Pôster 2 arquivado
         Map<String, LinhaGiro> g = new HashMap<>();
         giro.forEach(l -> g.put(l.nome(), l));
@@ -475,8 +487,8 @@ abstract class MassaFinanceira {
 
         assertEquals(
                 List.of("Camiseta 2", "Pôster 1", "Pôster 3"),
-                financas.parados(MARCO).stream().map(LinhaGiro::nome).toList());
-        assertEquals(10, financas.parados(evento("Feira 2")).size()); // 14 ativos - 4 vendidos na Feira 2
+                estoqueFinanceiro.parados(MARCO).stream().map(LinhaGiro::nome).toList());
+        assertEquals(10, estoqueFinanceiro.parados(evento("Feira 2")).size()); // 14 ativos - 4 vendidos na Feira 2
     }
 
     // ------------------------------------------------------------ invariantes
@@ -572,8 +584,8 @@ abstract class MassaFinanceira {
         assertEquals(total.itensVendidos(), itens);
 
         // O comparativo traz o dia a dia como coluna própria, no mesmo intervalo total (01/03 a 15/03)
-        var comparativo = financas.comparativoDeEventos();
-        var ultimo = comparativo.get(comparativo.size() - 1);
+        var linhas = comparativo.eventos();
+        var ultimo = linhas.get(linhas.size() - 1);
         assertEquals("Dia a dia", ultimo.nome());
         assertEquals(LocalDate.of(2025, 3, 1).atStartOfDay(), ultimo.inicio());
         assertEquals(LocalDate.of(2025, 3, 16).atStartOfDay(), ultimo.fim());
@@ -595,11 +607,10 @@ abstract class MassaFinanceira {
                 financas.resumo(FiltroFinancas.periodo(LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 1)))
                         .despesas());
         // O comparativo (eventos + dia a dia) soma o mesmo que o período inteiro.
-        var comparativo = financas.comparativoDeEventos();
-        BigDecimal soma = comparativo.stream()
-                .map(l -> l.resumo().despesas())
-                .reduce(BigDecimal.ZERO.setScale(2), BigDecimal::add);
-        var dia = comparativo.get(comparativo.size() - 1);
+        var linhas = comparativo.eventos();
+        BigDecimal soma =
+                linhas.stream().map(l -> l.resumo().despesas()).reduce(BigDecimal.ZERO.setScale(2), BigDecimal::add);
+        var dia = linhas.get(linhas.size() - 1);
         assertEquals(
                 financas.resumo(FiltroFinancas.periodo(
                                 dia.inicio().toLocalDate(),
@@ -629,5 +640,18 @@ abstract class MassaFinanceira {
         var promos = financas.promocoes(caneca);
         assertEquals(1, promos.size()); // o pacote apagado (V9); a do Bóton não tem caneca
         assertValor("26.67", promos.get(0).receitaLiquida()); // a Caneca 2 da V9, não os 40 da venda
+    }
+
+    @Test
+    @DisplayName("Relatório da Feira 1: a cancelada (V4) e os ajustes manuais (V3 e V5), com o motivo")
+    void relatorioDoEvento() {
+        var cancelamentos = relatorio.cancelamentos(evento("Feira 1"));
+        assertEquals(1, cancelamentos.size());
+        assertValor("30.00", cancelamentos.get(0).valor());
+        assertEquals("Ensaio", cancelamentos.get(0).motivo());
+        var ajustes = relatorio.ajustesManuais(evento("Feira 1"));
+        assertEquals(2, ajustes.size());
+        assertValor("-16.00", ajustes.get(0).diferenca());
+        assertValor("-5.00", ajustes.get(1).diferenca());
     }
 }

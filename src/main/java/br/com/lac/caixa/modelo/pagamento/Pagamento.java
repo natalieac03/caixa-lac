@@ -1,4 +1,4 @@
-package br.com.lac.caixa.pagamento;
+package br.com.lac.caixa.modelo.pagamento;
 
 import br.com.lac.caixa.modelo.PagamentoVenda;
 import br.com.lac.caixa.util.Dinheiro;

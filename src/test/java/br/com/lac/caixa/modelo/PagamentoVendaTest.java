@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
-import br.com.lac.caixa.pagamento.PagamentoFactory;
+import br.com.lac.caixa.modelo.pagamento.PagamentoFactory;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;

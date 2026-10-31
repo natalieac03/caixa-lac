@@ -18,6 +18,8 @@ import java.math.RoundingMode;
  */
 @Entity
 public class Produto {
+    /** Casas decimais do custo (o custo médio é uma divisão). */
+    public static final int ESCALA_CUSTO = 4;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -44,15 +46,15 @@ public class Produto {
      */
     private boolean ativo = true;
 
-    /**
-     * Custo unitário atual (custo médio ponderado das compras), 4 casas.
-     * Opcional: null = ainda não informado ("sem custo"). Só para as finanças;
-     * não muda o preço cobrado.
-     */
     /** Limite de estoque baixo (opcional): o alerta avisa quando a quantidade chega a ele. */
     private Integer estoqueMinimo;
 
-    @Column(precision = 38, scale = 4)
+    /**
+     * Custo unitário atual (custo médio ponderado das compras), com
+     * {@link #ESCALA_CUSTO} casas. Opcional: null = ainda não informado ("sem
+     * custo"). Só para as finanças; não muda o preço cobrado.
+     */
+    @Column(precision = 38, scale = ESCALA_CUSTO)
     private BigDecimal custoUnitario;
 
     public Produto() {}
@@ -107,9 +109,6 @@ public class Produto {
     public boolean isSemCusto() {
         return custoUnitario == null;
     }
-
-    /** Casas decimais do custo (o custo médio é uma divisão). */
-    public static final int ESCALA_CUSTO = 4;
 
     /**
      * Entrada por compra: soma ao estoque e recalcula o custo médio ponderado,

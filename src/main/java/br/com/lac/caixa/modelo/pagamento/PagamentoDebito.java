@@ -1,11 +1,11 @@
-package br.com.lac.caixa.pagamento;
+package br.com.lac.caixa.modelo.pagamento;
 
 import br.com.lac.caixa.modelo.PagamentoVenda;
 import br.com.lac.caixa.util.Dinheiro;
 
-public class PagamentoCredito implements Pagamento {
+public class PagamentoDebito implements Pagamento {
     @Override
     public String descrever(PagamentoVenda parte) {
-        return Dinheiro.reais(parte.getValor()) + " no crédito";
+        return Dinheiro.reais(parte.getValor()) + " no débito";
     }
 }

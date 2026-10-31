@@ -1,11 +1,13 @@
 package br.com.lac.caixa.controle;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.regex.Pattern;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -35,5 +37,25 @@ class EstaticosHttpTest {
                     .andExpect(status().isOk())
                     .andExpect(header().string("Cache-Control", "max-age=31536000, public"));
         }
+    }
+
+    @Test
+    @DisplayName("Tela de venda: o JS fica em /js/venda.js (com hash na URL), não dentro da página")
+    void jsDaVendaEmArquivo() throws Exception {
+        String pagina = mvc.perform(get("/venda/nova").sessionAttr("autenticado", true))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        var js = Pattern.compile("/js/venda-[0-9a-f]{32}\\.js").matcher(pagina);
+        assertTrue(js.find(), "sem /js/venda-<hash>.js na tela de venda");
+        assertFalse(pagina.contains("function recalcular"), "o JS ainda está dentro da página");
+        String codigo = mvc.perform(get(js.group()).sessionAttr("autenticado", true))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "max-age=31536000, public"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertTrue(codigo.contains("function recalcular"), "venda.js sem o código da tela");
     }
 }

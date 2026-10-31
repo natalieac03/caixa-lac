@@ -9,7 +9,7 @@ import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.modelo.Promocao;
 import br.com.lac.caixa.modelo.Venda;
 import br.com.lac.caixa.modelo.VendaDesconto;
-import br.com.lac.caixa.pagamento.PagamentoFactory;
+import br.com.lac.caixa.modelo.pagamento.PagamentoFactory;
 import br.com.lac.caixa.repositorio.VendaRepository;
 import br.com.lac.caixa.servico.preco.CalculadoraDePreco;
 import br.com.lac.caixa.servico.preco.Carrinho;

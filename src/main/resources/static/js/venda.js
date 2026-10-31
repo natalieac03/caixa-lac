@@ -1,0 +1,515 @@
+/* Tela de venda (venda-nova.html): carrinho, busca, pagamentos, prévia e Pix. */
+/* --- normalização para a busca --- */
+function sem(t) {
+    return (t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
+function filtrar() {
+    const q = sem(document.getElementById('busca').value);
+    let visiveis = 0;
+    document.querySelectorAll('#tabelaProdutos tbody tr').forEach(function (tr) {
+        const inp = tr.querySelector('.qtd');
+        if (!inp) return;
+        const ok = sem(inp.getAttribute('data-nome')).indexOf(q) !== -1
+                || sem(inp.getAttribute('data-catnome')).indexOf(q) !== -1;
+        tr.style.display = ok ? '' : 'none';
+        if (ok) visiveis++;
+    });
+    document.getElementById('semResultado').classList.toggle('oculto', visiveis > 0);
+}
+
+/* Botões − e + ao lado da quantidade */
+function passo(botao, delta) {
+    const inp = botao.parentNode.querySelector('.qtd');
+    const max = parseInt(inp.getAttribute('max'));
+    let v = (parseInt(inp.value) || 0) + delta;
+    if (v < 0) v = 0;
+    if (!isNaN(max) && v > max) v = max;
+    inp.value = v;
+    recalcular();
+}
+
+/* ---------- Pagamento ---------- */
+let unidades = 0, totalPrevia = null, dividido = false;
+const pixAutomatico = document.getElementById('formVenda').dataset.pixAutomatico === 'true';
+const tokenVenda = document.querySelector('input[name=token]').value;
+
+/* "12,50", "12.50" e "1.234,56" -> centavos; vazio ou inválido -> null (como o servidor). */
+function centavos(texto) {
+    let t = (texto || '').trim();
+    if (!t) return null;
+    if (!/^(?:[0-9]+(?:[.,][0-9]{1,2})?|[0-9]{1,3}(?:\.[0-9]{3})+,[0-9]{1,2})$/.test(t)) return null;
+    if (t.indexOf(',') !== -1) t = t.replace(/\./g, '').replace(',', '.');
+    return Math.round(parseFloat(t) * 100);
+}
+/* Valores do JSON da prévia (ex.: 18.00) em centavos. */
+function centavosDoJson(v) {
+    return Math.round(Number(v) * 100);
+}
+function reaisCentavos(c) {
+    const inteiro = Math.floor(Math.abs(c) / 100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return 'R$ ' + inteiro + ',' + String(Math.abs(c) % 100).padStart(2, '0');
+}
+
+/* Valor a cobrar: o ajustado, se preenchido; senão o total da prévia. */
+function alvo() {
+    const ajuste = document.getElementById('valorTotal').value.trim();
+    if (ajuste) return centavos(ajuste);
+    return totalPrevia;
+}
+
+function formaUnica() {
+    const r = document.querySelector('input[name=pag_forma_0]:checked');
+    return r ? r.value : '';
+}
+
+/* Campo escondido fica desabilitado: não vai no envio. */
+function mostrar(el, sim) {
+    el.classList.toggle('oculto', !sim);
+    el.querySelectorAll('input').forEach(i => { i.disabled = !sim; });
+}
+
+/* ---------- Pix automático (Mercado Pago) ---------- */
+const paineisPix = new Set();
+// Ao sair da tela, para todas as consultas.
+window.addEventListener('pagehide', function () { paineisPix.forEach(p => p.parar()); });
+
+function botaoPequeno(texto, aoClicar) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'botao botao-secundario botao-pequeno'; b.textContent = texto;
+    b.addEventListener('click', aoClicar);
+    return b;
+}
+
+async function pedirJson(url, opcoes) {
+    const resposta = await fetch(url, Object.assign({headers: {'Accept': 'application/json'}}, opcoes || {}));
+    const o = (resposta.headers.get('content-type') || '').includes('application/json') ? await resposta.json() : null;
+    return {status: resposta.status, ok: resposta.ok, o: o};
+}
+
+/*
+ * Painel do Pix de uma parte: "Gerar Pix" (Mercado Pago, confirma sozinho) ou
+ * "Pix manual" (conferido no app). valorAtual() dá o valor da parte em centavos.
+ * ok() = a parte está fechada: paga no Mercado Pago com o mesmo valor, ou manual.
+ */
+function criarPainelPix(parte, valorAtual) {
+    const raiz = document.createElement('div'); raiz.className = 'painel-pix';
+    const origem = document.createElement('input'); origem.type = 'hidden'; origem.className = 'origem';
+    const botoes = document.createElement('div'); botoes.className = 'acoes-linha';
+    const gerar = botaoPequeno('Gerar Pix', function () { gerarPix(); });
+    const manual = botaoPequeno('Pix manual', function () { usarManual(); });
+    botoes.append(gerar, manual);
+    const area = document.createElement('div'); area.className = 'qr-area oculto';
+    const img = document.createElement('img'); img.className = 'qr-pix'; img.alt = 'QR code do Pix';
+    const valorTexto = document.createElement('p'); valorTexto.className = 'qr-valor';
+    const copiar = botaoPequeno('Copiar código', function () {
+        if (!codigo) return;
+        navigator.clipboard?.writeText(codigo).then(() => { copiar.textContent = 'Código copiado'; });
+    });
+    // Com o Pix aguardando, dá para desistir e conferir no app (Pix manual).
+    const manualNoQr = botaoPequeno('Usar Pix manual', function () { usarManual(); });
+    area.append(img, valorTexto, copiar, manualNoQr);
+    const situacao = document.createElement('p'); situacao.className = 'ajuda situacao-pix'; situacao.setAttribute('aria-live', 'polite');
+    raiz.append(origem, botoes, area, situacao);
+
+    let estado = 'escolher', cobranca = null, codigo = null, intervalo = null, controle = null;
+    // Aviso do último acontecimento (expirou, valor mudou, erro): fica até a próxima ação.
+    let aviso = '';
+
+    function desenhar(mensagem) {
+        area.classList.toggle('oculto', !(estado === 'aguardando' || estado === 'paga'));
+        botoes.classList.toggle('oculto', estado === 'aguardando' || estado === 'paga' || estado === 'gerando');
+        manualNoQr.classList.toggle('oculto', estado !== 'aguardando');
+        const v = valorAtual();
+        gerar.disabled = !(v > 0) || unidades === 0;
+        if (mensagem !== undefined) aviso = mensagem;
+        if (aviso) situacao.textContent = aviso;
+        else if (estado === 'aguardando') situacao.textContent = 'Aguardando pagamento...';
+        else if (estado === 'paga') situacao.textContent = 'Pix recebido (Mercado Pago).';
+        else if (estado === 'manual') situacao.textContent = 'Pix manual: confira o recebimento no app.';
+        else if (estado === 'gerando') situacao.textContent = 'Gerando Pix...';
+        else situacao.textContent = '';
+    }
+
+    function parar() {
+        if (intervalo) clearInterval(intervalo);
+        intervalo = null;
+        if (controle) controle.abort();
+        controle = null;
+    }
+
+    async function gerarPix() {
+        const v = valorAtual();
+        if (!(v > 0)) return;
+        aviso = '';
+        estado = 'gerando'; desenhar();
+        try {
+            const r = await pedirJson('/venda/pix', {method: 'POST', body: new URLSearchParams({
+                token: tokenVenda, parte: String(parte), valor: (v / 100).toFixed(2)})});
+            if (r.status === 401) { estado = 'escolher'; sessaoExpirada(); return; }
+            if (!r.ok || !r.o) throw new Error(r.o && r.o.erro ? r.o.erro : 'Não foi possível gerar o Pix.');
+            cobranca = centavosDoJson(r.o.valor);
+            codigo = r.o.qrCode;
+            if (r.o.qrCodeBase64) img.src = 'data:image/png;base64,' + r.o.qrCodeBase64;
+            valorTexto.textContent = reaisCentavos(cobranca);
+            copiar.textContent = 'Copiar código';
+            origem.value = 'MERCADO_PAGO';
+            aplicar(r.o.status);
+        } catch (e) {
+            estado = 'escolher'; desenhar(e.message + ' Use Pix manual se precisar.');
+        }
+        atualizarPagamento();
+    }
+
+    function aplicar(status) {
+        if (status === 'PAGA') { estado = 'paga'; aviso = ''; parar(); desenhar(); }
+        else if (status === 'PENDENTE') {
+            estado = 'aguardando'; aviso = ''; desenhar();
+            if (!intervalo) intervalo = setInterval(consultar, 3000);
+        } else {
+            estado = 'escolher'; parar(); origem.value = '';
+            desenhar(status === 'EXPIRADA' ? 'O Pix expirou: gere outro.'
+                : status === 'ESTORNADA' ? 'O Pix foi estornado no Mercado Pago: gere outro ou use Pix manual.'
+                : 'O Pix foi cancelado: gere outro.');
+        }
+    }
+
+    async function consultar() {
+        // Uma consulta por vez: com a anterior ainda em andamento, espera o próximo ciclo.
+        if (controle) return;
+        controle = new AbortController();
+        try {
+            const r = await pedirJson('/venda/pix/' + encodeURIComponent(tokenVenda) + '/' + parte, {signal: controle.signal});
+            if (r.status === 401) { parar(); sessaoExpirada(); return; }
+            if (!r.ok || !r.o) return; // tenta de novo no próximo ciclo
+            if (r.o.status === 'PENDENTE' && r.o.valorPago !== null && centavosDoJson(r.o.valorPago) !== cobranca) {
+                desenhar('Pago com valor diferente (' + reaisCentavos(centavosDoJson(r.o.valorPago)) + '): resolva à mão.');
+                return;
+            }
+            aplicar(r.o.status);
+            atualizarPagamento();
+        } catch (e) {
+            if (e.name !== 'AbortError') desenhar('Sem resposta do servidor; tentando de novo...');
+        } finally {
+            controle = null;
+        }
+    }
+
+    /* Cancela no servidor e devolve a situação real (PAGA, PENDENTE em processamento, CANCELADA...). */
+    async function cancelarCobranca() {
+        parar();
+        try {
+            const r = await pedirJson('/venda/pix/cancelar', {method: 'POST',
+                body: new URLSearchParams({token: tokenVenda, parte: String(parte)})});
+            return r.ok && r.o ? r.o.status : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async function usarManual() {
+        if (estado === 'aguardando') {
+            desenhar('Cancelando o Pix no Mercado Pago...');
+            const status = await cancelarCobranca();
+            // Já pago: fica com o Pix do Mercado Pago, não troca para manual.
+            if (status === 'PAGA') { aplicar('PAGA'); atualizarPagamento(); return; }
+            if (status === 'PENDENTE') {
+                aplicar('PENDENTE');
+                desenhar('O Mercado Pago ainda está processando este Pix; espere alguns segundos.');
+                return;
+            }
+        }
+        aviso = '';
+        estado = 'manual'; origem.value = 'MANUAL'; desenhar();
+        atualizarPagamento();
+    }
+
+    /* Volta ao começo (outra forma escolhida): cancela a cobrança pendente. */
+    function reiniciar() {
+        if (estado === 'aguardando') cancelarCobranca();
+        if (estado !== 'paga') { estado = 'escolher'; origem.value = ''; desenhar(); }
+    }
+
+    function ok() {
+        const v = valorAtual();
+        if (estado === 'aguardando' && v !== cobranca) {
+            estado = 'escolher'; origem.value = '';
+            desenhar('O valor mudou: o Pix anterior foi cancelado. Gere outro.');
+            cancelarCobranca().then(function (status) {
+                if (status === 'PAGA') { aplicar('PAGA'); atualizarPagamento(); }
+                else if (status === 'PENDENTE') desenhar('O Pix anterior ainda está em processamento no Mercado Pago; espere alguns segundos antes de gerar outro.');
+            });
+        }
+        if (estado === 'paga' && v !== cobranca) {
+            desenhar('Este Pix já foi pago (' + reaisCentavos(cobranca) + '): ajuste o valor das partes.');
+            return false;
+        }
+        if (estado === 'escolher' || estado === 'manual') desenhar();
+        return estado === 'manual' || estado === 'paga';
+    }
+
+    function destruir() { reiniciar(); parar(); paineisPix.delete(painel); }
+
+    const painel = {elemento: raiz, ok: ok, reiniciar: reiniciar, parar: parar, destruir: destruir};
+    paineisPix.add(painel);
+    desenhar();
+    return painel;
+}
+
+const painelUnico = pixAutomatico ? criarPainelPix(0, () => alvo()) : null;
+if (painelUnico) {
+    painelUnico.elemento.querySelector('input.origem').name = 'pag_origem_0';
+    document.getElementById('pixUnico').append(painelUnico.elemento);
+}
+let proximaParte = 1;
+
+function alternarUnico(focar) {
+    const forma = formaUnica();
+    mostrar(document.getElementById('campoOutro'), !dividido && forma === 'OUTRO');
+    mostrar(document.getElementById('campoRecebido'), !dividido && forma === 'DINHEIRO');
+    mostrar(document.getElementById('pixUnico'), !dividido && forma === 'PIX' && pixAutomatico);
+    if (painelUnico && forma !== 'PIX') painelUnico.reiniciar();
+    if (focar && forma === 'OUTRO') document.getElementById('pagDescricaoUnico').focus();
+    atualizarPagamento();
+}
+
+function abrirDivisao() {
+    dividido = true;
+    if (painelUnico) painelUnico.reiniciar();
+    document.querySelectorAll('#pagamentoUnico input').forEach(i => { i.disabled = true; });
+    document.getElementById('pagamentoUnico').classList.add('oculto');
+    document.getElementById('pagamentoDividido').classList.remove('oculto');
+    const primeira = formaUnica() || 'PIX';
+    adicionarLinha(primeira);
+    adicionarLinha(primeira === 'DINHEIRO' ? 'PIX' : 'DINHEIRO');
+}
+
+function fecharDivisao() {
+    dividido = false;
+    document.querySelectorAll('#linhasPagamento .linha-pagamento').forEach(l => { if (l.painelPix) l.painelPix.destruir(); });
+    document.getElementById('linhasPagamento').replaceChildren();
+    document.getElementById('pagamentoDividido').classList.add('oculto');
+    document.getElementById('pagamentoUnico').classList.remove('oculto');
+    document.querySelectorAll('#pagamentoUnico input[type=radio]').forEach(i => { i.disabled = false; });
+    alternarUnico(false);
+}
+
+function campo(rotulo, classe) {
+    const div = document.createElement('div'); div.className = 'campo ' + classe;
+    const label = document.createElement('label'); label.textContent = rotulo;
+    const input = document.createElement('input'); input.type = 'text';
+    input.addEventListener('input', atualizarPagamento);
+    label.append(input); div.append(label);
+    return {div: div, input: input};
+}
+
+function adicionarLinha(forma) {
+    const lista = document.getElementById('linhasPagamento');
+    const linha = document.createElement('div'); linha.className = 'linha-pagamento';
+
+    const seletor = document.getElementById('modeloForma').cloneNode(true);
+    seletor.removeAttribute('id'); seletor.hidden = false; seletor.disabled = false;
+    seletor.removeAttribute('aria-hidden'); seletor.className = 'forma';
+    seletor.setAttribute('aria-label', 'Forma de pagamento');
+    if (typeof forma === 'string') seletor.value = forma;
+
+    const valor = campo('Valor', 'campo-valor'); valor.input.className = 'valor mono'; valor.input.inputMode = 'decimal';
+    const descricao = campo('Qual?', 'campo-descricao'); descricao.input.className = 'descricao'; descricao.input.maxLength = 255;
+    const recebido = campo('Recebido (opcional)', 'campo-recebido'); recebido.input.className = 'recebido mono'; recebido.input.inputMode = 'decimal';
+    const troco = document.createElement('p'); troco.className = 'ajuda troco'; recebido.div.append(troco);
+    // Número estável da parte: não muda quando outra linha é removida (a cobrança Pix é dela).
+    const parte = proximaParte++;
+    const numeroParte = document.createElement('input'); numeroParte.type = 'hidden'; numeroParte.className = 'parte';
+    numeroParte.value = String(parte);
+    const pix = document.createElement('div'); pix.className = 'campo campo-pix';
+    if (pixAutomatico) {
+        linha.painelPix = criarPainelPix(parte, () => centavos(valor.input.value));
+        pix.append(linha.painelPix.elemento);
+    }
+
+    const remover = document.createElement('button');
+    remover.type = 'button'; remover.className = 'botao botao-secundario botao-pequeno'; remover.textContent = 'Remover';
+    remover.setAttribute('aria-label', 'Remover esta forma');
+    remover.addEventListener('click', function () {
+        if (linha.painelPix) linha.painelPix.destruir();
+        linha.remove();
+        if (!lista.children.length) { fecharDivisao(); return; }
+        renumerar(); atualizarPagamento();
+    });
+    seletor.addEventListener('change', function () { ajustarLinha(linha); atualizarPagamento(); });
+
+    linha.append(seletor, valor.div, descricao.div, recebido.div, pix, numeroParte, remover);
+    lista.append(linha);
+    ajustarLinha(linha);
+    renumerar();
+    atualizarPagamento();
+    valor.input.focus();
+}
+
+function ajustarLinha(linha) {
+    const forma = linha.querySelector('select.forma').value;
+    mostrar(linha.querySelector('.campo-descricao'), forma === 'OUTRO');
+    mostrar(linha.querySelector('.campo-recebido'), forma === 'DINHEIRO');
+    mostrar(linha.querySelector('.campo-pix'), forma === 'PIX' && pixAutomatico);
+    if (linha.painelPix && forma !== 'PIX') linha.painelPix.reiniciar();
+}
+
+/* Nomes pag_forma_0, pag_valor_0, ... na ordem da tela. */
+function renumerar() {
+    document.querySelectorAll('#linhasPagamento .linha-pagamento').forEach(function (linha, n) {
+        linha.querySelector('select.forma').name = 'pag_forma_' + n;
+        linha.querySelector('input.valor').name = 'pag_valor_' + n;
+        linha.querySelector('input.descricao').name = 'pag_descricao_' + n;
+        linha.querySelector('input.recebido').name = 'pag_recebido_' + n;
+        linha.querySelector('input.parte').name = 'pag_parte_' + n;
+        const origem = linha.querySelector('input.origem');
+        if (origem) origem.name = 'pag_origem_' + n;
+    });
+}
+
+/* Troco ao vivo; devolve false se o recebido for inválido ou menor que o valor. */
+function mostrarTroco(saida, textoRecebido, valor) {
+    saida.textContent = '';
+    if (!textoRecebido.trim()) return true;
+    const recebido = centavos(textoRecebido);
+    if (recebido === null || valor === null) { saida.textContent = 'Valor recebido inválido.'; return false; }
+    if (recebido < valor) { saida.textContent = 'Recebido menor que o valor em dinheiro.'; return false; }
+    saida.textContent = 'Troco: ' + reaisCentavos(recebido - valor);
+    return true;
+}
+
+/* Confere o pagamento como o servidor fará; o servidor confere de novo. */
+function pagamentoOk() {
+    const saldo = document.getElementById('saldoPagamento');
+    saldo.textContent = ''; saldo.className = 'saldo-pagamento';
+    const total = alvo();
+    if (total === null) {
+        if (document.getElementById('valorTotal').value.trim()) saldo.textContent = 'Valor ajustado inválido.';
+        return false;
+    }
+    if (!dividido) {
+        const forma = formaUnica();
+        if (forma === 'OUTRO' && total > 0 && !document.getElementById('pagDescricaoUnico').value.trim()) {
+            saldo.textContent = 'Diga qual é a outra forma de pagamento.'; return false;
+        }
+        if (forma === 'DINHEIRO') {
+            return mostrarTroco(document.getElementById('trocoUnico'), document.getElementById('pagRecebidoUnico').value, total);
+        }
+        if (forma === 'PIX' && painelUnico && total > 0 && !painelUnico.ok()) {
+            saldo.textContent = 'Gere o Pix e aguarde o pagamento, ou escolha Pix manual.'; return false;
+        }
+        return true;
+    }
+    if (total === 0) { saldo.textContent = 'Cortesia (valor zero) não tem pagamento: volte para uma forma só.'; return false; }
+    let soma = 0, ok = true;
+    document.querySelectorAll('#linhasPagamento .linha-pagamento').forEach(function (linha) {
+        const forma = linha.querySelector('select.forma').value;
+        const valor = centavos(linha.querySelector('input.valor').value);
+        if (valor === null || valor <= 0) ok = false; else soma += valor;
+        if (forma === 'OUTRO' && !linha.querySelector('input.descricao').value.trim()) ok = false;
+        if (forma === 'PIX' && linha.painelPix && !linha.painelPix.ok()) ok = false;
+        const troco = linha.querySelector('.troco');
+        if (forma === 'DINHEIRO') { if (!mostrarTroco(troco, linha.querySelector('input.recebido').value, valor)) ok = false; }
+        else troco.textContent = '';
+    });
+    const diferenca = total - soma;
+    if (diferenca > 0) { saldo.textContent = 'Falta ' + reaisCentavos(diferenca); saldo.classList.add('saldo-falta'); }
+    else if (diferenca < 0) { saldo.textContent = 'Sobra ' + reaisCentavos(-diferenca); saldo.classList.add('saldo-falta'); }
+    else { saldo.textContent = 'Pagamento fechado: ' + reaisCentavos(total); saldo.classList.add('saldo-ok'); }
+    return ok && diferenca === 0;
+}
+
+function atualizarPagamento() {
+    const ok = pagamentoOk();
+    const botao = document.getElementById('botaoConfirmar');
+    botao.disabled = enviando || unidades === 0 || !ok;
+    // O botão mostra quanto vai ser cobrado: "Confirmar R$ 18,00".
+    const total = alvo();
+    botao.textContent = unidades > 0 && total !== null ? 'Confirmar ' + reaisCentavos(total) : 'Confirmar venda';
+}
+
+let enviando = false;
+document.getElementById('formVenda').addEventListener('submit', function(e) {
+    if (enviando) { e.preventDefault(); return; }
+    enviando = true;
+    document.getElementById('botaoConfirmar').disabled = true;
+});
+let timer, versao = 0;
+function linha(texto, valor) {
+    const div = document.createElement('div'); div.className = 'item-carrinho';
+    const nome = document.createElement('span'); nome.textContent = texto;
+    const preco = document.createElement('span'); preco.textContent = valor;
+    div.append(nome, preco); document.getElementById('carrinho').append(div);
+}
+const SEM_PREVIA = 'Não foi possível calcular a prévia. Confira a conexão e tente novamente.';
+
+/* Sessão expirada: avisa e oferece o login, sem perder o que está na tela. */
+function sessaoExpirada() {
+    totalPrevia = null; unidades = 0;
+    const aviso = document.createElement('p');
+    aviso.className = 'aviso aviso-erro';
+    aviso.id = 'sessaoExpirada';
+    aviso.setAttribute('role', 'alert');
+    aviso.append('Sessão expirou. Entre de novo. ');
+    const entrar = document.createElement('a');
+    entrar.href = '/login';
+    entrar.textContent = 'Entrar';
+    aviso.append(entrar);
+    document.getElementById('carrinho').replaceChildren(aviso);
+    atualizarPagamento();
+}
+
+/* Prévia em andamento: cancelada quando outra é pedida (só a última desenha). */
+let previaEmAndamento = null;
+function recalcular() {
+    clearTimeout(timer);
+    const atual = ++versao;
+    document.getElementById('botaoConfirmar').disabled = true;
+    timer = setTimeout(async function () {
+        if (previaEmAndamento) previaEmAndamento.abort();
+        const controle = new AbortController();
+        previaEmAndamento = controle;
+        try {
+            const resposta = await fetch('/venda/previa', {method:'POST', signal: controle.signal,
+                    body:new URLSearchParams(new FormData(document.getElementById('formVenda')))});
+            const json = (resposta.headers.get('content-type') || '').includes('application/json');
+            const o = json ? await resposta.json() : null;
+            if (atual !== versao) return;
+            if (resposta.status === 401) { sessaoExpirada(); return; }
+            // Erro com mensagem do servidor ({"erro": "..."}) aparece como veio.
+            if (!resposta.ok || !o || o.erro) throw new Error(o && o.erro ? o.erro : SEM_PREVIA);
+            document.getElementById('carrinho').replaceChildren();
+            unidades = 0;
+            o.itens.forEach(i => {
+                unidades += i.quantidade;
+                const unitario = centavosDoJson(i.precoUnitario);
+                linha(i.nome + ' · ' + i.categoria + ' · ' + i.quantidade + ' × ' + reaisCentavos(unitario), reaisCentavos(i.quantidade * unitario));
+            });
+            o.descontos.forEach(d => linha(d.descricao, '− ' + reaisCentavos(centavosDoJson(d.valor))));
+            if (o.aproximado) linha('Carrinho grande: promoções escolhidas por aproximação.', '');
+            totalPrevia = centavosDoJson(o.total);
+            document.getElementById('totalCarrinho').textContent = reaisCentavos(totalPrevia).slice(3);
+            document.getElementById('contagemItens').textContent = unidades + (unidades === 1 ? ' item' : ' itens');
+            atualizarPagamento();
+        } catch (e) {
+            if (e.name === 'AbortError' || atual !== versao) return;
+            totalPrevia = null; unidades = 0;
+            document.getElementById('carrinho').replaceChildren();
+            linha(e instanceof TypeError ? SEM_PREVIA : e.message, '');
+            atualizarPagamento();
+        }
+    }, 200);
+}
+
+/* Atalho: "/" foca a busca */
+document.addEventListener('keydown', function (e) {
+    const busca = document.getElementById('busca');
+    if (e.key === '/' && busca && document.activeElement !== busca
+            && !/input|textarea|select/i.test(document.activeElement.tagName)) {
+        e.preventDefault();
+        busca.focus();
+    }
+});
+
+alternarUnico(false);
+recalcular();

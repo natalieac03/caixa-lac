@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
+import br.com.lac.caixa.exportacao.ExportadorCSV;
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.modelo.PagamentoVenda;
 import br.com.lac.caixa.modelo.Produto;
@@ -14,7 +15,6 @@ import br.com.lac.caixa.modelo.Venda;
 import br.com.lac.caixa.repositorio.FiltroHistorico;
 import br.com.lac.caixa.repositorio.ProdutoRepository;
 import br.com.lac.caixa.repositorio.VendaRepository;
-import br.com.lac.caixa.util.ExportadorCSV;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;

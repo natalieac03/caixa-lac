@@ -1,9 +1,9 @@
 package br.com.lac.caixa.controle;
 
+import br.com.lac.caixa.exportacao.ExportadorCSV;
 import br.com.lac.caixa.repositorio.FiltroHistorico;
 import br.com.lac.caixa.servico.EventoService;
 import br.com.lac.caixa.servico.FechamentoService;
-import br.com.lac.caixa.util.ExportadorCSV;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;

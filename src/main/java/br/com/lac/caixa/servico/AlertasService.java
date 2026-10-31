@@ -4,9 +4,10 @@ import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.repositorio.EventoRepository;
 import br.com.lac.caixa.repositorio.FiltroFinancas;
 import br.com.lac.caixa.repositorio.PeriodoDoEvento;
+import br.com.lac.caixa.servico.financas.EstoqueFinanceiro;
 import br.com.lac.caixa.servico.financas.Financas.LinhaAjuste;
 import br.com.lac.caixa.servico.financas.Financas.LinhaGiro;
-import br.com.lac.caixa.servico.financas.FinancasService;
+import br.com.lac.caixa.servico.financas.RelatorioDoEvento;
 import br.com.lac.caixa.util.Dinheiro;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -37,7 +38,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class AlertasService {
     private final EstoqueService estoque;
     private final EventoRepository eventos;
-    private final FinancasService financas;
+    private final EstoqueFinanceiro estoqueFinanceiro;
+    private final RelatorioDoEvento relatorio;
     private final FechamentoService fechamento;
     private final Clock relogio;
     private final EventoService servicoDeEventos;
@@ -45,13 +47,15 @@ public class AlertasService {
     public AlertasService(
             EstoqueService estoque,
             EventoRepository eventos,
-            FinancasService financas,
+            EstoqueFinanceiro estoqueFinanceiro,
+            RelatorioDoEvento relatorio,
             FechamentoService fechamento,
             Clock relogio,
             EventoService servicoDeEventos) {
         this.estoque = estoque;
         this.eventos = eventos;
-        this.financas = financas;
+        this.estoqueFinanceiro = estoqueFinanceiro;
+        this.relatorio = relatorio;
         this.fechamento = fechamento;
         this.relogio = relogio;
         this.servicoDeEventos = servicoDeEventos;
@@ -186,7 +190,7 @@ public class AlertasService {
             var f = FiltroFinancas.doEvento(new PeriodoDoEvento(e.getId(), e.getNome(), e.getInicio(), e.getFim()));
             dias = f.dias();
             evento = e.getNome();
-            financas.giro(f).forEach(l -> giro.put(l.produtoId(), l));
+            estoqueFinanceiro.giro(f).forEach(l -> giro.put(l.produtoId(), l));
         }
         List<EstoqueAcabando> acabando = new ArrayList<>();
         for (Produto p : ativos) {
@@ -210,7 +214,7 @@ public class AlertasService {
                 .filter(Produto::isSemCusto)
                 .map(p -> new SemCusto(p.getId(), p.getNome()))
                 .toList();
-        var ajustes = financas.ajustesManuais(FiltroFinancas.periodo(hoje, hoje));
+        var ajustes = relatorio.ajustesManuais(FiltroFinancas.periodo(hoje, hoje));
         var fechado = fechamento.consultar(hoje, hoje);
         var esquecidos = servicoDeEventos
                 .aberto()

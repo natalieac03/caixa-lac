@@ -1,11 +1,11 @@
 package br.com.lac.caixa.controle;
 
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
+import br.com.lac.caixa.exportacao.ExportadorCSV;
 import br.com.lac.caixa.modelo.Categoria;
 import br.com.lac.caixa.servico.CategoriaService;
 import br.com.lac.caixa.servico.EstoqueService;
 import br.com.lac.caixa.util.Dinheiro;
-import br.com.lac.caixa.util.ExportadorCSV;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.PositiveOrZero;
 import java.math.BigDecimal;

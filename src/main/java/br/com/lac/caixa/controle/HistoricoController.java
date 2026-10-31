@@ -1,6 +1,7 @@
 package br.com.lac.caixa.controle;
 
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
+import br.com.lac.caixa.exportacao.ExportadorCSV;
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.repositorio.FiltroHistorico;
 import br.com.lac.caixa.repositorio.PeriodoDoEvento;
@@ -9,7 +10,6 @@ import br.com.lac.caixa.servico.CobrancaPixService;
 import br.com.lac.caixa.servico.ConsultaHistorico;
 import br.com.lac.caixa.servico.EventoService;
 import br.com.lac.caixa.util.Dinheiro;
-import br.com.lac.caixa.util.ExportadorCSV;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.DateTimeException;

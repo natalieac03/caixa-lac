@@ -1,7 +1,7 @@
 package br.com.lac.caixa.modelo;
 
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
-import br.com.lac.caixa.pagamento.PagamentoFactory;
+import br.com.lac.caixa.modelo.pagamento.PagamentoFactory;
 import br.com.lac.caixa.util.Dinheiro;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

@@ -47,9 +47,11 @@ public class PainelFinancas {
     private static final DateTimeFormatter MES = DateTimeFormatter.ofPattern("MM/yyyy");
 
     private final FinancasService financas;
+    private final EstoqueFinanceiro estoque;
 
-    public PainelFinancas(FinancasService financas) {
+    public PainelFinancas(FinancasService financas, EstoqueFinanceiro estoque) {
         this.financas = financas;
+        this.estoque = estoque;
     }
 
     /** Um cartão: valor escrito, variação escrita (com seta) e a direção (sobe, desce, igual, sem). */
@@ -103,7 +105,7 @@ public class PainelFinancas {
         List<ProdutoAbc> produtos = financas.rankingProdutos(f, metrica).stream()
                 .map(p -> new ProdutoAbc(p, abc.get(p.produtoId())))
                 .toList();
-        List<LinhaGiro> giro = new ArrayList<>(financas.giro(f));
+        List<LinhaGiro> giro = new ArrayList<>(estoque.giro(f));
         // O que acaba primeiro vem primeiro; sem giro no fim.
         giro.sort(Comparator.comparing(
                         LinhaGiro::diasAteAcabar, Comparator.nullsLast(Comparator.<BigDecimal>naturalOrder()))
@@ -122,8 +124,8 @@ public class PainelFinancas {
                 mapa(f),
                 financas.promocoes(f),
                 giro,
-                financas.parados(f),
-                financas.valorDoEstoque(f),
+                estoque.parados(f),
+                estoque.valorDoEstoque(f),
                 financas.metas(f, r));
     }
 

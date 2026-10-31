@@ -1,10 +1,11 @@
-package br.com.lac.caixa.util;
+package br.com.lac.caixa.exportacao;
 
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.modelo.PagamentoVenda;
 import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.modelo.Venda;
 import br.com.lac.caixa.servico.Fechamento;
+import br.com.lac.caixa.util.Dinheiro;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;

@@ -1,4 +1,4 @@
-package br.com.lac.caixa.util;
+package br.com.lac.caixa.exportacao;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

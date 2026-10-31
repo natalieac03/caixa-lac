@@ -1,5 +1,10 @@
 package br.com.lac.caixa.servico.financas;
 
+import static br.com.lac.caixa.servico.financas.Contas.CEM;
+import static br.com.lac.caixa.servico.financas.Contas.dinheiro;
+import static br.com.lac.caixa.servico.financas.Contas.percentual;
+import static br.com.lac.caixa.servico.financas.Contas.razao;
+
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.modelo.Promocao;
 import br.com.lac.caixa.repositorio.ConsultasFinanceiras;
@@ -9,7 +14,6 @@ import br.com.lac.caixa.repositorio.EventoRepository;
 import br.com.lac.caixa.repositorio.FiltroFinancas;
 import br.com.lac.caixa.repositorio.PeriodoDoEvento;
 import br.com.lac.caixa.repositorio.PromocaoRepository;
-import br.com.lac.caixa.servico.EventoService;
 import br.com.lac.caixa.servico.financas.Financas.Celula;
 import br.com.lac.caixa.servico.financas.Financas.ClasseAbc;
 import br.com.lac.caixa.servico.financas.Financas.Cobertura;
@@ -18,7 +22,6 @@ import br.com.lac.caixa.servico.financas.Financas.Granularidade;
 import br.com.lac.caixa.servico.financas.Financas.LinhaAbc;
 import br.com.lac.caixa.servico.financas.Financas.LinhaCategoria;
 import br.com.lac.caixa.servico.financas.Financas.LinhaForma;
-import br.com.lac.caixa.servico.financas.Financas.LinhaGiro;
 import br.com.lac.caixa.servico.financas.Financas.LinhaProduto;
 import br.com.lac.caixa.servico.financas.Financas.LinhaPromocao;
 import br.com.lac.caixa.servico.financas.Financas.Metrica;
@@ -29,7 +32,6 @@ import br.com.lac.caixa.servico.financas.Financas.Variacao;
 import br.com.lac.caixa.util.Dinheiro;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -50,48 +52,27 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Camada de consulta das finanças (sem tela ainda). As somas são feitas no
- * banco (ConsultasFinanceiras); aqui ficam arredondamento, percentuais,
- * ordenação e o preenchimento de dias e horas sem venda.
+ * As contas da tela de Finanças (o painel): resumo e comparação, série, mapa
+ * de calor, rankings, curva ABC, formas, promoções, demonstrativo e metas. As
+ * somas são feitas no banco (ConsultasFinanceiras); aqui ficam arredondamento,
+ * percentuais, ordenação e o preenchimento dos pontos sem venda. O estoque, o
+ * relatório do evento e o comparativo têm os seus serviços; as contas comuns
+ * ficam em {@link Contas}.
  */
 @Service
 @Transactional(readOnly = true)
 public class FinancasService {
-    private static final BigDecimal CEM = BigDecimal.valueOf(100);
     private static final DateTimeFormatter DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm");
 
     private final ConsultasFinanceiras consultas;
     private final EventoRepository eventos;
     private final PromocaoRepository promocoes;
-    private final EventoService servicoDeEventos;
-    private final Clock relogio;
 
-    public FinancasService(
-            ConsultasFinanceiras consultas,
-            EventoRepository eventos,
-            PromocaoRepository promocoes,
-            EventoService servicoDeEventos,
-            Clock relogio) {
+    public FinancasService(ConsultasFinanceiras consultas, EventoRepository eventos, PromocaoRepository promocoes) {
         this.consultas = consultas;
         this.eventos = eventos;
         this.promocoes = promocoes;
-        this.servicoDeEventos = servicoDeEventos;
-        this.relogio = relogio;
-    }
-
-    static BigDecimal dinheiro(BigDecimal valor) {
-        return valor == null ? null : valor.setScale(2, RoundingMode.HALF_EVEN);
-    }
-
-    /** parte / todo x 100, 2 casas; null se o todo é zero ou ausente. */
-    static BigDecimal percentual(BigDecimal parte, BigDecimal todo) {
-        if (parte == null || todo == null || todo.signum() == 0) return null;
-        return parte.multiply(CEM).divide(todo, 2, RoundingMode.HALF_EVEN);
-    }
-
-    static BigDecimal razao(BigDecimal a, long b) {
-        return b == 0 ? null : a.divide(BigDecimal.valueOf(b), 2, RoundingMode.HALF_EVEN);
     }
 
     // ---------------------------------------------------------------- A: resumo
@@ -478,65 +459,6 @@ public class FinancasService {
         return tipo + p.getNomesCategorias() + " por " + Dinheiro.reais(p.getPreco());
     }
 
-    // ---------------------------------------------------------------- D: estoque
-
-    /** Giro e cobertura de cada produto ativo (do filtro de categoria, se houver). */
-    public List<LinhaGiro> giro(FiltroFinancas f) {
-        long dias = f.dias();
-        List<LinhaGiro> linhas = new ArrayList<>();
-        for (var e : consultas.estoque(f)) {
-            BigDecimal media =
-                    BigDecimal.valueOf(e.vendidas()).divide(BigDecimal.valueOf(dias), 2, RoundingMode.HALF_EVEN);
-            boolean semGiro = e.vendidas() == 0;
-            BigDecimal diasAteAcabar = semGiro
-                    ? null
-                    : BigDecimal.valueOf(e.quantidade())
-                            .multiply(BigDecimal.valueOf(dias))
-                            .divide(BigDecimal.valueOf(e.vendidas()), 1, RoundingMode.HALF_EVEN);
-            linhas.add(new LinhaGiro(
-                    e.produtoId(),
-                    e.nome(),
-                    e.categoria(),
-                    e.vendidas(),
-                    media,
-                    e.quantidade(),
-                    diasAteAcabar,
-                    semGiro,
-                    e.custoUnitario() == null
-                            ? null
-                            : dinheiro(e.custoUnitario().multiply(BigDecimal.valueOf(e.quantidade()))),
-                    dinheiro(e.preco().multiply(BigDecimal.valueOf(e.quantidade())))));
-        }
-        return linhas;
-    }
-
-    /** Produtos ativos com estoque e sem venda no período. */
-    public List<LinhaGiro> parados(FiltroFinancas f) {
-        List<LinhaGiro> linhas = new ArrayList<>();
-        for (var e : consultas.parados(f)) {
-            linhas.add(new LinhaGiro(
-                    e.produtoId(),
-                    e.nome(),
-                    e.categoria(),
-                    0,
-                    BigDecimal.ZERO.setScale(2),
-                    e.quantidade(),
-                    null,
-                    true,
-                    e.custoUnitario() == null
-                            ? null
-                            : dinheiro(e.custoUnitario().multiply(BigDecimal.valueOf(e.quantidade()))),
-                    dinheiro(e.preco().multiply(BigDecimal.valueOf(e.quantidade())))));
-        }
-        return linhas;
-    }
-
-    /** Valor do estoque de agora a custo e a preço (produtos ativos do filtro de categoria). */
-    public Financas.ValorEstoque valorDoEstoque(FiltroFinancas f) {
-        var v = consultas.valorDoEstoque(f);
-        return new Financas.ValorEstoque(dinheiro(v.aCusto()), dinheiro(v.aPreco()), v.produtosSemCusto());
-    }
-
     // ---------------------------------------------------------------- demonstrativo
 
     /**
@@ -568,54 +490,6 @@ public class FinancasService {
     private static Financas.LinhaDemonstrativo linha(
             String rotulo, String operador, BigDecimal valor, BigDecimal base, boolean resultado) {
         return new Financas.LinhaDemonstrativo(rotulo, operador, valor, percentual(valor, base), resultado);
-    }
-
-    // ---------------------------------------------------------------- relatório do evento
-
-    /** Vendas canceladas do período (pela data da venda). */
-    public List<Financas.LinhaCancelamento> cancelamentos(FiltroFinancas f) {
-        return consultas.cancelamentos(f).stream()
-                .map(c -> new Financas.LinhaCancelamento(
-                        c.vendaId(), c.dataHora(), dinheiro(c.valor()), c.canceladaEm(), c.motivo()))
-                .toList();
-    }
-
-    /** Vendas válidas com ajuste manual, com o motivo e a diferença (cobrado - calculado). */
-    public List<Financas.LinhaAjuste> ajustesManuais(FiltroFinancas f) {
-        return consultas.ajustesManuais(f).stream()
-                .map(a -> new Financas.LinhaAjuste(
-                        a.vendaId(),
-                        a.dataHora(),
-                        dinheiro(a.calculado()),
-                        dinheiro(a.cobrado()),
-                        dinheiro(a.cobrado().subtract(a.calculado())),
-                        a.motivo()))
-                .toList();
-    }
-
-    /**
-     * Todos os eventos, do mais antigo ao mais novo, cada um com o seu resumo (o
-     * aberto até agora), e por último o "Dia a dia": as vendas fora dos eventos e
-     * as despesas sem evento no mesmo intervalo total (do primeiro ao último dia).
-     */
-    public List<Financas.ResumoDoEvento> comparativoDeEventos() {
-        var periodos = servicoDeEventos.periodos();
-        List<Financas.ResumoDoEvento> lista = new ArrayList<>();
-        for (PeriodoDoEvento p : periodos) {
-            lista.add(new Financas.ResumoDoEvento(
-                    p.id(), p.nome(), p.inicio(), p.fim(), resumo(FiltroFinancas.doEvento(p))));
-        }
-        if (!periodos.isEmpty()) {
-            LocalDate de = periodos.get(0).inicio().toLocalDate();
-            LocalDate ate = periodos.stream()
-                    .map(p -> p.fim().minusNanos(1).toLocalDate())
-                    .max(Comparator.naturalOrder())
-                    .orElse(de);
-            var diaADia = FiltroFinancas.diaADia(de, ate, LocalDateTime.now(relogio));
-            lista.add(new Financas.ResumoDoEvento(
-                    null, "Dia a dia", de.atStartOfDay(), ate.plusDays(1).atStartOfDay(), resumo(diaADia)));
-        }
-        return lista;
     }
 
     // ---------------------------------------------------------------- metas

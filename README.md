@@ -14,11 +14,12 @@ com nome padronizado — "BÓTON" e "bóton" são a mesma categoria.
 src/main/java/br/com/lac/caixa/
 ├── CaixaApplication.java     liga o servidor
 ├── modelo/                   o miolo POO (Produto, ItemVenda, Venda, FormaPagamento)
-├── pagamento/                padrão Strategy (Pix, Débito, Crédito, Outro)
+├── modelo/pagamento/         padrão Strategy (Pix, Débito, Crédito, Outro)
 ├── repositorio/              conversa com o Postgres (Spring Data JPA)
 ├── servico/                  regras: EstoqueService e CaixaService (são Singletons do Spring)
 ├── controle/                 recebe os cliques das telas
-├── util/ExportadorCSV.java   gera os arquivos .csv
+├── exportacao/               gera os arquivos .csv (ExportadorCSV, ExportadorFinancas)
+├── util/                     ferramentas soltas (Dinheiro, Rateio, GraficoSvg)
 └── config/DadosIniciais.java popula alguns produtos na primeira execução
 
 src/main/resources/
@@ -376,7 +377,8 @@ Despesas e Taxas; no celular o grupo abre como uma folha no pé da tela.
 
 O painel de **Finanças** mostra receita, lucro, margem, rankings, mapa de calor e
 estoque do período escolhido (atalhos, evento, categoria e forma ficam na URL:
-dá para mandar o link). Os números vêm todos do servidor (`FinancasService`);
+dá para mandar o link). Os números vêm todos do servidor (`FinancasService` para o
+painel, `EstoqueFinanceiro`, `RelatorioDoEvento` e `ComparativoDeEventos`);
 os gráficos leem `/financas/dados` (mesmo filtro, exige login).
 
 ### Eventos rápidos e dia a dia
