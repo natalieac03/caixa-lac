@@ -1,97 +1,297 @@
+<div align="center">
+
+<img src="src/main/resources/static/img/logo.png" alt="Brasão da LAC" width="180">
+
 # Caixa LAC
 
-Sistema de caixa da **Liga Acadêmica de Computação (LAC)** para vender produtos
-(bótons, adesivos, camisetas, canecas...) em feiras, encontros e no dia a dia.
-Roda no navegador (computador, tablet ou celular), registra cada venda com o
-pagamento usado, controla o estoque e mostra as finanças do grupo: receita,
-custo, despesas, lucro e o desempenho de cada evento.
+**O caixa da Liga Acadêmica de Computação:** vendas, Pix, estoque e finanças de feiras e eventos, direto do navegador.
 
-Feito em **Java 21 + Spring Boot 4.1**, com telas em Thymeleaf e banco
-PostgreSQL em produção (Railway). Os detalhes técnicos estão em
-**[docs/ARQUITETURA.md](docs/ARQUITETURA.md)**.
+![Java](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.1-6DB33F?logo=springboot&logoColor=white)
+![Thymeleaf](https://img.shields.io/badge/Thymeleaf-3.1-005F0F?logo=thymeleaf&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+![Flyway](https://img.shields.io/badge/Flyway-12-CC0200?logo=flyway&logoColor=white)
+![Mercado Pago](https://img.shields.io/badge/Pix-Mercado_Pago-00B1EA?logo=mercadopago&logoColor=white)
+![Railway](https://img.shields.io/badge/deploy-Railway-0B0D0E?logo=railway&logoColor=white)
+![Testes](https://img.shields.io/badge/testes-JUnit_·_Playwright_·_Testcontainers-25A162)
+
+<br>
+
+<img src="docs/prints/inicio-claro-computador.png" alt="Tela inicial do Caixa LAC no computador, tema claro" width="720">
+
+</div>
+
+---
+
+## Sumário
+
+- [O que o caixa faz](#o-que-o-caixa-faz)
+- [Telas](#telas)
+- [Stack](#stack)
+- [Arquitetura](#arquitetura)
+- [Como funciona por dentro](#como-funciona-por-dentro)
+- [Rodar no computador](#rodar-no-computador)
+- [Testes](#testes)
+- [Colocar no ar](#colocar-no-ar)
+- [Regras de negócio](#regras-de-negócio)
+- [Documentação](#documentação)
+
+---
 
 ## O que o caixa faz
 
-**Vender**
-- Tela de venda com busca de produtos, quantidades e o total calculado na hora,
-  já com as promoções aplicadas (o cliente sempre paga o menor total possível).
-- Pagamento em Pix, débito, crédito, dinheiro (com troco) ou "outro" (vale,
-  permuta), e **pagamento dividido** entre várias formas.
-- **Pix automático pelo Mercado Pago** (opcional): a tela mostra o QR Code e
-  confirma sozinha quando o pagamento cai. Sem Mercado Pago, o Pix é conferido
-  à mão no app do banco.
-- Ajuste manual de valor (com motivo) e cortesia.
-
-**Estoque e promoções**
-- Produtos organizados em categorias, com preço, quantidade, custo médio
-  (calculado a partir das compras) e limite de estoque baixo.
-- Entrada por compra, saídas e um livro de movimentos que explica cada mudança.
-- Promoções por categoria: "a partir de N unidades, cada uma sai por R$ X" e
-  pacotes ("3 por R$ 12", combos entre categorias).
-
-**Acompanhar**
-- **Histórico** de vendas com filtros (dia, forma, produto, evento), correção de
-  data, cancelamento com motivo e exportação em CSV.
-- **Fechamento do caixa** por dia ou por evento, com o total de cada forma de
-  pagamento (e o Pix separado entre Mercado Pago e manual) para conferir com os
-  extratos.
-- **Eventos**: "Iniciar evento" com um toque, relatório do evento para imprimir
-  e comparativo entre eventos. O que acontece fora dos eventos é o "dia a dia".
-- **Finanças**: receita, CMV, margem, taxas das maquininhas, despesas e lucro;
-  gráficos, rankings de produtos e categorias, curva ABC, mapa de calor das
-  vendas, giro de estoque e metas por evento. Todas as tabelas exportam CSV.
-- **Despesas** do grupo (material, transporte...) e **taxas** de cada forma de
-  pagamento, com vigência.
-- **Avisos** (o sininho no topo): estoque acabando, produto sem custo, ajustes
-  do dia, fechamento que não bate e evento esquecido aberto.
-
-**Proteger**
-- Acesso com uma senha única do grupo, que fica só em variável de ambiente.
-- Freio contra tentativas de senha, sessão de um dia de evento, proteção contra
-  formulários de outros sites e log de auditoria de tudo o que muda dinheiro ou
-  estoque.
-
-## Tecnologias
-
-| Parte | O que usa |
+| | |
 |---|---|
-| Linguagem e framework | Java 21, Spring Boot 4.1 (Spring MVC, Data JPA, Validation, Actuator) |
-| Telas | Thymeleaf, CSS próprio, JavaScript sem framework, Chart.js para os gráficos |
-| Banco | PostgreSQL em produção, H2 em arquivo no computador, migrações com Flyway |
-| Pagamentos | API de Orders do Mercado Pago (Pix), com webhook assinado |
-| Testes | JUnit 5, MockMvc, Testcontainers (PostgreSQL), Playwright (navegador), ArchUnit |
-| Hospedagem | Railway, com healthcheck em `/actuator/health` |
+| 🛒 **Vender** | Busca de produtos, total na hora com as promoções (o cliente sempre paga o menor total), pagamento em Pix, débito, crédito, dinheiro com troco ou "outro", **pagamento dividido**, ajuste com motivo e cortesia. |
+| ⚡ **Pix automático** | Com o Mercado Pago ligado, a tela mostra o QR Code e confirma sozinha quando o pagamento cai. Sem ele, o Pix é conferido à mão. |
+| 📦 **Estoque e promoções** | Produtos por categoria, custo médio pelas compras, limite de estoque baixo, livro de movimentos e promoções "a partir de N" ou em pacote. |
+| 🧾 **Histórico e fechamento** | Filtros por dia, forma, produto e evento; correção de data; cancelamento com motivo; fechamento por forma de pagamento (Pix do Mercado Pago separado do manual); CSV. |
+| 🎪 **Eventos** | "Iniciar evento" com um toque, relatório para imprimir e comparativo entre eventos. Fora deles é o "dia a dia". |
+| 📊 **Finanças** | Receita, CMV, margem, taxas, despesas e lucro; gráficos, rankings, curva ABC, mapa de calor, giro de estoque e metas. Toda tabela exporta CSV. |
+| 🔔 **Avisos** | O sininho avisa estoque acabando, produto sem custo, ajustes do dia, fechamento que não bate, evento esquecido e Pix estornado. |
+| 🔒 **Segurança** | Senha do grupo só em variável de ambiente, freio contra tentativas, sessão de um dia de evento, proteção contra formulários de outros sites e auditoria. |
+
+## Telas
+
+<table>
+  <tr>
+    <td width="66%"><img src="docs/prints/inicio-escuro-computador.png" alt="Tela inicial no tema escuro"></td>
+    <td width="34%" align="center"><img src="docs/prints/inicio-claro-celular.png" alt="Tela inicial no celular" width="200"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Tema escuro, com o evento em andamento no topo</sub></td>
+    <td align="center"><sub>No celular</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/prints/sino-aberto-escuro-computador.png" alt="Sininho de avisos aberto"></td>
+    <td align="center"><img src="docs/prints/comparativo-eventos.png" alt="Comparativo de eventos" width="220"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Sininho de avisos</sub></td>
+    <td align="center"><sub>Comparativo de eventos (impressão)</sub></td>
+  </tr>
+</table>
+
+O relatório completo de um evento, como sai na impressão, está em
+[`docs/prints/relatorio-feira-1.pdf`](docs/prints/relatorio-feira-1.pdf).
+
+## Stack
+
+| Camada | Tecnologia | Versão |
+|---|---|---|
+| Linguagem | Java | 21 |
+| Framework | Spring Boot · Spring Framework (MVC, transações, `RestClient`) | 4.1.2 · 7.0 |
+| Servidor | Tomcat embutido | 11.0 |
+| Telas | Thymeleaf · CSS próprio (tema claro/escuro) · JavaScript sem framework | 3.1 |
+| Gráficos | Chart.js, embutido no projeto (sem CDN) | 4.4.1 |
+| JSON | Jackson 3 | 3.1 |
+| Persistência | Spring Data JPA · Hibernate ORM · Jakarta Persistence · HikariCP | 4.1 · 7.4 · 3.2 · 7.0 |
+| Banco | PostgreSQL em produção · H2 em arquivo no computador | 16 · 2.3.232 |
+| Migrações | Flyway (`flyway-database-postgresql`) | 12.4 |
+| Pagamentos | Mercado Pago, Orders API (Pix), webhook com HMAC-SHA256 | |
+| Saúde | Spring Boot Actuator, só `/actuator/health` | 4.1 |
+| Testes | JUnit · Mockito · Testcontainers · Playwright · OkHttp MockWebServer · ArchUnit (e MockMvc do Spring) | 6.0 · 5.23 · 2.0 · 1.64 · 4.12 · 1.5 |
+| Qualidade | Spotless (palantir-java-format) · JaCoCo | 3.10 · 0.8.16 |
+| Build e CI | Maven Wrapper (Maven 3.9.9) · GitHub Actions | |
+| Hospedagem | Railway (Railpack) com healthcheck | |
+
+## Arquitetura
+
+Um monólito Spring Boot renderizado no servidor, com um pouco de JavaScript nas
+telas que precisam reagir na hora (venda, Pix, gráficos, avisos). Um processo,
+um banco.
+
+```mermaid
+flowchart LR
+    N["🖥️ Navegador<br/>caixa, tablet, celular"] -- "HTML, formulários,<br/>JSON da prévia e do Pix" --> A
+    subgraph R["☁️ Railway"]
+        A["Caixa LAC<br/>Spring Boot 4.1 + Tomcat 11"] -- "JDBC (Hikari)" --> P[("PostgreSQL")]
+    end
+    A -- "Orders API: criar,<br/>consultar, cancelar Pix" --> MP["Mercado Pago"]
+    MP -- "webhook assinado" --> A
+    R -. "/actuator/health" .-> A
+```
+
+```
+src/main/java/br/com/lac/caixa/
+├── config/        senha, freio de login, filtro de origem, relógio, dados iniciais
+├── controle/      controllers MVC e JSON, um por tela
+│   └── csv/       geração e download dos CSVs
+├── servico/       regras de negócio e transações
+│   ├── preco/     calculadora de preço e busca de pacotes (Java puro)
+│   └── financas/  contas das finanças, por assunto
+├── consulta/      filtros (histórico, finanças, período do evento)
+├── repositorio/   Spring Data, Specifications, Criteria e SQL das finanças
+├── modelo/        entidades JPA com as regras de cada uma
+│   └── pagamento/ Strategy de descrição de cada forma de pagamento
+├── dominio/       exceções de negócio
+├── pix/           cliente do Mercado Pago e assinatura do webhook
+└── util/          Dinheiro, Rateio, GraficoSvg
+
+src/main/resources/
+├── db/migration/            migrações comuns (H2 e PostgreSQL)
+├── db/migration-postgresql/ migrações só do PostgreSQL
+├── templates/               telas Thymeleaf
+└── static/                  css, js (venda, venda-pix, financas, avisos) e imagens
+```
+
+**Regras de dependência**, conferidas em todo build pelo `ArquiteturaTest` (ArchUnit):
+nenhum ciclo entre pacotes; `modelo` não conhece serviço, banco nem web;
+`repositorio` não conhece serviço nem controle; `servico` não conhece controle;
+`controle` não conhece repositório; `util` não depende de ninguém do projeto.
+
+**Padrões de POO** (o projeto nasceu como trabalho da disciplina):
+**Strategy** em `modelo/pagamento/` (cada forma de pagamento sabe se descrever
+a partir de `DadosDaParte`), **Factory** (`PagamentoFactory`), **Singleton**
+(cada `@Service` do Spring), **records** para filtros, orçamentos e resultados,
+e `RegraDeNegocioException` para a mensagem que vai para a pessoa no caixa.
+
+## Como funciona por dentro
+
+<details>
+<summary><b>🛒 Venda</b></summary>
+
+1. A tela abre com um **token** novo; reenviar o mesmo formulário nunca cria
+   outra venda.
+2. A cada mudança no carrinho, `POST /venda/previa` devolve o orçamento calculado
+   no servidor. O navegador nunca calcula preço.
+3. `POST /venda`, numa transação: confere o orçamento e o ajuste, confere o
+   pagamento (soma exata, troco, Pix pago com o mesmo valor), grava a taxa de
+   cada parte, baixa o estoque com um `UPDATE` atômico, rateia o desconto entre
+   os itens pelo maior resto e grava a auditoria.
+4. Recusada (estoque acabou, Pix não pago), a tela volta com o mesmo carrinho.
+
+</details>
+
+<details>
+<summary><b>🧮 Calculadora de preço</b></summary>
+
+Java puro, sem Spring nem banco. O cliente paga o **menor total possível** e cada
+unidade entra em **no máximo uma promoção**. As `A_PARTIR_DE` que não disputam
+categoria com pacotes entram direto; as outras são combinadas, e para cada
+combinação a `BuscaDePacotes` escolhe os pacotes por programação dinâmica, só
+sobre os estados alcançáveis. Carrinho grande demais usa uma heurística e marca
+o orçamento como aproximado, sem recusar a venda. Um teste compara com uma força
+bruta independente em carrinhos aleatórios.
+
+</details>
+
+<details>
+<summary><b>⚡ Pix pelo Mercado Pago</b></summary>
+
+```mermaid
+sequenceDiagram
+    participant T as Tela
+    participant C as Caixa
+    participant M as Mercado Pago
+    T->>C: Gerar Pix (token, parte, valor)
+    C->>M: criar order (X-Idempotency-Key)
+    M-->>C: order + QR Code
+    C-->>T: QR e código copia-e-cola
+    loop a cada 3 s
+        T->>C: consultar a parte
+        C->>M: consultar a order (no máximo a cada 5 s)
+    end
+    M->>C: webhook assinado
+    C->>M: consultar a order
+    T->>C: Confirmar venda (o servidor confere que está paga)
+```
+
+- Nenhuma chamada ao Mercado Pago com a linha do banco travada: consulta primeiro
+  e aplica depois, numa transação curta.
+- A cobrança só vira **paga** com o valor exato; estorno e contestação viram
+  **estornada**, mesmo depois de paga.
+- Dois "Gerar Pix" da mesma parte ao mesmo tempo não perdem order: a que perde a
+  corrida é cancelada no Mercado Pago.
+- O webhook confere o `x-signature` (HMAC-SHA256), responde na hora e trabalha em
+  segundo plano.
+- Pendências velhas são encerradas a cada 5 minutos; Pix pago sem venda aparece
+  no histórico para alguém resolver.
+
+</details>
+
+<details>
+<summary><b>📊 Finanças</b></summary>
+
+As somas são feitas no banco, em SQL que roda igual no PostgreSQL e no H2. Os
+serviços de `servico/financas/` cuidam de arredondamento, percentuais e
+ordenação: `ResumoFinanceiro`, `SerieFinanceira`, `RankingsFinanceiros`,
+`EstoqueFinanceiro` e `OcorrenciasFinanceiras`. O `PainelFinancas` monta a tela
+buscando cada consulta uma vez, e o `RelatorioDoEvento` gera o relatório com
+gráficos em SVG para imprimir. Um teste conta as consultas de cada pedido e trava
+o máximo.
+
+</details>
+
+<details>
+<summary><b>🗄️ Persistência e concorrência</b></summary>
+
+- O **Flyway** é dono do esquema; o Hibernate só valida (`ddl-auto=validate`).
+  Migração aplicada nunca é editada.
+- Quatro jeitos de consultar, cada um onde serve melhor: Spring Data com JPQL,
+  `Specification` no filtro do histórico, Criteria nas somas e
+  `NamedParameterJdbcTemplate` nas agregações das finanças.
+- Versão otimista em produto e venda, baixa de estoque atômica, trava pessimista
+  na venda e na cobrança Pix, índice único no token da venda e um só evento
+  aberto por vez (índice parcial no PostgreSQL).
+- `CHECK`s, chaves estrangeiras e `NOT NULL` no banco, além das validações no
+  serviço. `open-in-view` desligado.
+
+</details>
+
+<details>
+<summary><b>🔒 Segurança</b></summary>
+
+- Senha única do grupo (`APP_SENHA`), obrigatória e comparada em tempo constante;
+  sem ela o app não sobe.
+- Freio de tentativas por IP (espera progressiva, bloqueio, IPv6 por /64, teto
+  global por minuto).
+- Sessão só por cookie, 12 h, `SameSite=Strict` e `Secure` em produção; logout só
+  por POST.
+- POST de outro site recusado (`Sec-Fetch-Site` e `Origin`).
+- Segredos só em variáveis de ambiente, nunca no código nem no log.
+- CSV protegido contra fórmulas de planilha.
+- Auditoria de vendas, ajustes, cancelamentos e cadastros.
+- Do Actuator, só `{"status":"UP"}` em `/actuator/health`.
+
+</details>
+
+<details>
+<summary><b>🕐 Hora de Brasília</b></summary>
+
+O relógio da aplicação é sempre `America/Sao_Paulo`, qualquer que seja o fuso da
+máquina (o contêiner do Railway roda em UTC). Todo código que precisa de "agora"
+recebe o `Clock`, e os testes usam um relógio controlado.
+
+</details>
 
 ## Rodar no computador
 
 Precisa de **Java 21+**. O Maven vem junto (Maven Wrapper).
 
-1. Defina a senha de acesso (mínimo de 8 caracteres), de um destes jeitos:
+```bash
+# 1. a senha de acesso (mínimo de 8 caracteres)
+export APP_SENHA='uma-senha-sua'      # PowerShell: $env:APP_SENHA='uma-senha-sua'
+# ou: cp senha-local.properties.exemplo senha-local.properties  (e edite)
 
-   ```bash
-   # variável de ambiente (vale para esta janela do terminal)
-   export APP_SENHA='uma-senha-sua'          # PowerShell: $env:APP_SENHA='uma-senha-sua'
+# 2. subir
+./mvnw spring-boot:run                # Windows: mvnw.cmd spring-boot:run
+```
 
-   # ou um arquivo local, fora do git
-   cp senha-local.properties.exemplo senha-local.properties   # depois edite o valor
-   ```
+Abra **http://localhost:8080**. No computador o banco é um H2 em arquivo na pasta
+`./dados/`, com alguns produtos de exemplo na primeira vez; o console do H2 fica
+em `/h2-console` (JDBC URL `jdbc:h2:file:./dados/caixa`, usuário `sa`, senha em
+branco).
 
-2. Suba a aplicação:
+| Perfil | Banco | Uso |
+|---|---|---|
+| `local` (padrão) | H2 em arquivo, só em 127.0.0.1 | desenvolvimento |
+| `prod` | PostgreSQL do Railway | produção |
+| `test` | H2 em memória ou PostgreSQL (Testcontainers) | a suíte de testes |
 
-   ```bash
-   ./mvnw spring-boot:run                    # Windows: mvnw.cmd spring-boot:run
-   ```
-
-3. Abra **http://localhost:8080** e entre com a senha.
-
-No computador o banco é um arquivo H2 na pasta `./dados/` (os dados ficam entre
-uma execução e outra) e alguns produtos de exemplo são criados na primeira vez.
-O console do H2 fica em `http://localhost:8080/h2-console` (JDBC URL
-`jdbc:h2:file:./dados/caixa`, usuário `sa`, senha em branco). Sem `APP_SENHA`,
-a aplicação não sobe e avisa o que falta.
-
-**Imagens:** coloque `logo.png` (telas de início e login) e `caixa.png` (tela
-"Abrir caixa") em `src/main/resources/static/img/`. Sem elas, aparece um 🦫.
+> [!TIP]
+> Coloque `logo.png` (início e login) e `caixa.png` ("Abrir caixa") em
+> `src/main/resources/static/img/`. Sem eles, aparece um 🦫.
 
 ## Testes
 
@@ -99,39 +299,102 @@ a aplicação não sobe e avisa o que falta.
 ./mvnw -B verify
 ```
 
-Roda os testes de unidade, de tela (MockMvc), contra PostgreSQL real
-(Testcontainers, precisa de Docker) e no navegador (Playwright, usa o Chromium do
-Playwright ou o Google Chrome da máquina), além do Spotless (formatação), das
-regras de arquitetura e do relatório de cobertura em
-`target/site/jacoco/index.html`. Sem Docker ou sem navegador, esses testes são
-pulados no computador; no CI (GitHub Actions) a falta deles é erro. Se o build
-reclamar de formatação, rode `./mvnw spotless:apply`.
+| Tipo | O que garante |
+|---|---|
+| Unidade | regras das entidades, calculadora (inclusive contra força bruta), rateio, freio de login |
+| Serviço e HTTP (MockMvc) | fluxos completos das telas, mensagens, CSVs e a segurança de todas as rotas |
+| Massa fixa das finanças | resultados calculados à mão, no H2 e no PostgreSQL |
+| Saídas esperadas | JSON da prévia, das finanças e do Pix, o corpo enviado ao Mercado Pago e o CSV, iguais byte a byte |
+| PostgreSQL real (Testcontainers) | migração de um banco legado e de um vazio, filtros e planos de consulta |
+| Navegador (Playwright) | venda dividida, Pix, finanças, sininho e evento rápido num Chromium |
+| Arquitetura (ArchUnit) | as regras de dependência entre pacotes |
+
+O `verify` também roda o **Spotless** (formatação; para corrigir,
+`./mvnw spotless:apply`) e gera a cobertura do **JaCoCo** em
+`target/site/jacoco/index.html`. O Mercado Pago nunca é chamado de verdade: os
+testes usam um servidor falso. Sem Docker ou sem navegador, esses testes são
+pulados no computador; no **GitHub Actions** a falta deles é erro.
 
 ## Colocar no ar
 
-O caixa roda no **Railway** com um banco PostgreSQL do próprio Railway. O roteiro
-completo (variáveis, backup, migrações, deploy, conferência e rollback) está em
-**[docs/DEPLOY.md](docs/DEPLOY.md)**. Em resumo, o serviço do app precisa de
-`SPRING_PROFILES_ACTIVE=prod`, do endereço e do usuário do banco, de `APP_SENHA`,
-de `RAILPACK_JDK_VERSION=21` e de `TZ=America/Sao_Paulo`. O Pix automático liga
-com as variáveis do Mercado Pago (`MP_ACCESS_TOKEN`, `MP_PAYER_EMAIL`,
-`MP_WEBHOOK_SECRET`); sem elas, o caixa segue com Pix manual.
+O caixa roda no **[Railway](https://railway.app)** com um PostgreSQL do próprio
+Railway. O serviço do app precisa destas variáveis:
+
+| Variável | Para quê |
+|---|---|
+| `SPRING_PROFILES_ACTIVE=prod` | perfil de produção |
+| `SPRING_DATASOURCE_URL`, `PGUSER`, `PGPASSWORD` | o banco do Railway |
+| `APP_SENHA` | a senha de acesso (segredo) |
+| `RAILPACK_JDK_VERSION=21` | Java 21 no build |
+| `TZ=America/Sao_Paulo` | fuso da máquina |
+| `MP_ACCESS_TOKEN`, `MP_PAYER_EMAIL`, `MP_WEBHOOK_SECRET` | opcionais: ligam o Pix automático |
+
+O roteiro completo (backup, migrações, deploy, conferência, rollback, Mercado
+Pago e troca de senha) está em **[docs/DEPLOY.md](docs/DEPLOY.md)**.
+
+## Regras de negócio
+
+<details>
+<summary><b>Preço e promoção</b></summary>
+
+- A calculadora é a única fonte dos valores. Produto sem categoria não entra em promoção.
+- **A_PARTIR_DE:** atingido o mínimo de cada categoria do combo, todas as unidades
+  delas saem pelo preço promocional (só onde ele é mais barato) e não entram em pacote.
+- **PACOTE:** as unidades que sobraram formam pacotes, cada um com as mais caras;
+  o resto sai no preço normal.
+- Exemplo, bóton de R$ 6, "a partir de 2 por R$ 5" e "3 por R$ 12":
+  3 bótons = **R$ 12**, 4 = **R$ 18**, 6 = **R$ 24**.
+- Empate: menos `A_PARTIR_DE` e, entre pacotes, o de menor id. A ordem de cadastro não importa.
+- **Valor ajustado:** diferente do calculado exige motivo; zero é cortesia; negativo não pode.
+
+</details>
+
+<details>
+<summary><b>Pagamento</b></summary>
+
+- Uma forma só, sem valor, paga o total (um toque). Dividido: até 10 partes,
+  somando **exatamente** o valor cobrado.
+- Troco só em dinheiro; "Outro" exige descrição; cortesia não tem pagamento.
+- Pix do Mercado Pago só vale pago com o mesmo valor, conferido de novo ao confirmar.
+- A taxa estimada de cada parte é a vigente no dia da venda.
+
+</details>
+
+<details>
+<summary><b>Histórico, cancelamento e fechamento</b></summary>
+
+- Filtro por forma traz a venda se **qualquer** parte usou a forma; busca por
+  produto sem diferenciar maiúsculas nem acentos; 50 vendas por página, totais
+  do filtro inteiro.
+- Corrigir a data recusa futuro e venda cancelada, e recalcula a taxa.
+- Cancelar exige motivo, devolve o estoque uma vez e tira a venda de todos os totais.
+  O reembolso é feito fora do caixa.
+- No fechamento, a soma das formas tem que bater com o total cobrado; se não
+  bater, a tela e o sininho avisam.
+
+</details>
+
+<details>
+<summary><b>Estoque, eventos, despesas e finanças</b></summary>
+
+- O estoque nunca fica negativo; produto com vendas é arquivado, não apagado.
+- A compra recalcula o custo médio (4 casas); o item da venda congela preço e custo.
+- Evento é `[início, fim)`; só um em andamento, que vale até agora ou até o
+  próximo marcado. A venda não guarda o evento: ele vem da data e hora.
+- Despesa ligada a evento conta no dia em que ele começa; sem evento, na data dela.
+- Período de até 3 anos; série por hora, dia, semana ou mês conforme o tamanho;
+  comparação com o período anterior cortado no mesmo horário.
+
+</details>
 
 ## Documentação
 
 | Documento | Para quê |
 |---|---|
-| [docs/ARQUITETURA.md](docs/ARQUITETURA.md) | Como o sistema é construído: stack, camadas, domínio, fluxos, segurança, testes e as regras de negócio em detalhe |
-| [docs/DEPLOY.md](docs/DEPLOY.md) | Deploy no Railway, Mercado Pago, troca de senha, backup e rollback |
-| [docs/MIGRACOES.md](docs/MIGRACOES.md) | Mudanças de esquema e o roteiro para migrar um banco existente |
-| [docs/DECISOES.md](docs/DECISOES.md) | Os porquês das decisões que o código não mostra |
+| [docs/DEPLOY.md](docs/DEPLOY.md) | deploy no Railway, Mercado Pago, troca de senha, backup e rollback |
+| [docs/MIGRACOES.md](docs/MIGRACOES.md) | mudanças de esquema e o roteiro para migrar um banco existente |
+| [docs/DECISOES.md](docs/DECISOES.md) | os porquês das decisões que o código não mostra |
 
-## Bibliotecas de terceiros embutidas
-
-| Biblioteca | Versão | Arquivo | Licença |
-|---|---|---|---|
-| [Chart.js](https://www.chartjs.org/) | 4.4.1 (fixa) | `src/main/resources/static/js/vendor/chart-4.4.1.umd.js` | MIT (`chart-4.4.1.LICENSE.md` ao lado) |
-
-O Chart.js fica dentro do projeto (sem CDN) para a tela funcionar com internet
-ruim no evento. Para atualizar, troque o arquivo e o nome com a versão nova, e o
-`<script>` em `templates/financas.html`.
+<sub>Inclui o [Chart.js](https://www.chartjs.org/) 4.4.1 (licença MIT), em
+`src/main/resources/static/js/vendor/` com a licença ao lado. Para atualizar,
+troque o arquivo e o `<script>` em `templates/financas.html`.</sub>
