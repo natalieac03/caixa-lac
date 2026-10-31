@@ -1,6 +1,6 @@
 package br.com.lac.caixa.servico.financas;
 
-import br.com.lac.caixa.repositorio.FiltroFinancas;
+import br.com.lac.caixa.consulta.FiltroFinancas;
 import br.com.lac.caixa.servico.financas.Financas.ClasseAbc;
 import br.com.lac.caixa.servico.financas.Financas.Comparacao;
 import br.com.lac.caixa.servico.financas.Financas.LinhaAbc;

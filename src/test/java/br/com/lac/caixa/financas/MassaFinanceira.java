@@ -5,13 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import br.com.lac.caixa.consulta.FiltroFinancas;
+import br.com.lac.caixa.consulta.FiltroHistorico;
 import br.com.lac.caixa.modelo.Categoria;
 import br.com.lac.caixa.modelo.Evento;
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.repositorio.CategoriaDespesaRepository;
-import br.com.lac.caixa.repositorio.FiltroFinancas;
-import br.com.lac.caixa.repositorio.FiltroHistorico;
 import br.com.lac.caixa.repositorio.ProdutoRepository;
 import br.com.lac.caixa.repositorio.PromocaoRepository;
 import br.com.lac.caixa.repositorio.VendaRepository;

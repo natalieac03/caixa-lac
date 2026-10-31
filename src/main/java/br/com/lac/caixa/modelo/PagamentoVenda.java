@@ -1,6 +1,7 @@
 package br.com.lac.caixa.modelo;
 
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
+import br.com.lac.caixa.modelo.pagamento.DadosDaParte;
 import br.com.lac.caixa.modelo.pagamento.PagamentoFactory;
 import br.com.lac.caixa.util.Dinheiro;
 import jakarta.persistence.Column;
@@ -124,12 +125,16 @@ public class PagamentoVenda {
         return valorRecebido == null ? null : valorRecebido.subtract(valor);
     }
 
+    public DadosDaParte dados() {
+        return new DadosDaParte(forma, valor, descricao, getTroco());
+    }
+
     public String getNomeForma() {
-        return PagamentoFactory.criar(forma).nome(this);
+        return PagamentoFactory.criar(forma).nome(dados());
     }
 
     public String getTexto() {
-        return PagamentoFactory.criar(forma).resumir(this);
+        return PagamentoFactory.criar(forma).resumir(dados());
     }
 
     public Long getId() {

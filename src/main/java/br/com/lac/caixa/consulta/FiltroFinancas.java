@@ -1,4 +1,4 @@
-package br.com.lac.caixa.repositorio;
+package br.com.lac.caixa.consulta;
 
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.FormaPagamento;

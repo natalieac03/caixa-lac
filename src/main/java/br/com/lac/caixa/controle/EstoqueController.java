@@ -1,7 +1,8 @@
 package br.com.lac.caixa.controle;
 
+import br.com.lac.caixa.controle.csv.ExportadorCSV;
+import br.com.lac.caixa.controle.csv.RespostaCsv;
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
-import br.com.lac.caixa.exportacao.ExportadorCSV;
 import br.com.lac.caixa.modelo.Categoria;
 import br.com.lac.caixa.servico.CategoriaService;
 import br.com.lac.caixa.servico.EstoqueService;

@@ -11,12 +11,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import br.com.lac.caixa.RelogioDeTeste;
+import br.com.lac.caixa.consulta.FiltroFinancas;
 import br.com.lac.caixa.controle.FiltrosDaTelaFinancas;
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.Categoria;
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.modelo.Venda;
-import br.com.lac.caixa.repositorio.FiltroFinancas;
 import br.com.lac.caixa.repositorio.VendaRepository;
 import br.com.lac.caixa.servico.CaixaService;
 import br.com.lac.caixa.servico.CategoriaService;

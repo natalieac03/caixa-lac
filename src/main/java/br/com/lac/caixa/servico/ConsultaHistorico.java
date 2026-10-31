@@ -1,8 +1,8 @@
 package br.com.lac.caixa.servico;
 
+import br.com.lac.caixa.consulta.FiltroHistorico;
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.Venda;
-import br.com.lac.caixa.repositorio.FiltroHistorico;
 import br.com.lac.caixa.repositorio.IndicadoresHistorico;
 import br.com.lac.caixa.repositorio.VendaRepository;
 import br.com.lac.caixa.repositorio.VendaSpecs;

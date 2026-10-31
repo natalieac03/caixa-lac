@@ -3,7 +3,7 @@ package br.com.lac.caixa.servico;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import br.com.lac.caixa.exportacao.ExportadorCSV;
+import br.com.lac.caixa.controle.csv.ExportadorCSV;
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.modelo.OrigemPagamento;
 import br.com.lac.caixa.modelo.Produto;

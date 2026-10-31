@@ -2,10 +2,10 @@ package br.com.lac.caixa.financas;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import br.com.lac.caixa.consulta.FiltroFinancas;
+import br.com.lac.caixa.consulta.PeriodoDoEvento;
 import br.com.lac.caixa.postgres.ExigeDocker;
 import br.com.lac.caixa.repositorio.ConsultasFinanceiras;
-import br.com.lac.caixa.repositorio.FiltroFinancas;
-import br.com.lac.caixa.repositorio.PeriodoDoEvento;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;

@@ -1,6 +1,6 @@
 package br.com.lac.caixa.controle;
 
-import br.com.lac.caixa.repositorio.PeriodoDoEvento;
+import br.com.lac.caixa.consulta.PeriodoDoEvento;
 import java.time.LocalDateTime;
 import java.util.List;
 

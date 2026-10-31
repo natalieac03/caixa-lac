@@ -5,13 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import br.com.lac.caixa.consulta.FiltroFinancas;
+import br.com.lac.caixa.consulta.FiltroHistorico;
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.migracao.Migracoes;
 import br.com.lac.caixa.modelo.Categoria;
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.repositorio.CategoriaRepository;
-import br.com.lac.caixa.repositorio.FiltroFinancas;
-import br.com.lac.caixa.repositorio.FiltroHistorico;
 import br.com.lac.caixa.repositorio.MovimentoEstoqueRepository;
 import br.com.lac.caixa.repositorio.ProdutoRepository;
 import br.com.lac.caixa.repositorio.VendaRepository;

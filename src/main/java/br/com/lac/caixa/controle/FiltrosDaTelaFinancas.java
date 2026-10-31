@@ -1,8 +1,8 @@
 package br.com.lac.caixa.controle;
 
+import br.com.lac.caixa.consulta.FiltroFinancas;
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.FormaPagamento;
-import br.com.lac.caixa.repositorio.FiltroFinancas;
 import br.com.lac.caixa.servico.EventoService;
 import java.time.Clock;
 import java.time.LocalDate;

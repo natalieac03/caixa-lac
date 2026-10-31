@@ -1,7 +1,7 @@
 package br.com.lac.caixa.servico.financas;
 
-import br.com.lac.caixa.repositorio.FiltroFinancas;
-import br.com.lac.caixa.repositorio.PeriodoDoEvento;
+import br.com.lac.caixa.consulta.FiltroFinancas;
+import br.com.lac.caixa.consulta.PeriodoDoEvento;
 import br.com.lac.caixa.servico.EventoService;
 import java.time.Clock;
 import java.time.LocalDate;

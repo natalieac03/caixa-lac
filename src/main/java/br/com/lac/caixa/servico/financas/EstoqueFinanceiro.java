@@ -2,8 +2,8 @@ package br.com.lac.caixa.servico.financas;
 
 import static br.com.lac.caixa.servico.financas.Contas.dinheiro;
 
+import br.com.lac.caixa.consulta.FiltroFinancas;
 import br.com.lac.caixa.repositorio.ConsultasFinanceiras;
-import br.com.lac.caixa.repositorio.FiltroFinancas;
 import br.com.lac.caixa.servico.financas.Financas.LinhaGiro;
 import java.math.BigDecimal;
 import java.math.RoundingMode;

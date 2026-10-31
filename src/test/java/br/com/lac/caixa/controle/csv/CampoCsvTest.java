@@ -1,4 +1,4 @@
-package br.com.lac.caixa.exportacao;
+package br.com.lac.caixa.controle.csv;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

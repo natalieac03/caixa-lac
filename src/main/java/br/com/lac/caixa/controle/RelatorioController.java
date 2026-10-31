@@ -1,6 +1,6 @@
 package br.com.lac.caixa.controle;
 
-import br.com.lac.caixa.repositorio.FiltroFinancas;
+import br.com.lac.caixa.consulta.FiltroFinancas;
 import br.com.lac.caixa.servico.DespesaService;
 import br.com.lac.caixa.servico.EventoService;
 import br.com.lac.caixa.servico.financas.ComparativoDeEventos;

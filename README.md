@@ -14,11 +14,12 @@ com nome padronizado — "BÓTON" e "bóton" são a mesma categoria.
 src/main/java/br/com/lac/caixa/
 ├── CaixaApplication.java     liga o servidor
 ├── modelo/                   o miolo POO (Produto, ItemVenda, Venda, FormaPagamento)
-├── modelo/pagamento/         padrão Strategy (Pix, Débito, Crédito, Outro)
+├── modelo/pagamento/         padrão Strategy (Pix, Débito, Crédito, Dinheiro, Outro)
+├── consulta/                 os filtros (histórico, finanças, período do evento)
 ├── repositorio/              conversa com o Postgres (Spring Data JPA)
 ├── servico/                  regras: EstoqueService e CaixaService (são Singletons do Spring)
 ├── controle/                 recebe os cliques das telas
-├── exportacao/               gera os arquivos .csv (ExportadorCSV, ExportadorFinancas)
+├── controle/csv/             gera e entrega os arquivos .csv (ExportadorCSV, ExportadorFinancas)
 ├── util/                     ferramentas soltas (Dinheiro, Rateio, GraficoSvg)
 └── config/DadosIniciais.java popula alguns produtos na primeira execução
 
@@ -29,7 +30,8 @@ src/main/resources/
 ```
 
 Os padrões do projeto de POO continuam visíveis: o **Strategy** de pagamento
-está em `pagamento/`, e cada `@Service` é um **Singleton** mantido pelo Spring
+está em `modelo/pagamento/` (cada estratégia recebe os dados da parte: forma,
+valor, descrição e troco, em `DadosDaParte`), e cada `@Service` é um **Singleton** mantido pelo Spring
 (sem precisar do `getInstancia()` escrito à mão).
 
 ## Rodar no seu computador

@@ -1,9 +1,9 @@
 package br.com.lac.caixa.servico;
 
+import br.com.lac.caixa.consulta.PeriodoDoEvento;
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
 import br.com.lac.caixa.modelo.Evento;
 import br.com.lac.caixa.repositorio.EventoRepository;
-import br.com.lac.caixa.repositorio.PeriodoDoEvento;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;

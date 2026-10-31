@@ -165,7 +165,12 @@ public class CaixaService {
             auditoria.registrar(
                     "ajuste_valor", "id", salva.getId(), "antes", calculado, "depois", total, "motivo", motivoAjuste);
         }
-        return new ResultadoVenda(salva, PagamentoFactory.mensagem(salva.getPagamentos()), false);
+        return new ResultadoVenda(
+                salva,
+                PagamentoFactory.mensagem(salva.getPagamentos().stream()
+                        .map(PagamentoVenda::dados)
+                        .toList()),
+                false);
     }
 
     private static boolean tokenValido(String token) {

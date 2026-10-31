@@ -5,14 +5,14 @@ import static br.com.lac.caixa.servico.financas.Contas.dinheiro;
 import static br.com.lac.caixa.servico.financas.Contas.percentual;
 import static br.com.lac.caixa.servico.financas.Contas.razao;
 
+import br.com.lac.caixa.consulta.FiltroFinancas;
+import br.com.lac.caixa.consulta.PeriodoDoEvento;
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.modelo.Promocao;
 import br.com.lac.caixa.repositorio.ConsultasFinanceiras;
 import br.com.lac.caixa.repositorio.ConsultasFinanceiras.Balde;
 import br.com.lac.caixa.repositorio.ConsultasFinanceiras.SomaProduto;
 import br.com.lac.caixa.repositorio.EventoRepository;
-import br.com.lac.caixa.repositorio.FiltroFinancas;
-import br.com.lac.caixa.repositorio.PeriodoDoEvento;
 import br.com.lac.caixa.repositorio.PromocaoRepository;
 import br.com.lac.caixa.servico.financas.Financas.Celula;
 import br.com.lac.caixa.servico.financas.Financas.ClasseAbc;

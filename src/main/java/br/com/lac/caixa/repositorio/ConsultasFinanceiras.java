@@ -1,5 +1,6 @@
 package br.com.lac.caixa.repositorio;
 
+import br.com.lac.caixa.consulta.FiltroFinancas;
 import br.com.lac.caixa.modelo.FormaPagamento;
 import java.math.BigDecimal;
 import java.sql.ResultSet;

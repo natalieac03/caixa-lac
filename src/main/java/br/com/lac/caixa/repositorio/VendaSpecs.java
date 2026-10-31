@@ -1,5 +1,6 @@
 package br.com.lac.caixa.repositorio;
 
+import br.com.lac.caixa.consulta.FiltroHistorico;
 import br.com.lac.caixa.modelo.Evento;
 import br.com.lac.caixa.modelo.ItemVenda;
 import br.com.lac.caixa.modelo.PagamentoVenda;

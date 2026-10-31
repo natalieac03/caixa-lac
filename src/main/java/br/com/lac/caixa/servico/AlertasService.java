@@ -1,9 +1,9 @@
 package br.com.lac.caixa.servico;
 
+import br.com.lac.caixa.consulta.FiltroFinancas;
+import br.com.lac.caixa.consulta.PeriodoDoEvento;
 import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.repositorio.EventoRepository;
-import br.com.lac.caixa.repositorio.FiltroFinancas;
-import br.com.lac.caixa.repositorio.PeriodoDoEvento;
 import br.com.lac.caixa.servico.financas.EstoqueFinanceiro;
 import br.com.lac.caixa.servico.financas.Financas.LinhaAjuste;
 import br.com.lac.caixa.servico.financas.Financas.LinhaGiro;

@@ -2,8 +2,8 @@ package br.com.lac.caixa.servico.financas;
 
 import static br.com.lac.caixa.servico.financas.Contas.dinheiro;
 
+import br.com.lac.caixa.consulta.FiltroFinancas;
 import br.com.lac.caixa.repositorio.ConsultasFinanceiras;
-import br.com.lac.caixa.repositorio.FiltroFinancas;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

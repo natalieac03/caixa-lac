@@ -7,10 +7,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 
 import br.com.lac.caixa.CaixaApplication;
+import br.com.lac.caixa.consulta.FiltroHistorico;
 import br.com.lac.caixa.migracao.Migracoes;
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.modelo.Venda;
-import br.com.lac.caixa.repositorio.FiltroHistorico;
 import br.com.lac.caixa.servico.CaixaService;
 import br.com.lac.caixa.servico.ConsultaHistorico;
 import br.com.lac.caixa.servico.EstoqueService;

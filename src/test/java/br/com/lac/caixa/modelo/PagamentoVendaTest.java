@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
+import br.com.lac.caixa.modelo.pagamento.DadosDaParte;
 import br.com.lac.caixa.modelo.pagamento.PagamentoFactory;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -89,7 +90,7 @@ class PagamentoVendaTest {
         comMotivo.registrarPagamentos(List.of());
         assertTrue(comMotivo.isCortesia());
         assertEquals("Cortesia", comMotivo.getPagamentoTexto());
-        assertEquals("Cortesia: nada a receber.", PagamentoFactory.mensagem(comMotivo.getPagamentos()));
+        assertEquals("Cortesia: nada a receber.", PagamentoFactory.mensagem(dados(comMotivo.getPagamentos())));
         assertThrows(
                 RegraDeNegocioException.class,
                 () -> venda("0", "Brinde").registrarPagamentos(List.of(parte(FormaPagamento.PIX, "1"))));
@@ -102,15 +103,20 @@ class PagamentoVendaTest {
         var partes = List.of(
                 parte(FormaPagamento.PIX, "10"), new PagamentoVenda(FormaPagamento.DINHEIRO, r("8"), null, r("10")));
         assertEquals(
-                "Recebido R$ 10,00 via Pix + R$ 8,00 em dinheiro (troco R$ 2,00).", PagamentoFactory.mensagem(partes));
+                "Recebido R$ 10,00 via Pix + R$ 8,00 em dinheiro (troco R$ 2,00).",
+                PagamentoFactory.mensagem(dados(partes)));
         var v = venda("18", null);
         v.registrarPagamentos(partes);
         assertEquals("Pix R$ 10,00 + Dinheiro R$ 8,00 (troco R$ 2,00)", v.getPagamentoTexto());
         assertEquals(
                 "Recebido R$ 5,00 no débito + R$ 1,00 no crédito + R$ 2,00 via Vale.",
-                PagamentoFactory.mensagem(List.of(
+                PagamentoFactory.mensagem(dados(List.of(
                         parte(FormaPagamento.DEBITO, "5"),
                         parte(FormaPagamento.CREDITO, "1"),
-                        new PagamentoVenda(FormaPagamento.OUTRO, r("2"), "Vale", null))));
+                        new PagamentoVenda(FormaPagamento.OUTRO, r("2"), "Vale", null)))));
+    }
+
+    static List<DadosDaParte> dados(List<PagamentoVenda> partes) {
+        return partes.stream().map(PagamentoVenda::dados).toList();
     }
 }

@@ -94,6 +94,12 @@ Os porquês que o código não mostra. Uma linha por decisão, com a classe ou a
 - `EstoqueService.remover`: produto com vendas ou movimentos é arquivado em vez de apagado, para o histórico não quebrar.
 - `MovimentoEstoque`: todo lugar que mexe no estoque grava movimento com sinal, para a soma dos movimentos ser sempre a quantidade.
 
+## Pacotes
+
+- `consulta`: FiltroHistorico, FiltroFinancas e PeriodoDoEvento ficam fora de `repositorio` porque controle, serviço e repositório os usam; assim o controle não depende do repositório.
+- `controle.csv`: os CSVs são formato de download (texto + resposta HTTP), por isso ficam junto do controle e não em `util`.
+- `modelo.pagamento`: as estratégias recebem `DadosDaParte` (forma, valor, descrição, troco) e não a entidade PagamentoVenda, para o Strategy não depender da persistência.
+
 ## Banco, Flyway e consultas
 
 - `spring.jpa.hibernate.ddl-auto=validate`: o Flyway é dono do DDL; o Hibernate só confere o modelo.

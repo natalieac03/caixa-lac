@@ -5,12 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import br.com.lac.caixa.controle.csv.ExportadorCSV;
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
-import br.com.lac.caixa.exportacao.ExportadorCSV;
 import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.modelo.PagamentoVenda;
 import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.modelo.Venda;
+import br.com.lac.caixa.modelo.pagamento.DadosDaParte;
 import br.com.lac.caixa.modelo.pagamento.PagamentoFactory;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -41,7 +42,7 @@ class DinheiroTest {
     void reaisSeparaMilharECsvNao() {
         var mil = new BigDecimal("1234.56");
 
-        String mensagem = PagamentoFactory.mensagem(List.of(parte(FormaPagamento.PIX, "1234.56", null)));
+        String mensagem = PagamentoFactory.mensagem(dados(List.of(parte(FormaPagamento.PIX, "1234.56", null))));
 
         assertEquals("R$ 1.234,56", Dinheiro.reais(mil));
         assertEquals("R$ 0,50", Dinheiro.reais(new BigDecimal("0.5")));
@@ -53,7 +54,7 @@ class DinheiroTest {
     @DisplayName("A mensagem de confirmação de toda forma de pagamento mostra o valor em reais")
     void todasAsMensagensUsamReais() {
         for (var forma : FormaPagamento.values()) {
-            String mensagem = PagamentoFactory.mensagem(List.of(parte(forma, "12.50", "teste")));
+            String mensagem = PagamentoFactory.mensagem(dados(List.of(parte(forma, "12.50", "teste"))));
 
             assertTrue(mensagem.contains("R$ 12,50"), forma + ": " + mensagem);
         }
@@ -72,5 +73,9 @@ class DinheiroTest {
 
         assertTrue(estoque.contains("\"Produto \"\"especial\"\"\";\"\";12,50;2"));
         assertTrue(historico.contains(";12,50;12,50;0,00;0,00;0,00;0,00;\"\"\n"));
+    }
+
+    static List<DadosDaParte> dados(List<PagamentoVenda> partes) {
+        return partes.stream().map(PagamentoVenda::dados).toList();
     }
 }

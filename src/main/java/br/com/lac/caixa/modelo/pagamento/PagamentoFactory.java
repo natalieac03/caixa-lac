@@ -1,7 +1,6 @@
 package br.com.lac.caixa.modelo.pagamento;
 
 import br.com.lac.caixa.modelo.FormaPagamento;
-import br.com.lac.caixa.modelo.PagamentoVenda;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,9 +19,9 @@ public class PagamentoFactory {
         };
     }
 
-    public static String mensagem(List<PagamentoVenda> partes) {
+    public static String mensagem(List<DadosDaParte> partes) {
         if (partes.isEmpty()) return "Cortesia: nada a receber.";
         return "Recebido "
-                + partes.stream().map(p -> criar(p.getForma()).descrever(p)).collect(Collectors.joining(" + ")) + ".";
+                + partes.stream().map(p -> criar(p.forma()).descrever(p)).collect(Collectors.joining(" + ")) + ".";
     }
 }

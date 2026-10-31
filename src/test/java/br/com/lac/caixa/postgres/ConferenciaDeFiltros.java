@@ -4,8 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import br.com.lac.caixa.consulta.FiltroHistorico;
 import br.com.lac.caixa.modelo.FormaPagamento;
-import br.com.lac.caixa.repositorio.FiltroHistorico;
 import br.com.lac.caixa.servico.ConsultaHistorico;
 import br.com.lac.caixa.servico.FechamentoService;
 import java.math.BigDecimal;

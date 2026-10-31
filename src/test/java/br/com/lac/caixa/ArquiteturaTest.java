@@ -1,8 +1,12 @@
 package br.com.lac.caixa;
 
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.equivalentTo;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAnyPackage;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
+import br.com.lac.caixa.modelo.FormaPagamento;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
@@ -54,4 +58,22 @@ class ArquiteturaTest {
             .should()
             .beFreeOfCycles()
             .because("um pacote que depende de outro que depende dele vira um pacote só");
+
+    @ArchTest
+    static final ArchRule controleSemRepositorio = noClasses()
+            .that()
+            .resideInAPackage("..caixa.controle..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAPackage("..caixa.repositorio..")
+            .because("a tela fala com o serviço; os filtros ficam em consulta");
+
+    @ArchTest
+    static final ArchRule estrategiasRecebemOsDados = classes()
+            .that()
+            .resideInAPackage("..caixa.modelo.pagamento..")
+            .should()
+            .onlyDependOnClassesThat(resideInAnyPackage("..caixa.modelo.pagamento..", "..caixa.util..", "java..")
+                    .or(equivalentTo(FormaPagamento.class)))
+            .because("as estratégias recebem forma, valor, descrição e troco, não a entidade PagamentoVenda");
 }
