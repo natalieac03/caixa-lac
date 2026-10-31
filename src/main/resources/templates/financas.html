@@ -71,11 +71,12 @@
         <div class="cabecalho-secao"><h2 id="titulo-demonstrativo">Demonstrativo</h2>
         <a class="botao botao-secundario botao-pequeno exportar-csv" th:href="@{/financas/exportar/demonstrativo.csv} + '?' + ${f.consulta()} + '&metrica=' + ${metrica}">Exportar CSV</a></div>
         <table th:replace="~{fragments/financas :: demonstrativo(${painel})}"></table>
+        <p class="ajuda" id="regra-despesas">Despesas: a ligada a um evento conta no evento e no dia em que ele começa; a sem evento, na data dela.</p>
     </section>
 
     <!--/* 6. Série */-->
     <section class="cartao" aria-labelledby="titulo-serie">
-        <div class="cabecalho-secao"><h2 id="titulo-serie" th:text="${painel.serie.porHora} ? 'Receita líquida e lucro bruto por hora' : 'Receita líquida e lucro bruto por dia'">Receita e lucro por dia</h2>
+        <div class="cabecalho-secao"><h2 id="titulo-serie" th:text="'Receita líquida e lucro bruto ' + ${painel.serie.granularidade.rotulo}">Receita e lucro por dia</h2>
         <a class="botao botao-secundario botao-pequeno exportar-csv" th:href="@{/financas/exportar/serie.csv} + '?' + ${f.consulta()} + '&metrica=' + ${metrica}">Exportar CSV</a></div>
         <figure class="grafico grafico-linha">
             <canvas id="grafico-serie" role="img" aria-describedby="tabela-serie-titulo" aria-label="Gráfico de linha: receita líquida e lucro bruto"></canvas>
@@ -215,7 +216,9 @@
     <!--/* 9. Formas de pagamento */-->
     <section class="cartao" aria-labelledby="titulo-formas">
         <div class="cabecalho-secao"><h2 id="titulo-formas">Formas de pagamento</h2>
-        <a class="botao botao-secundario botao-pequeno exportar-csv" th:href="@{/financas/exportar/formas.csv} + '?' + ${f.consulta()} + '&metrica=' + ${metrica}">Exportar CSV</a></div>
+        <a class="botao botao-secundario botao-pequeno exportar-csv" th:unless="${painel.formas.isEmpty()}" th:href="@{/financas/exportar/formas.csv} + '?' + ${f.consulta()} + '&metrica=' + ${metrica}">Exportar CSV</a></div>
+        <p class="ajuda" id="formas-com-categoria" th:if="${painel.formas.isEmpty()}">Com filtro de categoria, as formas de pagamento não aparecem: o pagamento é da venda inteira e não se separa por item.</p>
+        <th:block th:unless="${painel.formas.isEmpty()}">
         <figure class="grafico grafico-barras">
             <canvas id="grafico-formas" role="img" aria-describedby="tabela-formas-grafico" aria-label="Gráfico de barras: valor e número de vendas por forma de pagamento"></canvas>
             <figcaption>Barras roxas: valor recebido (eixo da esquerda). Barras laranja listradas: número de vendas (eixo da direita).</figcaption>
@@ -242,7 +245,9 @@
             </tbody>
         </table>
         </div>
-        <p class="ajuda">Pelas partes do pagamento: uma venda dividida entra em cada forma que usou, com o valor de cada parte.</p>
+        <p class="ajuda">Pelas partes do pagamento: uma venda dividida entra em cada forma que usou, com o valor de cada parte.
+            Com filtro de forma, só as partes nessa forma (valor e taxa).</p>
+        </th:block>
     </section>
 
     <!--/* 10. Mapa de calor */-->

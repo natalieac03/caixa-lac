@@ -19,6 +19,9 @@ import java.time.temporal.ChronoUnit;
  *   <li>diaADia: dentro do período, só as vendas fora de qualquer evento (o
  *       aberto vale até {@code agora}) e as despesas sem evento.</li>
  * </ul>
+ *
+ * <p>Com {@code agora}, o período termina nele: um período que ainda não acabou
+ * conta os dias até hoje e, na comparação, o anterior é cortado na mesma hora.
  */
 public record FiltroFinancas(
         LocalDate inicio,
@@ -68,9 +71,14 @@ public record FiltroFinancas(
         return new FiltroFinancas(inicio, fim, evento, categoriaId, outra, diaADia, agora);
     }
 
-    /** O mesmo filtro em outro período (ou evento), para comparar; o dia a dia continua dia a dia. */
-    public FiltroFinancas noPeriodo(LocalDate de, LocalDate ate) {
-        return new FiltroFinancas(de, ate, null, categoriaId, forma, diaADia, agora);
+    /**
+     * O mesmo filtro em outro período, para comparar; o dia a dia continua dia a
+     * dia. O agora anda junto ({@code recuo} dias antes), para o anterior ter o
+     * mesmo recorte de horas.
+     */
+    public FiltroFinancas noPeriodo(LocalDate de, LocalDate ate, long recuo) {
+        return new FiltroFinancas(
+                de, ate, null, categoriaId, forma, diaADia, agora == null ? null : agora.minusDays(recuo));
     }
 
     public FiltroFinancas noEvento(PeriodoDoEvento outro) {
@@ -81,21 +89,34 @@ public record FiltroFinancas(
         return evento != null ? evento.inicio() : inicio.atStartOfDay();
     }
 
-    /** Exclusivo. */
+    /**
+     * Exclusivo: o fim do período ou, se ele ainda não acabou, logo depois de
+     * agora (1 microssegundo, a precisão do banco), para a venda feita agora entrar.
+     */
     public LocalDateTime fimConsulta() {
+        if (evento != null) return evento.fim();
+        LocalDateTime fimDoPeriodo = fim.plusDays(1).atStartOfDay();
+        if (agora == null || !agora.isBefore(fimDoPeriodo)) return fimDoPeriodo;
+        LocalDateTime depoisDeAgora = agora.plus(1, ChronoUnit.MICROS);
+        return depoisDeAgora.isBefore(fimDoPeriodo) ? depoisDeAgora : fimDoPeriodo;
+    }
+
+    /** Fim do período escolhido (exclusivo), sem o corte de agora: o tamanho que a tela pediu. */
+    public LocalDateTime fimEscolhido() {
         return evento != null ? evento.fim() : fim.plusDays(1).atStartOfDay();
     }
 
-    /** Dias do período: datas inclusivas; evento = duração em dias, arredondada para cima (mínimo 1). */
+    /**
+     * Dias do período até agora: datas inclusivas, com o fim em min(fim, hoje);
+     * evento = duração em dias, arredondada para cima. Mínimo 1.
+     */
     public long dias() {
-        if (evento == null) return ChronoUnit.DAYS.between(inicio, fim) + 1;
+        if (evento == null) {
+            LocalDate ate = agora != null && agora.toLocalDate().isBefore(fim) ? agora.toLocalDate() : fim;
+            return Math.max(1, ChronoUnit.DAYS.between(inicio, ate) + 1);
+        }
         long minutos = Duration.between(evento.inicio(), evento.fim()).toMinutes();
         return Math.max(1, (minutos + 1439) / 1440);
-    }
-
-    /** Série por hora quando o período tem até 2 dias (48 horas). */
-    public boolean porHora() {
-        return Duration.between(inicioConsulta(), fimConsulta()).compareTo(Duration.ofHours(48)) <= 0;
     }
 
     /** Despesas e lucro líquido não se dividem por categoria de produto nem por forma de pagamento. */

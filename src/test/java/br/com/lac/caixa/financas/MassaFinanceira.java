@@ -179,7 +179,7 @@ abstract class MassaFinanceira {
     }
 
     @Test
-    @DisplayName("Resumo de 01 a 15/03: todas as vendas válidas, despesas pela data")
+    @DisplayName("Resumo de 01 a 15/03: todas as vendas válidas; despesa de evento no dia em que ele começa")
     void resumoDoMes() {
         Resumo x = financas.resumo(MARCO);
         assertValor("257.00", x.receitaBruta());
@@ -190,9 +190,10 @@ abstract class MassaFinanceira {
         assertValor("83.50", x.cmv()); // 6 + 37 + 6 + 10 + 17 + 2,50 + 5
         assertValor("145.50", x.margemBruta());
         assertValor("63.54", x.margemBrutaPercentual());
-        assertValor("85.50", x.despesas()); // Mesa 50 + Uber 20 + Lanche 15,50 (a Lona é de 28/02)
-        assertValor("56.42", x.lucroLiquido()); // 229 - 3,58 - 83,50 - 85,50
-        assertValor("24.64", x.lucroLiquidoPercentual());
+        // Lona 30 + Mesa 50 (Feira 1, que começa em 01/03) + Uber 20 + Lanche 15,50 (Feira 2)
+        assertValor("115.50", x.despesas());
+        assertValor("26.42", x.lucroLiquido()); // 229 - 3,58 - 83,50 - 115,50
+        assertValor("11.54", x.lucroLiquidoPercentual());
         assertEquals(8, x.vendas());
         assertEquals(16, x.itensVendidos());
         assertValor("28.62", x.ticketMedio()); // 28,625 (meio para o par)
@@ -577,5 +578,56 @@ abstract class MassaFinanceira {
         assertEquals(LocalDate.of(2025, 3, 1).atStartOfDay(), ultimo.inicio());
         assertEquals(LocalDate.of(2025, 3, 16).atStartOfDay(), ultimo.fim());
         assertValor("65.00", ultimo.resumo().receitaLiquida());
+    }
+
+    // ------------------------------------------------------------ regras do bloco de finanças
+
+    @Test
+    @DisplayName("Despesa: uma regra só. A ligada a evento conta no dia em que ele começa; a sem evento, pela data")
+    void despesaUmaRegra() {
+        // A Lona (28/02) é da Feira 1, que começa em 01/03: não é de fevereiro.
+        assertValor(
+                "0.00",
+                financas.resumo(FiltroFinancas.periodo(LocalDate.of(2025, 2, 28), LocalDate.of(2025, 2, 28)))
+                        .despesas());
+        assertValor(
+                "80.00",
+                financas.resumo(FiltroFinancas.periodo(LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 1)))
+                        .despesas());
+        // O comparativo (eventos + dia a dia) soma o mesmo que o período inteiro.
+        var comparativo = financas.comparativoDeEventos();
+        BigDecimal soma = comparativo.stream()
+                .map(l -> l.resumo().despesas())
+                .reduce(BigDecimal.ZERO.setScale(2), BigDecimal::add);
+        var dia = comparativo.get(comparativo.size() - 1);
+        assertEquals(
+                financas.resumo(FiltroFinancas.periodo(
+                                dia.inicio().toLocalDate(),
+                                dia.fim().minusNanos(1).toLocalDate()))
+                        .despesas(),
+                soma);
+        assertValor("115.50", soma);
+    }
+
+    @Test
+    @DisplayName("Filtro de forma: a tabela de formas e as taxas só com as partes dessa forma")
+    void filtroDeFormaRecortaAsPartes() {
+        var credito = MARCO.comForma(FormaPagamento.CREDITO); // V2 (crédito 50 + dinheiro 30) e V8 (crédito 17)
+        Map<FormaPagamento, LinhaForma> f = new HashMap<>();
+        financas.formasDePagamento(credito).forEach(l -> f.put(l.forma(), l));
+        assertValor("67.00", f.get(FormaPagamento.CREDITO).valor());
+        assertValor("0.00", f.get(FormaPagamento.DINHEIRO).valor()); // os 30 em dinheiro da V2 não são crédito
+        assertValor("100.00", f.get(FormaPagamento.CREDITO).participacaoPercentual());
+        assertValor("2.01", financas.resumo(credito).taxas()); // 1,50 + 0,51
+    }
+
+    @Test
+    @DisplayName("Filtro de categoria: sem tabela de formas, e a promoção conta só a receita dos itens da categoria")
+    void filtroDeCategoria() {
+        var caneca = MARCO.comCategoria(c.get("Caneca").getId());
+        assertTrue(financas.formasDePagamento(caneca).isEmpty());
+        var promos = financas.promocoes(caneca);
+        assertEquals(1, promos.size()); // o pacote apagado (V9); a do Bóton não tem caneca
+        assertValor("26.67", promos.get(0).receitaLiquida()); // a Caneca 2 da V9, não os 40 da venda
     }
 }

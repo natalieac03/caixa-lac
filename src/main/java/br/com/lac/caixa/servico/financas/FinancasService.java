@@ -14,6 +14,7 @@ import br.com.lac.caixa.servico.financas.Financas.Celula;
 import br.com.lac.caixa.servico.financas.Financas.ClasseAbc;
 import br.com.lac.caixa.servico.financas.Financas.Cobertura;
 import br.com.lac.caixa.servico.financas.Financas.Comparacao;
+import br.com.lac.caixa.servico.financas.Financas.Granularidade;
 import br.com.lac.caixa.servico.financas.Financas.LinhaAbc;
 import br.com.lac.caixa.servico.financas.Financas.LinhaCategoria;
 import br.com.lac.caixa.servico.financas.Financas.LinhaForma;
@@ -30,9 +31,12 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
@@ -55,6 +59,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class FinancasService {
     private static final BigDecimal CEM = BigDecimal.valueOf(100);
     private static final DateTimeFormatter DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm");
 
     private final ConsultasFinanceiras consultas;
     private final EventoRepository eventos;
@@ -148,11 +153,15 @@ public class FinancasService {
             anterior = f.noEvento(new PeriodoDoEvento(e.getId(), e.getNome(), e.getInicio(), e.getFim()));
             descricao = "evento " + e.getNome();
         } else {
+            // Mesmo tamanho até agora e, se o período ainda não acabou, o mesmo recorte de horas.
             long dias = f.dias();
             LocalDate ate = f.inicio().minusDays(1);
             LocalDate de = ate.minusDays(dias - 1);
-            anterior = f.noPeriodo(de, ate);
-            descricao = de.format(DATA) + " a " + ate.format(DATA);
+            anterior = f.noPeriodo(de, ate, dias);
+            descricao = de.equals(ate) ? de.format(DATA) : de.format(DATA) + " a " + ate.format(DATA);
+            if (anterior.fimConsulta().isBefore(anterior.fimEscolhido())) {
+                descricao += " até " + anterior.fimConsulta().format(HORA);
+            }
         }
         Resumo antes = resumo(anterior);
         return new Comparacao(atual, antes, descricao, variacoes(atual, antes));
@@ -188,29 +197,65 @@ public class FinancasService {
 
     // ---------------------------------------------------------------- B: séries
 
-    /** Por dia (ou por hora, se o período tem até 2 dias), com zeros onde não houve venda. */
+    /**
+     * De quanto em quanto tempo vai a série, pelo tamanho do período escolhido:
+     * por hora até 48 horas, por dia até 90 dias, por semana até 1 ano e por mês acima.
+     */
+    static Granularidade granularidade(FiltroFinancas f) {
+        LocalDateTime de = f.inicioConsulta();
+        LocalDateTime ate = f.fimEscolhido();
+        if (Duration.between(de, ate).compareTo(Duration.ofHours(48)) <= 0) return Granularidade.HORA;
+        if (!ate.isAfter(de.plusDays(90))) return Granularidade.DIA;
+        if (!ate.isAfter(de.plusYears(1))) return Granularidade.SEMANA;
+        return Granularidade.MES;
+    }
+
+    /** Início do ponto em que cai o momento: a hora, o dia, a semana (segunda) ou o mês, nunca antes do período. */
+    private static LocalDateTime inicioDoPonto(Granularidade g, LocalDateTime momento, LocalDate inicioDoPeriodo) {
+        LocalDate dia = momento.toLocalDate();
+        LocalDate comeco = switch (g) {
+            case HORA -> null;
+            case DIA -> dia;
+            case SEMANA -> dia.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+            case MES -> dia.withDayOfMonth(1);
+        };
+        if (comeco == null) return momento.truncatedTo(ChronoUnit.HOURS);
+        return (comeco.isBefore(inicioDoPeriodo) ? inicioDoPeriodo : comeco).atStartOfDay();
+    }
+
+    private static LocalDateTime proximoPonto(Granularidade g, LocalDateTime cursor) {
+        return switch (g) {
+            case HORA -> cursor.plusHours(1);
+            case DIA -> cursor.plusDays(1);
+            case SEMANA ->
+                cursor.toLocalDate()
+                        .with(TemporalAdjusters.next(DayOfWeek.MONDAY))
+                        .atStartOfDay();
+            case MES -> cursor.toLocalDate().withDayOfMonth(1).plusMonths(1).atStartOfDay();
+        };
+    }
+
+    /** Por hora, dia, semana ou mês (pelo tamanho do período), com zeros onde não houve venda. */
     public Serie serie(FiltroFinancas f) {
-        boolean porHora = f.porHora();
+        Granularidade g = granularidade(f);
+        LocalDate inicioDoPeriodo = f.inicioConsulta().toLocalDate();
         Map<LocalDateTime, BigDecimal[]> somas = new TreeMap<>();
         Map<LocalDateTime, Long> vendas = new TreeMap<>();
         for (Balde b : consultas.porDiaEHora(f)) {
-            LocalDateTime chave =
-                    porHora ? b.dia().atTime(b.hora(), 0) : b.dia().atStartOfDay();
+            LocalDateTime chave = inicioDoPonto(g, b.dia().atTime(b.hora(), 0), inicioDoPeriodo);
             somas.merge(chave, new BigDecimal[] {b.liquido(), b.cmv()}, (x, y) ->
                     new BigDecimal[] {x[0].add(y[0]), x[1].add(y[1])});
             vendas.merge(chave, b.vendas(), Long::sum);
         }
         List<Ponto> pontos = new ArrayList<>();
-        LocalDateTime cursor = porHora
-                ? f.inicioConsulta().withMinute(0).withSecond(0).withNano(0)
-                : f.inicioConsulta().toLocalDate().atStartOfDay();
+        LocalDateTime cursor = inicioDoPonto(g, f.inicioConsulta(), inicioDoPeriodo);
         while (cursor.isBefore(f.fimConsulta())) {
             BigDecimal[] s = somas.getOrDefault(cursor, new BigDecimal[] {BigDecimal.ZERO, BigDecimal.ZERO});
             BigDecimal liquido = dinheiro(s[0]);
             pontos.add(new Ponto(cursor, liquido, liquido.subtract(dinheiro(s[1])), vendas.getOrDefault(cursor, 0L)));
-            cursor = porHora ? cursor.plusHours(1) : cursor.plusDays(1);
+            cursor = proximoPonto(g, cursor);
         }
-        return new Serie(porHora, pontos);
+        return new Serie(g, pontos);
     }
 
     /** Vendas e receita por dia da semana x hora (7 x 24 células, segunda a domingo). */
@@ -382,8 +427,13 @@ public class FinancasService {
         return linhas;
     }
 
-    /** Por forma de pagamento, pelas partes: valor, vendas, taxa estimada e participação. Todas as formas. */
+    /**
+     * Por forma de pagamento, pelas partes: valor, vendas, taxa estimada e
+     * participação. Todas as formas. Com filtro de categoria, nenhuma: o
+     * pagamento é da venda inteira e não se separa por item.
+     */
     public List<LinhaForma> formasDePagamento(FiltroFinancas f) {
+        if (f.categoriaId() != null) return List.of();
         var somas = consultas.porForma(f);
         BigDecimal total = somas.stream().map(s -> dinheiro(s.valor())).reduce(BigDecimal.ZERO, BigDecimal::add);
         List<LinhaForma> linhas = new ArrayList<>();

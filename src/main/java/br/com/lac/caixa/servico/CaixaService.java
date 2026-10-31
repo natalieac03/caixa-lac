@@ -61,7 +61,8 @@ public class CaixaService {
 
     /**
      * Corrige o dia e a hora de uma venda já registrada (ex.: venda anotada
-     * no papel e lançada no caixa depois).
+     * no papel e lançada no caixa depois). Não vale para venda cancelada nem
+     * para o futuro; a taxa estimada passa a ser a vigente no novo dia.
      */
     @Transactional
     public void alterarDataHora(Long vendaId, LocalDateTime novaDataHora) {
@@ -70,6 +71,9 @@ public class CaixaService {
         }
         Venda venda = vendas.findById(vendaId)
                 .orElseThrow(() -> new RegraDeNegocioException("Venda não encontrada: " + vendaId));
+        if (venda.isCancelada()) throw new RegraDeNegocioException("Venda cancelada não tem a data corrigida.");
+        if (novaDataHora.isAfter(LocalDateTime.now(relogio)))
+            throw new RegraDeNegocioException("A data da venda não pode ser no futuro.");
 
         // A tela só edita até os minutos: se o minuto não mudou, mantém os
         // segundos originais para não embaralhar vendas do mesmo minuto.
@@ -78,6 +82,11 @@ public class CaixaService {
         }
         LocalDateTime antes = venda.getDataHora();
         venda.setDataHora(novaDataHora);
+        // A taxa estimada é a vigente no dia da venda: com outro dia, pode ser outra.
+        for (PagamentoVenda parte : venda.getPagamentos()) {
+            parte.registrarTaxa(
+                    taxas.vigente(parte.getForma(), novaDataHora.toLocalDate()).orElse(null));
+        }
         vendas.save(venda);
         auditoria.registrar("correcao_data", "id", vendaId, "antes", antes, "depois", novaDataHora);
     }

@@ -148,7 +148,9 @@
                     }
                 }
             });
-            new Chart(document.getElementById('grafico-formas'), {
+            // Com filtro de categoria a tela não tem as formas de pagamento.
+            var formas = document.getElementById('grafico-formas');
+            if (formas) new Chart(formas, {
                 type: 'bar',
                 data: {
                     labels: d.formasValor.rotulos,

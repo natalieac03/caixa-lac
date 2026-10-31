@@ -64,8 +64,10 @@ public class FechamentoController {
         LocalDate de = filtro.evento() == null
                 ? filtro.inicio()
                 : filtro.evento().inicio().toLocalDate();
-        LocalDate ate =
-                filtro.evento() == null ? filtro.fim() : filtro.evento().fim().toLocalDate();
+        // O fim do evento é exclusivo: o que acaba à meia-noite termina no dia anterior.
+        LocalDate ate = filtro.evento() == null
+                ? filtro.fim()
+                : filtro.evento().fim().minusNanos(1).toLocalDate();
         return RespostaCsv.arquivo(ExportadorCSV.doFechamento(resultado, de, ate), "fechamento.csv");
     }
 }

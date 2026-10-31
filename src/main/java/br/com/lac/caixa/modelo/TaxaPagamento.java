@@ -76,13 +76,13 @@ public class TaxaPagamento {
 
     /**
      * Taxa estimada de uma parte: valor x percentual / 100 + fixo, arredondada
-     * ao centavo (meio centavo arredonda para cima, HALF_UP).
+     * ao centavo, com meio centavo para o par (HALF_EVEN), como o resto das finanças.
      */
     public BigDecimal estimar(BigDecimal valor) {
         return valor.multiply(percentual)
                 .divide(BigDecimal.valueOf(100))
                 .add(valorFixo)
-                .setScale(2, RoundingMode.HALF_UP);
+                .setScale(2, RoundingMode.HALF_EVEN);
     }
 
     public Long getId() {

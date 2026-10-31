@@ -7,6 +7,7 @@ import br.com.lac.caixa.servico.EventoService;
 import br.com.lac.caixa.servico.financas.Financas.Metrica;
 import br.com.lac.caixa.servico.financas.PainelFinancas;
 import br.com.lac.caixa.util.ExportadorFinancas;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -52,8 +53,17 @@ public class FinancasController {
             @RequestParam(required = false) Long categoria,
             @RequestParam(required = false) FormaPagamento forma,
             @RequestParam(required = false) String metrica,
-            Model model) {
-        var resolvido = filtros.resolver(atalho, inicio, fim, evento, categoria, forma);
+            Model model,
+            HttpServletResponse resposta) {
+        FiltrosDaTelaFinancas.Resolvido resolvido;
+        try {
+            resolvido = filtros.resolver(atalho, inicio, fim, evento, categoria, forma);
+        } catch (RegraDeNegocioException ex) {
+            // Filtro recusado (ex.: período longo demais): 400 com a mensagem e o mês atual, sem redirecionar.
+            resposta.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            model.addAttribute("erro", ex.getMessage());
+            resolvido = filtros.resolver("mes", null, null, null, categoria, forma);
+        }
         Metrica m = metrica(metrica);
         model.addAttribute("f", resolvido);
         model.addAttribute("metrica", m.name().toLowerCase());

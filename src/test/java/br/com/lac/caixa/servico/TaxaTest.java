@@ -128,13 +128,16 @@ class TaxaTest {
     }
 
     @Test
-    @DisplayName("Arredondamento: percentual + fixo ao centavo, meio centavo para cima")
+    @DisplayName("Arredondamento: percentual + fixo ao centavo, meio centavo para o par (HALF_EVEN)")
     void arredondamento() {
         var agora = LocalDateTime.of(2025, 1, 1, 0, 0);
         var credito = new TaxaPagamento(FormaPagamento.CREDITO, r("3.5"), r("0"), LocalDate.of(2025, 1, 1), agora);
         assertValor("0.21", credito.estimar(r("6.00"))); // 0,21 exato
         assertValor("0.04", credito.estimar(r("1.00"))); // 0,035 -> 0,04
         assertValor("0.03", credito.estimar(r("0.99"))); // 0,03465 -> 0,03
+        var meio = new TaxaPagamento(FormaPagamento.CREDITO, r("2.5"), r("0"), LocalDate.of(2025, 1, 1), agora);
+        assertValor("0.02", meio.estimar(r("1.00"))); // 0,025 -> 0,02 (o par), como o resto das finanças
+        assertValor("0.04", meio.estimar(r("1.40"))); // 0,035 -> 0,04 (o par)
         var debito = new TaxaPagamento(FormaPagamento.DEBITO, r("1.99"), r("0.30"), LocalDate.of(2025, 1, 1), agora);
         assertValor("0.66", debito.estimar(r("18.00"))); // 0,3582 + 0,30 = 0,6582 -> 0,66
         assertValor("0.32", debito.estimar(r("1.00"))); // 0,0199 + 0,30 -> 0,32

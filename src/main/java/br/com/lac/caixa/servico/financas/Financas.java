@@ -77,7 +77,29 @@ public final class Financas {
     /** Um ponto da série: o início do dia (ou da hora), receita líquida, lucro bruto e vendas. */
     public record Ponto(LocalDateTime inicio, BigDecimal receitaLiquida, BigDecimal lucroBruto, long vendas) {}
 
-    public record Serie(boolean porHora, List<Ponto> pontos) {}
+    /** De quanto em quanto tempo é cada ponto da série. */
+    public enum Granularidade {
+        HORA("por hora"),
+        DIA("por dia"),
+        SEMANA("por semana"),
+        MES("por mês");
+
+        private final String rotulo;
+
+        Granularidade(String rotulo) {
+            this.rotulo = rotulo;
+        }
+
+        public String getRotulo() {
+            return rotulo;
+        }
+    }
+
+    public record Serie(Granularidade granularidade, List<Ponto> pontos) {
+        public boolean porHora() {
+            return granularidade == Granularidade.HORA;
+        }
+    }
 
     /** Mapa de calor: dia da semana x hora do dia (todas as 7 x 24 células). */
     public record Celula(DayOfWeek diaDaSemana, int hora, long vendas, BigDecimal receitaLiquida) {}

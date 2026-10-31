@@ -69,7 +69,7 @@ class FinancasNoNavegadorTest {
 
         // Cartões (comparados com 14/02 a 28/02, sem vendas)
         assertThat(pagina.locator("#cartao-receita .indicador-valor")).hasText("R$ 229,00");
-        assertThat(pagina.locator("#cartao-lucro .indicador-valor")).hasText("R$ 56,42");
+        assertThat(pagina.locator("#cartao-lucro .indicador-valor")).hasText("R$ 26,42");
         assertThat(pagina.locator("#cartao-margem .indicador-valor")).hasText("63,54%");
         assertThat(pagina.locator("#cartao-ticket .indicador-valor")).hasText("R$ 28,62");
         assertThat(pagina.locator("#cartao-vendas .indicador-valor")).hasText("8");
@@ -87,8 +87,8 @@ class FinancasNoNavegadorTest {
                 "(-) Taxas estimadas R$ 3,58 1,56%",
                 "(-) CMV (custo da mercadoria vendida) R$ 83,50 36,46%",
                 "= Margem bruta R$ 145,50 63,54%",
-                "(-) Despesas R$ 85,50 37,34%",
-                "= Lucro líquido R$ 56,42 24,64%");
+                "(-) Despesas R$ 115,50 50,44%",
+                "= Lucro líquido R$ 26,42 11,54%");
         assertThat(linhas).hasCount(esperado.size());
         List<String> lidas = linhas.allInnerTexts().stream()
                 .map(t -> t.replaceAll("\\s+", " ").trim())

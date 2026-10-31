@@ -112,13 +112,13 @@ class AuditoriaHttpTest {
         long id = vendas.findByToken(token).orElseThrow().getId();
 
         mvc.perform(doIp(post("/historico/" + id + "/data"))
-                .param("data", "2030-01-02")
+                .param("data", "2025-01-02")
                 .param("hora", "10:30"));
         mvc.perform(doIp(post("/historico/" + id + "/cancelar")).param("motivo", "Desistiu"));
 
         String data = eventos("correcao_data").get(0);
         assertTrue(data.startsWith("evento=correcao_data id=" + id + " ip=" + IP + " antes="), data);
-        assertTrue(data.endsWith(" depois=2030-01-02T10:30"), data);
+        assertTrue(data.endsWith(" depois=2025-01-02T10:30"), data);
         assertEquals(
                 List.of("evento=cancelamento id=" + id + " ip=" + IP
                         + " cobrado=6.00 motivo=Desistiu itens=\"Auditado x1\""),

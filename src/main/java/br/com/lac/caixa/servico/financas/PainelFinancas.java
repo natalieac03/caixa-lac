@@ -44,6 +44,7 @@ public class PainelFinancas {
     private static final DecimalFormatSymbols SIMBOLOS = DecimalFormatSymbols.getInstance(PT_BR);
     private static final DateTimeFormatter DIA = DateTimeFormatter.ofPattern("dd/MM");
     private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH'h'");
+    private static final DateTimeFormatter MES = DateTimeFormatter.ofPattern("MM/yyyy");
 
     private final FinancasService financas;
 
@@ -128,7 +129,11 @@ public class PainelFinancas {
 
     public Dados dados(FiltroFinancas f, Metrica metrica) {
         var serie = financas.serie(f);
-        DateTimeFormatter rotulo = serie.porHora() ? HORA : DIA;
+        DateTimeFormatter rotulo = switch (serie.granularidade()) {
+            case HORA -> HORA;
+            case DIA, SEMANA -> DIA;
+            case MES -> MES;
+        };
         List<String> dias = new ArrayList<>();
         List<BigDecimal> receita = new ArrayList<>();
         List<BigDecimal> lucro = new ArrayList<>();

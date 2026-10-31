@@ -34,6 +34,19 @@ public class ConsultasFinanceiras {
             + " AND (ev.fim > v.data_hora OR (ev.fim IS NULL AND v.data_hora <= :agora"
             + " AND NOT EXISTS (SELECT 1 FROM evento prox WHERE prox.inicio > ev.inicio AND prox.inicio <= v.data_hora))))";
 
+    /**
+     * CMV de um item (alias i): custo x quantidade arredondado ao centavo no
+     * próprio item, para o resumo, a série e os rankings somarem os mesmos
+     * centavos. Item sem custo fica fora (null).
+     */
+    static final String CMV =
+            "CASE WHEN i.custo_unitario IS NOT NULL THEN ROUND(i.custo_unitario * i.quantidade, 2) END";
+
+    /** Só as partes de pagamento (alias pg) na forma do filtro, se houver. */
+    private static String partes(FiltroFinancas f) {
+        return f.forma() == null ? "" : " AND pg.forma = :forma";
+    }
+
     /** WHERE das vendas (alias v) e, se o filtro tem categoria, dos itens (alias p = produto do item). */
     private record Onde(String vendas, String itens, MapSqlParameterSource parametros) {}
 
@@ -72,7 +85,7 @@ public class ConsultasFinanceiras {
 
     // ---------------------------------------------------------------- resumo
 
-    /** Somas dos itens das vendas do filtro. cmv = custo x quantidade dos itens com custo (4 casas). */
+    /** Somas dos itens das vendas do filtro. cmv = soma do CMV de cada item (já ao centavo). */
     public record SomaItens(
             BigDecimal bruto,
             BigDecimal liquido,
@@ -85,7 +98,7 @@ public class ConsultasFinanceiras {
         Onde o = onde(f);
         return jdbc.queryForObject(
                 "SELECT COALESCE(SUM(i.valor_bruto), 0) AS bruto, COALESCE(SUM(i.valor_liquido), 0) AS liquido,"
-                        + " COALESCE(SUM(CASE WHEN i.custo_unitario IS NOT NULL THEN i.custo_unitario * i.quantidade END), 0) AS cmv,"
+                        + " COALESCE(SUM(" + CMV + "), 0) AS cmv,"
                         + " COALESCE(SUM(CASE WHEN i.custo_unitario IS NOT NULL THEN i.valor_liquido END), 0) AS liquido_com_custo,"
                         + " COALESCE(SUM(CASE WHEN i.custo_unitario IS NULL THEN 1 ELSE 0 END), 0) AS linhas_sem_custo,"
                         + " COALESCE(SUM(i.quantidade), 0) AS unidades"
@@ -137,17 +150,21 @@ public class ConsultasFinanceiras {
                         dec(r, "cobrado_sem_itens")));
     }
 
-    /** Soma das taxas estimadas das partes de pagamento das vendas do filtro. */
+    /** Soma das taxas estimadas das partes de pagamento das vendas do filtro (só as da forma, se houver). */
     public BigDecimal taxas(FiltroFinancas f) {
         Onde o = onde(f);
         return jdbc.queryForObject(
                 "SELECT COALESCE(SUM(pg.taxa_estimada), 0) FROM pagamento_venda pg JOIN venda v ON v.id = pg.venda_id"
-                        + " WHERE " + o.vendas(),
+                        + " WHERE " + o.vendas() + partes(f),
                 o.parametros(),
                 BigDecimal.class);
     }
 
-    /** Despesas: do evento (ligadas a ele) ou do período (pela data). */
+    /**
+     * Despesas, numa regra só: a ligada a um evento é do evento e conta no dia
+     * em que ele começa; a sem evento conta na data dela. Assim eventos + dia a
+     * dia somam o mesmo que o período.
+     */
     public BigDecimal despesas(FiltroFinancas f) {
         if (f.evento() != null) {
             return jdbc.queryForObject(
@@ -163,7 +180,9 @@ public class ConsultasFinanceiras {
                     BigDecimal.class);
         }
         return jdbc.queryForObject(
-                "SELECT COALESCE(SUM(valor), 0) FROM despesa WHERE data >= :de AND data <= :ate",
+                "SELECT COALESCE(SUM(d.valor), 0) FROM despesa d LEFT JOIN evento e ON e.id = d.evento_id"
+                        + " WHERE COALESCE(CAST(e.inicio AS DATE), d.data) >= :de"
+                        + " AND COALESCE(CAST(e.inicio AS DATE), d.data) <= :ate",
                 new MapSqlParameterSource().addValue("de", f.inicio()).addValue("ate", f.fim()),
                 BigDecimal.class);
     }
@@ -179,7 +198,7 @@ public class ConsultasFinanceiras {
         return jdbc.query(
                 "SELECT CAST(v.data_hora AS DATE) AS dia, EXTRACT(HOUR FROM v.data_hora) AS hora,"
                         + " COALESCE(SUM(i.valor_liquido), 0) AS liquido,"
-                        + " COALESCE(SUM(CASE WHEN i.custo_unitario IS NOT NULL THEN i.custo_unitario * i.quantidade END), 0) AS cmv,"
+                        + " COALESCE(SUM(" + CMV + "), 0) AS cmv,"
                         + " COUNT(DISTINCT v.id) AS vendas"
                         + " FROM item_venda i JOIN venda v ON v.id = i.venda_id JOIN produto p ON p.id = i.produto_id"
                         + " WHERE " + o.vendas() + o.itens()
@@ -213,7 +232,7 @@ public class ConsultasFinanceiras {
         return jdbc.query(
                 "SELECT p.id, p.nome, p.ativo, p.categoria_id, c.nome AS categoria,"
                         + " SUM(i.quantidade) AS unidades, COALESCE(SUM(i.valor_liquido), 0) AS liquido,"
-                        + " COALESCE(SUM(CASE WHEN i.custo_unitario IS NOT NULL THEN i.custo_unitario * i.quantidade END), 0) AS cmv,"
+                        + " COALESCE(SUM(" + CMV + "), 0) AS cmv,"
                         + " COALESCE(SUM(CASE WHEN i.custo_unitario IS NULL THEN i.quantidade ELSE 0 END), 0) AS sem_custo"
                         + " FROM item_venda i JOIN venda v ON v.id = i.venda_id JOIN produto p ON p.id = i.produto_id"
                         + " LEFT JOIN categoria c ON c.id = p.categoria_id"
@@ -247,7 +266,7 @@ public class ConsultasFinanceiras {
         return jdbc.query(
                 "SELECT p.categoria_id, c.nome AS categoria,"
                         + " SUM(i.quantidade) AS unidades, COALESCE(SUM(i.valor_liquido), 0) AS liquido,"
-                        + " COALESCE(SUM(CASE WHEN i.custo_unitario IS NOT NULL THEN i.custo_unitario * i.quantidade END), 0) AS cmv,"
+                        + " COALESCE(SUM(" + CMV + "), 0) AS cmv,"
                         + " COALESCE(SUM(CASE WHEN i.custo_unitario IS NULL THEN i.quantidade ELSE 0 END), 0) AS sem_custo,"
                         + " COUNT(DISTINCT v.id) AS vendas"
                         + " FROM item_venda i JOIN venda v ON v.id = i.venda_id JOIN produto p ON p.id = i.produto_id"
@@ -265,7 +284,7 @@ public class ConsultasFinanceiras {
                         r.getLong("vendas")));
     }
 
-    /** Por forma, pelas partes de pagamento: valor, vendas distintas e taxa estimada. */
+    /** Por forma, pelas partes de pagamento: valor, vendas distintas e taxa estimada (só a forma do filtro, se houver). */
     public record SomaForma(FormaPagamento forma, BigDecimal valor, long vendas, BigDecimal taxas) {}
 
     public List<SomaForma> porForma(FiltroFinancas f) {
@@ -274,7 +293,7 @@ public class ConsultasFinanceiras {
                 "SELECT pg.forma, COALESCE(SUM(pg.valor), 0) AS valor, COUNT(DISTINCT pg.venda_id) AS vendas,"
                         + " COALESCE(SUM(pg.taxa_estimada), 0) AS taxas"
                         + " FROM pagamento_venda pg JOIN venda v ON v.id = pg.venda_id"
-                        + " WHERE " + o.vendas() + " GROUP BY pg.forma",
+                        + " WHERE " + o.vendas() + partes(f) + " GROUP BY pg.forma",
                 o.parametros(),
                 (r, n) -> new SomaForma(
                         FormaPagamento.valueOf(r.getString("forma")),
@@ -285,21 +304,29 @@ public class ConsultasFinanceiras {
 
     /**
      * Por promoção (promocao_id null = promoções apagadas): vendas em que entrou,
-     * desconto total e receita líquida (valor cobrado) dessas vendas.
+     * desconto total e receita líquida dessas vendas: o valor cobrado ou, com
+     * filtro de categoria, o líquido só dos itens da categoria.
      */
     public record SomaPromocao(Long promocaoId, long vendas, BigDecimal desconto, BigDecimal receita) {}
 
     public List<SomaPromocao> porPromocao(FiltroFinancas f) {
         Onde o = onde(f);
+        String receita = f.categoriaId() == null
+                ? " JOIN (SELECT x.promocao_id, SUM(v.valor_cobrado) AS receita"
+                        + "  FROM (SELECT DISTINCT promocao_id, venda_id FROM venda_desconto) x"
+                        + "  JOIN venda v ON v.id = x.venda_id WHERE " + o.vendas()
+                        + "  GROUP BY x.promocao_id) r"
+                : " JOIN (SELECT x.promocao_id, SUM(i.valor_liquido) AS receita"
+                        + "  FROM (SELECT DISTINCT promocao_id, venda_id FROM venda_desconto) x"
+                        + "  JOIN venda v ON v.id = x.venda_id JOIN item_venda i ON i.venda_id = v.id"
+                        + "  JOIN produto p ON p.id = i.produto_id WHERE " + o.vendas() + o.itens()
+                        + "  GROUP BY x.promocao_id) r";
         return jdbc.query(
                 "SELECT d.promocao_id, d.vendas, d.desconto, r.receita FROM"
                         + " (SELECT vd.promocao_id, COUNT(DISTINCT vd.venda_id) AS vendas, SUM(vd.valor) AS desconto"
                         + "  FROM venda_desconto vd JOIN venda v ON v.id = vd.venda_id WHERE " + o.vendas()
                         + "  GROUP BY vd.promocao_id) d"
-                        + " JOIN (SELECT x.promocao_id, SUM(v.valor_cobrado) AS receita"
-                        + "  FROM (SELECT DISTINCT promocao_id, venda_id FROM venda_desconto) x"
-                        + "  JOIN venda v ON v.id = x.venda_id WHERE " + o.vendas()
-                        + "  GROUP BY x.promocao_id) r"
+                        + receita
                         + " ON r.promocao_id = d.promocao_id OR (r.promocao_id IS NULL AND d.promocao_id IS NULL)",
                 o.parametros(),
                 (r, n) -> new SomaPromocao(

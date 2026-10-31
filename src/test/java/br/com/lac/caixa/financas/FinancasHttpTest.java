@@ -65,7 +65,7 @@ class FinancasHttpTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("01/03/2025 a 15/03/2025")))
                 .andExpect(content().string(containsString("R$ 229,00")))
-                .andExpect(content().string(containsString("R$ 56,42")))
+                .andExpect(content().string(containsString("R$ 26,42")))
                 .andExpect(content().string(containsString("63,54%")))
                 .andExpect(content().string(containsString("id=\"aviso-parcial\"")))
                 .andExpect(content().string(containsString("/estoque?semCusto=true")))
@@ -98,8 +98,10 @@ class FinancasHttpTest {
         for (String atalho : new String[] {"hoje", "evento", "7dias", "mes"}) {
             mvc.perform(logado("/financas?atalho=" + atalho)).andExpect(status().isOk());
         }
-        mvc.perform(logado("/financas?atalho=xyz").header("Referer", "http://localhost/financas"))
-                .andExpect(redirectedUrl("/financas"));
+        // Filtro recusado: 400 na própria tela, com a mensagem (sem redirecionar para a mesma URL).
+        mvc.perform(logado("/financas?atalho=xyz").header("Referer", "http://localhost/financas?atalho=xyz"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("Atalho de período desconhecido.")));
     }
 
     @Test
@@ -154,7 +156,7 @@ class FinancasHttpTest {
         assertTrue(corpo[0] == (byte) 0xEF && corpo[1] == (byte) 0xBB && corpo[2] == (byte) 0xBF, "BOM");
         String texto = new String(corpo, StandardCharsets.UTF_8);
         assertTrue(texto.contains("\"01/03/2025 a 15/03/2025\";\"= Receita líquida\";229,00;100,00"), texto);
-        assertTrue(texto.contains("\"(-) Despesas\";85,50;37,34"), texto);
+        assertTrue(texto.contains("\"(-) Despesas\";115,50;50,44"), texto);
         for (String tabela : ExportadorFinancas.TABELAS) {
             mvc.perform(logado("/financas/exportar/" + tabela + ".csv" + MARCO)).andExpect(status().isOk());
         }

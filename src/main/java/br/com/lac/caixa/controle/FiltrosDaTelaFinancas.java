@@ -18,11 +18,14 @@ import org.springframework.web.util.UriComponentsBuilder;
  * ou o último que começou), 7dias, mes (do dia 1 até hoje) e personalizado
  * (De/Até). Um evento escolhido na lista vale como período; "Dia a dia" fica
  * dentro do período do atalho (vendas fora de qualquer evento). Sem atalho: mes.
+ * O período vai no máximo até agora (o que ainda não aconteceu não conta dias)
+ * e tem no máximo {@value #ANOS_NO_MAXIMO} anos.
  */
 @Component
 public class FiltrosDaTelaFinancas {
     static final DateTimeFormatter DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     static final DateTimeFormatter DATA_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    static final int ANOS_NO_MAXIMO = 3;
 
     private final EventoService eventos;
     private final Clock relogio;
@@ -108,11 +111,13 @@ public class FiltrosDaTelaFinancas {
             case "personalizado" -> {
                 de = data(inicio, hoje);
                 ate = data(fim, de);
+                if (!ate.isBefore(de.plusYears(ANOS_NO_MAXIMO)))
+                    throw new RegraDeNegocioException("O período pode ter no máximo " + ANOS_NO_MAXIMO
+                            + " anos. Escolha um início e um fim mais próximos.");
             }
             default -> throw new RegraDeNegocioException("Atalho de período desconhecido.");
         }
-        var filtro = new FiltroFinancas(
-                de, ate, null, categoria, forma, sel.diaADia(), sel.diaADia() ? LocalDateTime.now(relogio) : null);
+        var filtro = new FiltroFinancas(de, ate, null, categoria, forma, sel.diaADia(), LocalDateTime.now(relogio));
         String texto = (de.equals(ate) ? de.format(DATA) : de.format(DATA) + " a " + ate.format(DATA))
                 + (sel.diaADia() ? " · dia a dia (fora dos eventos)" : "");
         return new Resolvido(a, de, ate, null, sel.diaADia(), categoria, forma, filtro, texto, aviso);
