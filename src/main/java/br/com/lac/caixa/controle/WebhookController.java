@@ -21,6 +21,8 @@ import org.springframework.web.bind.annotation.RestController;
  * Webhook do Mercado Pago (fora do login). Reforço da consulta da tela: confere
  * o x-signature, responde 200 na hora e, em segundo plano, consulta a order no
  * Mercado Pago e atualiza a cobrança. Assinatura inválida: 401 sem corpo.
+ * O id da order vem só do data.id da URL, que entra na assinatura; sem ele,
+ * 400 (o id do corpo não é assinado e não vale).
  */
 @RestController
 public class WebhookController {
@@ -51,13 +53,17 @@ public class WebhookController {
             @RequestParam(name = "data.id", required = false) String dataId,
             @RequestParam(name = "type", required = false) String tipo,
             @RequestBody(required = false) String corpo) {
+        if (dataId == null || dataId.isBlank()) {
+            LOG.warn("Webhook do Mercado Pago recusado: sem data.id na URL.");
+            return ResponseEntity.badRequest().build();
+        }
         if (!AssinaturaWebhook.valida(config.getWebhookSecret(), assinatura, requestId, dataId, relogio.instant())) {
             LOG.warn("Webhook do Mercado Pago recusado: assinatura inválida ou fora da tolerância.");
             return ResponseEntity.status(401).build();
         }
-        String orderId = dataId != null ? dataId : idDoCorpo(corpo);
+        String orderId = dataId;
         String tipoDoAviso = tipo != null ? tipo : tipoDoCorpo(corpo);
-        if (orderId != null && (tipoDoAviso == null || "order".equals(tipoDoAviso))) {
+        if (tipoDoAviso == null || "order".equals(tipoDoAviso)) {
             avisos.execute(() -> {
                 try {
                     cobrancas.atualizarPorOrder(orderId);
@@ -75,13 +81,6 @@ public class WebhookController {
         } catch (Exception e) {
             return null;
         }
-    }
-
-    private String idDoCorpo(String corpo) {
-        JsonNode no = ler(corpo);
-        return no == null || no.path("data").path("id").isMissingNode()
-                ? null
-                : no.path("data").path("id").asText();
     }
 
     private String tipoDoCorpo(String corpo) {

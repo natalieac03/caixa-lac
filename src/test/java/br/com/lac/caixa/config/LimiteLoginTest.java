@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import br.com.lac.caixa.RelogioDeTeste;
 import br.com.lac.caixa.config.LimiteLogin.Situacao;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class LimiteLoginTest {
@@ -74,5 +75,42 @@ class LimiteLoginTest {
         for (int i = 0; i < 5; i++) errarEEsperar("ip");
         relogio.avancar(600);
         assertEquals(1, limite.tentar("ip", false).segundos());
+    }
+
+    @Test
+    @DisplayName("IPv6: o mesmo /64 é um IP só (trocar o fim do endereço não zera a espera)")
+    void ipv6AgrupadoPor64() {
+        assertEquals(Situacao.ERRO, limite.tentar("2001:db8:1:2::1", false).situacao());
+        assertEquals(
+                Situacao.AGUARDE, limite.tentar("2001:db8:1:2:ffff::9", true).situacao());
+        assertEquals(
+                Situacao.AGUARDE, limite.tentar("2001:DB8:1:2:0:0:0:abc", true).situacao());
+        assertTrue(limite.tentar("2001:db8:1:3::1", true).aceita()); // outra rede /64
+        assertTrue(limite.tentar("192.168.0.1", true).aceita()); // IPv4 continua por endereço
+    }
+
+    @Test
+    @DisplayName("Teto global: 60 erros no último minuto, somando todos os IPs, seguram qualquer tentativa")
+    void tetoGlobalPorMinuto() {
+        for (int i = 0; i < 60; i++) {
+            assertEquals(Situacao.ERRO, limite.tentar("10.0.0." + i, false).situacao());
+        }
+        // Nem a senha certa é conferida enquanto o teto está cheio.
+        assertEquals(new LimiteLogin.Tentativa(Situacao.AGUARDE, 60), limite.tentar("10.0.1.1", true));
+        relogio.avancar(30);
+        assertEquals(new LimiteLogin.Tentativa(Situacao.AGUARDE, 30), limite.tentar("10.0.1.1", false));
+        relogio.avancar(30);
+        assertTrue(limite.tentar("10.0.1.1", true).aceita());
+    }
+
+    @Test
+    @DisplayName("Mapa limitado: passando do máximo de IPs guardados, o mais antigo sai")
+    void maximoDeEntradas() {
+        var pequeno = new LimiteLogin(relogio, 1000, 3);
+        for (int i = 0; i < 5; i++) pequeno.tentar("ip" + i, false);
+        assertEquals(3, pequeno.tamanho());
+        assertTrue(pequeno.tentar("ip0", true).aceita()); // esquecido
+        assertEquals(Situacao.AGUARDE, pequeno.tentar("ip4", true).situacao());
+        assertEquals(10_000, LimiteLogin.MAXIMO_DE_ENTRADAS);
     }
 }

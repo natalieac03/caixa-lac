@@ -291,14 +291,16 @@ class PostgresBancoNovoTest {
                     eventos.doMomento(durante.getDataHora()).orElseThrow().getId());
             var hoje = LocalDate.now();
             var agora = java.time.LocalDateTime.now();
-            var diaADia = new br.com.lac.caixa.repositorio.FiltroHistorico(null, hoje, hoje, "").comDiaADia(agora);
+            // Logo depois da meia-noite, a venda de 10 minutos atrás é de ontem: o filtro começa no dia dela.
+            var desde = antes.getDataHora().toLocalDate();
+            var diaADia = new br.com.lac.caixa.repositorio.FiltroHistorico(null, desde, hoje, "").comDiaADia(agora);
             var ids = consultaHistorico
                     .consultar(diaADia, 0)
                     .pagina()
                     .map(v -> v.getId())
                     .getContent();
             assertTrue(ids.contains(antes.getId()) && !ids.contains(durante.getId()), ids.toString());
-            var r = financas.resumo(br.com.lac.caixa.repositorio.FiltroFinancas.diaADia(hoje, hoje, agora));
+            var r = financas.resumo(br.com.lac.caixa.repositorio.FiltroFinancas.diaADia(desde, hoje, agora));
             assertTrue(r.vendas() >= 1);
             var doEvento = financas.resumo(
                     br.com.lac.caixa.repositorio.FiltroFinancas.doEvento(eventos.periodo(feira.getId())));

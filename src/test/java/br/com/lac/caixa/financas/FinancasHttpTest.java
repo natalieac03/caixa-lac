@@ -155,7 +155,8 @@ class FinancasHttpTest {
                 .getContentAsByteArray();
         assertTrue(corpo[0] == (byte) 0xEF && corpo[1] == (byte) 0xBB && corpo[2] == (byte) 0xBF, "BOM");
         String texto = new String(corpo, StandardCharsets.UTF_8);
-        assertTrue(texto.contains("\"01/03/2025 a 15/03/2025\";\"= Receita líquida\";229,00;100,00"), texto);
+        // "= Receita líquida" sai com apóstrofo: sem ele, a planilha leria uma fórmula.
+        assertTrue(texto.contains("\"01/03/2025 a 15/03/2025\";\"'= Receita líquida\";229,00;100,00"), texto);
         assertTrue(texto.contains("\"(-) Despesas\";115,50;50,44"), texto);
         for (String tabela : ExportadorFinancas.TABELAS) {
             mvc.perform(logado("/financas/exportar/" + tabela + ".csv" + MARCO)).andExpect(status().isOk());

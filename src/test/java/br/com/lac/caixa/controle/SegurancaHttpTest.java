@@ -60,8 +60,9 @@ class SegurancaHttpTest {
                 conferidas++;
             }
         }
-        // O webhook é público, mas sem assinatura válida responde 401.
-        mvc.perform(post("/webhooks/mercadopago")).andExpect(status().isUnauthorized());
+        // O webhook é público, mas sem assinatura válida responde 401 (e sem data.id, 400).
+        mvc.perform(post("/webhooks/mercadopago").param("data.id", "1")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/webhooks/mercadopago")).andExpect(status().isBadRequest());
         assertTrue(conferidas >= 15, "rotas conferidas: " + conferidas);
     }
 

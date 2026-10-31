@@ -160,6 +160,26 @@ class WebhookHttpTest {
     }
 
     @Test
+    @DisplayName("Sem data.id na URL: 400, mesmo assinado; o id do corpo (que não entra na assinatura) não vale")
+    void exigeDataIdNaUrl() throws Exception {
+        String order = gerarPix();
+        FAKE.pagar(order, "18.00");
+        long agora = Instant.now().getEpochSecond();
+        String requestId = UUID.randomUUID().toString();
+        // Assinatura válida para um aviso sem id (o manifesto fica sem a parte "id:")
+        String v1 = assinar(SEGREDO, "request-id:" + requestId + ";ts:" + agora + ";");
+        mvc.perform(post("/webhooks/mercadopago")
+                        .param("type", "order")
+                        .header("x-request-id", requestId)
+                        .header("x-signature", "ts=" + agora + ",v1=" + v1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"type\":\"order\",\"data\":{\"id\":\"" + order + "\"}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(""));
+        assertEquals("PENDENTE", situacao(order));
+    }
+
+    @Test
     @DisplayName("O mesmo aviso duas vezes não muda nada na segunda (idempotente)")
     void avisoRepetido() throws Exception {
         // Arrange

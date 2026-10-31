@@ -121,11 +121,15 @@ public final class ExportadorCSV {
         return csv.toString();
     }
 
+    /**
+     * Campo de texto entre aspas (aspas dobradas). Texto que começa com = + - @
+     * tab ou CR ganha um apóstrofo na frente, para a planilha não ler como fórmula.
+     */
     static String campo(String valor) {
         if (valor == null) {
             return "";
         }
-        String escapado = valor.replace("\"", "\"\"");
-        return "\"" + escapado + "\"";
+        String texto = !valor.isEmpty() && "=+-@\t\r".indexOf(valor.charAt(0)) >= 0 ? "'" + valor : valor;
+        return "\"" + texto.replace("\"", "\"\"") + "\"";
     }
 }
