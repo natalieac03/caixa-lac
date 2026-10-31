@@ -3,6 +3,7 @@ package br.com.lac.caixa.controle;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import br.com.lac.caixa.pix.FakeMercadoPago;
@@ -35,6 +36,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
             "mercadopago.webhook-sincrono=true"
         })
 @AutoConfigureMockMvc
+@org.junit.jupiter.api.extension.ExtendWith(org.springframework.boot.test.system.OutputCaptureExtension.class)
 class WebhookHttpTest {
     static final String SEGREDO = "segredo-do-webhook-de-teste";
     static final FakeMercadoPago FAKE = new FakeMercadoPago();
@@ -205,5 +207,68 @@ class WebhookHttpTest {
                                 "select valor_pago from cobranca_pix where order_id = ?",
                                 java.math.BigDecimal.class,
                                 order)));
+    }
+
+    @Autowired
+    @org.springframework.beans.factory.annotation.Qualifier("requestMappingHandlerMapping")
+    org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping rotas;
+
+    @Test
+    @DisplayName(
+            "\"Simular notificação\" do painel: assinatura válida, order que não existe -> 200 e só um aviso no log")
+    void simulacaoDoPainel(org.springframework.boot.test.system.CapturedOutput saida) throws Exception {
+        long agora = Instant.now().getEpochSecond();
+        int consultas = FAKE.consultas.get();
+        // Como o painel manda: data.id numérico, type=order e o corpo com action/data.id
+        String manifesto = "id:123456;request-id:req-simulado;ts:" + agora + ";";
+        mvc.perform(post("/webhooks/mercadopago")
+                        .param("data.id", "123456")
+                        .param("type", "order")
+                        .header("x-request-id", "req-simulado")
+                        .header("x-signature", "ts=" + agora + ",v1=" + assinar(SEGREDO, manifesto))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"action\":\"order.processed\",\"api_version\":\"v1\",\"type\":\"order\","
+                                + "\"live_mode\":false,\"data\":{\"id\":\"123456\"}}"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(""));
+        String log = saida.getOut();
+        org.junit.jupiter.api.Assertions.assertTrue(
+                log.contains("Webhook: a order 123456 não é de nenhuma cobrança deste caixa; aviso ignorado."), log);
+        org.junit.jupiter.api.Assertions.assertFalse(log.contains(" ERROR "), "sem erro no log");
+        assertEquals(consultas, FAKE.consultas.get(), "order que não é nossa não é consultada no Mercado Pago");
+    }
+
+    @Test
+    @DisplayName("Id com quebra de linha não forja linhas no log")
+    void idNaoForjaLinhas(org.springframework.boot.test.system.CapturedOutput saida) throws Exception {
+        mvc.perform(avisoAssinado("123\nINFO falso", "req-quebra", Instant.now().getEpochSecond()))
+                .andExpect(status().isOk());
+        org.junit.jupiter.api.Assertions.assertTrue(
+                saida.getOut().contains("a order 123_INFO falso não é"), saida.getOut());
+        org.junit.jupiter.api.Assertions.assertFalse(saida.getOut().contains("\nINFO falso"));
+    }
+
+    @Test
+    @DisplayName("O endpoint é exatamente POST /webhooks/mercadopago e fica fora do login; o resto pede login")
+    void caminhoEForaDoLogin() throws Exception {
+        // Única rota de webhook da aplicação
+        var webhooks = rotas.getHandlerMethods().keySet().stream()
+                .filter(r -> r.getPatternValues().stream().anyMatch(x -> x.contains("webhook")))
+                .toList();
+        assertEquals(1, webhooks.size(), webhooks.toString());
+        assertEquals(java.util.Set.of("/webhooks/mercadopago"), webhooks.get(0).getPatternValues());
+        assertEquals(
+                java.util.Set.of(org.springframework.web.bind.annotation.RequestMethod.POST),
+                webhooks.get(0).getMethodsCondition().getMethods());
+        // Sem sessão: chega ao controller (401 da assinatura, não o redirecionamento do login)
+        mvc.perform(post("/webhooks/mercadopago").param("data.id", "1"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().doesNotExist("Location"));
+        // Qualquer outro caminho parecido continua atrás do login
+        for (String outro : new String[] {"/webhooks/mercadopago/x", "/webhooks/outro", "/webhooks"}) {
+            mvc.perform(post(outro))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(header().string("Location", "/login"));
+        }
     }
 }

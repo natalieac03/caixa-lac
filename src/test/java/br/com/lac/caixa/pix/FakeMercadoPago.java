@@ -43,6 +43,9 @@ public class FakeMercadoPago extends Dispatcher {
     public final AtomicInteger consultas = new AtomicInteger();
     public final AtomicInteger cancelamentos = new AtomicInteger();
 
+    /** O corpo JSON da última criação de order (o MockWebServer só deixa ler o corpo uma vez). */
+    public volatile com.fasterxml.jackson.databind.JsonNode ultimaCriacao;
+
     public static MockWebServer iniciar(FakeMercadoPago fake) {
         try {
             var servidor = new MockWebServer();
@@ -106,6 +109,7 @@ public class FakeMercadoPago extends Dispatcher {
     private MockResponse criar(RecordedRequest req) throws Exception {
         String chave = req.getHeader("X-Idempotency-Key");
         var corpo = json.readTree(req.getBody().readUtf8());
+        ultimaCriacao = corpo;
         String existente = chave == null ? null : porIdempotencia.get(chave);
         if (existente != null) return resposta(201, corpo(orders.get(existente)));
         criacoes.incrementAndGet();

@@ -185,12 +185,23 @@ public class CobrancaPixService {
     public boolean atualizarPorOrder(String orderId) {
         if (orderId == null || orderId.isBlank() || !mp.ligado()) return false;
         var cobranca = cobrancas.buscarPorOrderParaAtualizar(orderId);
-        if (cobranca.isEmpty() || cobranca.get().getStatus() != StatusCobranca.PENDENTE) return false;
+        if (cobranca.isEmpty()) {
+            // Ex.: o botão "Simular notificação" do painel do Mercado Pago manda um id que não existe.
+            LOG.warn("Webhook: a order {} não é de nenhuma cobrança deste caixa; aviso ignorado.", paraLog(orderId));
+            return false;
+        }
+        if (cobranca.get().getStatus() != StatusCobranca.PENDENTE) return false;
         StatusCobranca antes = cobranca.get().getStatus();
         BigDecimal pagoAntes = cobranca.get().getValorPago();
         atualizarPeloMercadoPago(cobranca.get());
         return antes != cobranca.get().getStatus()
                 || !java.util.Objects.equals(pagoAntes, cobranca.get().getValorPago());
+    }
+
+    /** Id vindo de fora, pronto para o log: sem quebras de linha (não forja linhas) e com no máximo 64 caracteres. */
+    static String paraLog(String externo) {
+        String limpo = externo.replaceAll("[\\r\\n\\t]", "_");
+        return limpo.length() > 64 ? limpo.substring(0, 64) + "..." : limpo;
     }
 
     /** Pix que entrou (pago, ou pago com valor diferente) sem venda confirmada, para resolver à mão. */

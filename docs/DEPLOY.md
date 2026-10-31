@@ -20,7 +20,8 @@ exemplos são **fictícios**.
 | `MP_ACCESS_TOKEN` | Não (sem ela o **Mercado Pago fica desligado** e o caixa usa Pix manual) | **Sim** | `APP_USR-0000000000000000-000000-00000000000000000000000000000000-000000000` | Access token da aplicação no Mercado Pago (Orders API). |
 | `MP_PAYER_EMAIL` | Só para ligar o Mercado Pago (token sem e-mail = desligado) | Não | `caixa@exemplo.org` | E-mail do pagador exigido pela API do Pix. |
 | `MP_WEBHOOK_SECRET` | Não (sem ela os avisos do webhook são **recusados**; a tela ainda confere a cobrança a cada 3 s) | **Sim** | `exemplo-de-assinatura-secreta` | Assinatura secreta do webhook (cabeçalho `x-signature`). |
-| `MP_PAYER_FIRST_NAME` | Não. **Deixe vazia em produção** | Não | `APRO` | Só com credenciais de teste: `APRO` aprova o Pix de teste sozinho. |
+| `MP_PAYER_NOME` | Não. **Deixe vazia em produção** | Não | `APRO` | Quando existe, vai como `payer.first_name` na criação da order Pix. No modo teste do Mercado Pago, `APRO` faz o Pix ser aprovado sozinho. |
+| `MP_PAYER_FIRST_NAME` | Não (nome antigo de `MP_PAYER_NOME`, ainda aceito; `MP_PAYER_NOME` tem preferência) | Não | `APRO` | O mesmo que `MP_PAYER_NOME`. Use o nome novo. |
 
 Lidas pelo Railway (não pelo app):
 
@@ -164,7 +165,7 @@ SPRING_PROFILES_ACTIVE=prod SPRING_DATASOURCE_URL=jdbc:postgresql://127.0.0.1:55
 
 1. Em *Variables* do serviço: confira as da seção 1. Os segredos são `APP_SENHA`,
    `PGPASSWORD`, `MP_ACCESS_TOKEN` e `MP_WEBHOOK_SECRET`; use as **Variable
-   References** `${{Postgres.*}}` para o banco. Em produção, `MP_PAYER_FIRST_NAME` fica vazia.
+   References** `${{Postgres.*}}` para o banco. Em produção, `MP_PAYER_NOME` (e o antigo `MP_PAYER_FIRST_NAME`) ficam vazias.
 2. Em *Settings*: Healthcheck Path `/actuator/health`, `RAILWAY_HEALTHCHECK_TIMEOUT_SEC=300`,
    Restart Policy *On Failure*, 1 réplica (por causa da descontinuação do `railway.json`).
 3. Suba o commit (push da `main`, se o serviço está ligado ao GitHub, ou `railway up`).
@@ -187,6 +188,10 @@ SPRING_PROFILES_ACTIVE=prod SPRING_DATASOURCE_URL=jdbc:postgresql://127.0.0.1:55
    - cadastre o webhook em *Suas integrações → Webhooks*, com a URL
      `https://<seu-domínio>/webhooks/mercadopago` e o evento **Order**;
    - copie a assinatura secreta para `MP_WEBHOOK_SECRET`;
+   - o botão **Simular notificação** manda um id de order que não existe: o caixa
+     responde 200 e o log mostra "a order ... não é de nenhuma cobrança deste caixa;
+     aviso ignorado". Isso confirma a URL e a assinatura (com a assinatura errada
+     o log mostra "Webhook do Mercado Pago recusado" e a resposta é 401);
    - faça um Pix de valor baixo de ponta a ponta;
    - veja o README, seção "Pix automático".
 

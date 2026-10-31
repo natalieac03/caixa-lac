@@ -150,7 +150,7 @@ mostra o aviso e o botão **Pix manual** continua funcionando.
 | `MP_ACCESS_TOKEN` | Access Token da aplicação no Mercado Pago (liga o recurso) |
 | `MP_WEBHOOK_SECRET` | Assinatura secreta dos webhooks (valida os avisos de pagamento) |
 | `MP_PAYER_EMAIL` | E-mail fixo da LAC usado como pagador (a API exige um) |
-| `MP_PAYER_FIRST_NAME` | Só em teste: `APRO` faz o Mercado Pago aprovar o Pix de teste sozinho. Vazio em produção |
+| `MP_PAYER_NOME` | Opcional: vai como `payer.first_name` na order Pix. No modo teste, `APRO` faz o Mercado Pago aprovar o Pix sozinho. Vazio em produção (o nome antigo `MP_PAYER_FIRST_NAME` ainda é aceito) |
 
 Ficam só em variável de ambiente (Variables no Railway, ou o
 `senha-local.properties` no computador), nunca no código nem no log.
@@ -202,21 +202,24 @@ Ficam só em variável de ambiente (Variables no Railway, ou o
 ### Configurar no Railway
 
 No serviço do app, em **Variables**: `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET` e
-`MP_PAYER_EMAIL` (e, só para ensaio, `MP_PAYER_FIRST_NAME=APRO`). O deploy
-seguinte liga o recurso; o log de início diz "Pix automático (Mercado Pago)
-ligado" (sem mostrar valores). A URL do webhook é o domínio público do serviço
+`MP_PAYER_EMAIL` (e, só para ensaio, `MP_PAYER_NOME=APRO`). O deploy
+seguinte liga o recurso; o log de início diz "Mercado Pago: ligado" e
+"webhook: assinatura configurada" (sem mostrar valores). A URL do webhook é o domínio público do serviço
 (Settings → Networking) + `/webhooks/mercadopago`.
 
 ### Testar com as credenciais de teste
 
 1. Variables com o Access Token **de teste**, a assinatura do webhook do modo
-   **Teste** e `MP_PAYER_FIRST_NAME=APRO`.
+   **Teste** e `MP_PAYER_NOME=APRO`.
 2. Faça uma venda com **Gerar Pix**: com `APRO`, o Mercado Pago aprova o Pix de
    teste sozinho e a tela mostra "Pix recebido" em poucos segundos.
 3. Confira em Suas integrações → aplicação → **Pagamentos de teste**, e no
    histórico/fechamento do caixa (parte marcada como Mercado Pago).
 4. Antes do evento, troque para as credenciais e o webhook de **produção** e
-   apague `MP_PAYER_FIRST_NAME`.
+   apague `MP_PAYER_NOME`.
+5. O botão **Simular notificação** do painel manda um aviso com assinatura válida
+   e um id de order que não existe: o caixa responde 200 e só registra no log
+   "a order ... não é de nenhuma cobrança deste caixa; aviso ignorado".
 
 A suíte de testes nunca chama o Mercado Pago: usa um servidor HTTP falso.
 

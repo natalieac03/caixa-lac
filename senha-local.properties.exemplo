@@ -9,4 +9,4 @@ APP_SENHA=troque-esta-senha
 # MP_WEBHOOK_SECRET=exemplo-de-assinatura-secreta
 # MP_PAYER_EMAIL=caixa@exemplo.org
 # Só com credenciais de teste: APRO faz o Pix de teste ser aprovado sozinho.
-# MP_PAYER_FIRST_NAME=APRO
+# MP_PAYER_NOME=APRO
