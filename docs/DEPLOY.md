@@ -23,10 +23,11 @@ exemplos são **fictícios**.
 | `MP_PAYER_NOME` | Não. **Deixe vazia em produção** | Não | `APRO` | Quando existe, vai como `payer.first_name` na criação da order Pix. No modo teste do Mercado Pago, `APRO` faz o Pix ser aprovado sozinho. |
 | `MP_PAYER_FIRST_NAME` | Não (nome antigo de `MP_PAYER_NOME`, ainda aceito; `MP_PAYER_NOME` tem preferência) | Não | `APRO` | O mesmo que `MP_PAYER_NOME`. Use o nome novo. |
 
-Lidas pelo Railway (não pelo app):
+Lidas pelo Railway ou pela JVM (não pelas properties do app):
 
 | Variável | Valor | Para quê |
 |---|---|---|
+| `TZ` | `America/Sao_Paulo` | Fuso da máquina. O app já usa o horário de Brasília sozinho (relógio fixo e `TimeZone.setDefault` no `main`); `TZ` deixa logs e ferramentas do contêiner no mesmo horário. |
 | `RAILWAY_HEALTHCHECK_TIMEOUT_SEC` | `300` | Tempo máximo do healthcheck no deploy. Recomendo criar: vale mesmo sem o `railway.json` (veja a seção 2). |
 
 Ajustes finos, **não precisam** ser definidos (o Spring aceita qualquer
@@ -41,6 +42,21 @@ Ao subir, o log mostra (sem nenhum valor secreto):
 Mercado Pago: ligado            (ou: desligado)
 webhook: assinatura configurada (ou: não configurada)
 ```
+
+### Fuso horário: atenção ao primeiro deploy desta versão
+
+Até aqui o app em produção rodava com a JVM em UTC. As colunas de data são
+`TIMESTAMP` sem fuso, então as vendas foram gravadas com a hora UTC: a consulta
+de horas da seção 5 do script mostra o pico de madrugada. Esta versão grava a hora
+de Brasília. Para o banco não ficar misturado, **as datas antigas precisam ser
+convertidas no mesmo deploy**.
+
+A **V20** (só no Postgres) faz essa conversão no mesmo deploy. Ela converte as
+colunas gravadas pelo relógio e não mexe nas digitadas. Por decisão da LAC, as
+vendas corrigidas à mão no histórico também são convertidas e ficam 3 h
+adiantadas: confira as poucas que foram corrigidas e ajuste na tela. **O relógio
+novo e a V20 têm de subir juntos.** Não suba só uma parte, senão as vendas feitas
+nesse intervalo seriam deslocadas de novo.
 
 ## 2. `railway.json` e o painel do Railway
 
@@ -91,12 +107,16 @@ Postgres e no H2.
 | V17 `estoque_minimo` | Limite de estoque baixo opcional por produto. |
 | V18 `metas_do_evento` | Metas de receita e de lucro opcionais por evento. |
 | V19 `evento_aberto` | Fim do evento opcional (evento em andamento) e índice em `evento(inicio, fim)`. |
+| V20 `horarios_em_brasilia` | **Só no PostgreSQL** (`db/migration-postgresql`). Converte de UTC para Brasília os horários gravados pelo relógio (vendas, cancelamentos, movimentos, compras, Pix, despesas e taxas). Não mexe no que foi digitado (eventos do formulário, datas). As vendas corrigidas à mão também são convertidas e ficam 3 h adiantadas (decisão da LAC). |
 
 **Quais vão rodar em produção** depende do que o banco já tem. A seção 3 do
 `scripts/conferir-producao.sql` mostra a última versão aplicada:
 
-- sem `flyway_schema_history`: baseline + **V2 a V19** (18 migrações);
-- na versão N: da **V(N+1) à V19**.
+- sem `flyway_schema_history`: baseline + **V2 a V20** (19 migrações);
+- na versão N: da **V(N+1) à V20**.
+
+O H2 local não roda a V20: as pastas são `db/migration` (todos os bancos) e
+`db/migration-{vendor}` (`spring.flyway.locations`).
 
 No ensaio local com o esquema da versão original, as 18 migrações rodaram em
 0,5 s. Num banco maior, a V11 e a V12 percorrem todos os produtos e itens, mas
@@ -163,7 +183,7 @@ SPRING_PROFILES_ACTIVE=prod SPRING_DATASOURCE_URL=jdbc:postgresql://127.0.0.1:55
 
 ### 4.3 Deploy
 
-1. Em *Variables* do serviço: confira as da seção 1. Os segredos são `APP_SENHA`,
+1. Em *Variables* do serviço: confira as da seção 1, incluindo `TZ=America/Sao_Paulo`. Os segredos são `APP_SENHA`,
    `PGPASSWORD`, `MP_ACCESS_TOKEN` e `MP_WEBHOOK_SECRET`; use as **Variable
    References** `${{Postgres.*}}` para o banco. Em produção, `MP_PAYER_NOME` (e o antigo `MP_PAYER_FIRST_NAME`) ficam vazias.
 2. Em *Settings*: Healthcheck Path `/actuator/health`, `RAILWAY_HEALTHCHECK_TIMEOUT_SEC=300`,

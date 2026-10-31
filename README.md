@@ -57,6 +57,11 @@ usuário `sa`, senha em branco).
 
 ## Subir no Railway (com Postgres que não perde dados)
 
+> **Fuso:** o caixa grava e mostra a hora de Brasília (`America/Sao_Paulo`),
+> qualquer que seja o fuso da máquina. No Railway, crie também
+> `TZ=America/Sao_Paulo` em Variables. As datas antigas gravadas em UTC são
+> convertidas pela V20 (só no Postgres): veja o [docs/DEPLOY.md](docs/DEPLOY.md).
+>
 > Roteiro completo, com variáveis, migrações, backup, ensaio, deploy, conferência
 > e rollback: **[docs/DEPLOY.md](docs/DEPLOY.md)**. Conferência só de leitura,
 > para rodar antes e depois: `scripts/conferir-producao.sql`.

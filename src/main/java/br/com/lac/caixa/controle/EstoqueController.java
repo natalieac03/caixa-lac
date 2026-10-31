@@ -9,6 +9,7 @@ import br.com.lac.caixa.util.ExportadorCSV;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.PositiveOrZero;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
@@ -25,10 +26,12 @@ public class EstoqueController {
 
     private final EstoqueService estoque;
     private final CategoriaService categorias;
+    private final Clock relogio;
 
-    public EstoqueController(EstoqueService estoque, CategoriaService categorias) {
+    public EstoqueController(EstoqueService estoque, CategoriaService categorias, Clock relogio) {
         this.estoque = estoque;
         this.categorias = categorias;
+        this.relogio = relogio;
     }
 
     /** semCusto=true: só os produtos sem custo (link do aviso de lucro parcial nas Finanças). */
@@ -40,7 +43,7 @@ public class EstoqueController {
                 "produtos",
                 semCusto ? produtos.stream().filter(p -> p.isSemCusto()).toList() : produtos);
         model.addAttribute("categorias", categorias.listar());
-        model.addAttribute("hoje", LocalDate.now());
+        model.addAttribute("hoje", LocalDate.now(relogio));
         return "estoque";
     }
 
@@ -129,7 +132,7 @@ public class EstoqueController {
         if (custo == null) throw new RegraDeNegocioException("Informe o custo total da compra.");
         LocalDate dia;
         try {
-            dia = data == null || data.isBlank() ? LocalDate.now() : LocalDate.parse(data.trim());
+            dia = data == null || data.isBlank() ? LocalDate.now(relogio) : LocalDate.parse(data.trim());
         } catch (java.time.format.DateTimeParseException e) {
             throw new RegraDeNegocioException("Data da compra inválida.");
         }

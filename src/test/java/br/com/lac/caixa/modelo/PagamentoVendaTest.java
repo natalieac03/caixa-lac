@@ -22,7 +22,7 @@ class PagamentoVendaTest {
     }
 
     Venda venda(String cobrado, String motivo) {
-        var v = Venda.nova();
+        var v = Venda.nova(java.time.LocalDateTime.now());
         v.registrarValores(r("18"), BigDecimal.ZERO, r(cobrado), motivo);
         return v;
     }

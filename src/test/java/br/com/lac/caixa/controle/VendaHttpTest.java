@@ -263,7 +263,7 @@ class VendaHttpTest {
     @DisplayName("Tela de venda tem o token e o histórico mostra o valor cobrado")
     void telasRenderizamEHistoricoExibeValorLegado() throws Exception {
         // Arrange
-        var antiga = Venda.nova();
+        var antiga = Venda.nova(java.time.LocalDateTime.now());
         antiga.registrarValores(new BigDecimal("9.50"), BigDecimal.ZERO, new BigDecimal("9.50"), null);
         antiga.registrarPagamentos(List.of(pix("9.50")));
         vendas.save(antiga);
@@ -298,7 +298,7 @@ class VendaHttpTest {
     @DisplayName("Cancelamento por HTTP risca a venda; fechamento e CSV do fechamento respondem")
     void fechamentoECancelamentoFuncionamPorHttp() throws Exception {
         // Arrange
-        var v = Venda.nova();
+        var v = Venda.nova(java.time.LocalDateTime.now());
         v.adicionarItem(new ItemVenda(p, 1));
         v.registrarValores(new BigDecimal("6"), BigDecimal.ZERO, new BigDecimal("6"), null);
         v.registrarPagamentos(List.of(pix("6")));

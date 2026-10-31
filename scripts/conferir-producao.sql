@@ -99,4 +99,8 @@ FROM item_venda i WHERE NOT EXISTS (SELECT 1 FROM venda_itens vi WHERE vi.itens_
   \endif
 \endif
 
+\echo
+\echo '== 5. Vendas por hora do dia (pico de madrugada = horas gravadas em UTC; pico à noite = Brasília)'
+SELECT EXTRACT(HOUR FROM data_hora) h, COUNT(*) FROM venda GROUP BY 1 ORDER BY 1;
+
 ROLLBACK;

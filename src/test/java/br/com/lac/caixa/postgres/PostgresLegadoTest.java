@@ -166,7 +166,7 @@ class PostgresLegadoTest {
                 jdbc.queryForObject(
                         "select count(*) from flyway_schema_history where type = 'BASELINE'", Integer.class));
         assertEquals(
-                Migracoes.quantidade() - 1,
+                Migracoes.quantidadePostgres() - 1,
                 jdbc.queryForObject(
                         "select count(*) from flyway_schema_history where type = 'SQL' and success", Integer.class));
         assertEquals(2, jdbc.queryForObject("select count(*) from item_venda where venda_id = 1", Integer.class));

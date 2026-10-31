@@ -37,7 +37,9 @@ class DeployDocsTest {
     void migracoesDocumentadas() throws Exception {
         String doc = Files.readString(DEPLOY);
         int anterior = -1;
-        try (Stream<Path> arquivos = Files.list(Path.of("src", "main", "resources", "db", "migration"))) {
+        try (Stream<Path> arquivos = Stream.concat(
+                Files.list(Path.of("src", "main", "resources", "db", "migration")),
+                Files.list(Path.of("src", "main", "resources", "db", "migration-postgresql")))) {
             var nomes = arquivos.map(p -> p.getFileName().toString())
                     .sorted((a, b) -> Integer.compare(versao(a), versao(b)))
                     .toList();

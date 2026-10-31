@@ -34,7 +34,7 @@ class HistoricoIntegracaoTest {
     ConsultaHistorico consulta;
 
     Venda venda(Produto p, FormaPagamento forma, LocalDate dia) {
-        var v = Venda.nova();
+        var v = Venda.nova(java.time.LocalDateTime.now());
         v.setDataHora(dia.atTime(12, 0));
         v.adicionarItem(new ItemVenda(p, 2));
         v.registrarValores(new BigDecimal("2"), BigDecimal.ZERO, new BigDecimal("2"), null);
