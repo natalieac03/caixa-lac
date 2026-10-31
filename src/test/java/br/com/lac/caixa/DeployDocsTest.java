@@ -1,6 +1,5 @@
 package br.com.lac.caixa;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
@@ -10,9 +9,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import tools.jackson.databind.json.JsonMapper;
 
-/** docs/DEPLOY.md e railway.json acompanham o código. */
+/** docs/DEPLOY.md acompanha o código. */
 class DeployDocsTest {
     static final Path DEPLOY = Path.of("docs", "DEPLOY.md");
 
@@ -56,18 +54,5 @@ class DeployDocsTest {
 
     static int versao(String arquivo) {
         return Integer.parseInt(arquivo.substring(1, arquivo.indexOf("__")));
-    }
-
-    @Test
-    @DisplayName("railway.json: healthcheck em /actuator/health com 300 s, 1 réplica e restart em falha")
-    void railwayJson() throws Exception {
-        var json = new JsonMapper().readTree(Path.of("railway.json").toFile());
-        assertEquals(
-                "https://railway.com/railway.schema.json", json.path("$schema").asString());
-        var deploy = json.path("deploy");
-        assertEquals("/actuator/health", deploy.path("healthcheckPath").asString());
-        assertEquals(300, deploy.path("healthcheckTimeout").asInt());
-        assertEquals(1, deploy.path("numReplicas").asInt());
-        assertEquals("ON_FAILURE", deploy.path("restartPolicyType").asString());
     }
 }

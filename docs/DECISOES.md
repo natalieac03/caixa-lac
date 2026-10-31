@@ -5,7 +5,7 @@ Os porquês que o código não mostra. Uma linha por decisão, com a classe ou a
 ## Railway e implantação
 
 - `server.port=${PORT:8080}`: o Railway define a porta na variável PORT; localmente fica 8080.
-- `RAILPACK_JDK_VERSION=21` (Variables do Railway): o Railpack não lê o `system.properties`; a versão do Java do build vem dessa variável.
+- `RAILPACK_JDK_VERSION=21` (Variables do Railway): a versão do Java do build vem dessa variável (o Railpack não lê `system.properties`, por isso o projeto não tem um).
 - `spring.threads.virtual.enabled` fica desligado: o `LimiteLogin` usa `synchronized` e as chamadas ao Mercado Pago seguram conexão do banco; ligar threads virtuais pede revisar os dois antes.
 - `server.forward-headers-strategy=native` (prod): o Tomcat só usa o X-Forwarded-For quando a conexão vem da rede privada (o proxy do Railway), então o limite de login conta o IP real de cada pessoa em vez de bloquear todo mundo pelo IP do proxy; cabeçalho vindo direto da internet é ignorado.
 - `management.endpoint.health.probes.enabled=false`: o Spring Boot 4 liga as sondas de liveness/readiness por padrão, o que acrescenta `"groups"` ao `/actuator/health` e abre `/actuator/health/liveness` e `/readiness` sem login; o Railway só precisa do status.

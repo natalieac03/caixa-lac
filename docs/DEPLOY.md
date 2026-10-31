@@ -27,9 +27,9 @@ Lidas pelo Railway ou pela JVM (não pelas properties do app):
 
 | Variável | Valor | Para quê |
 |---|---|---|
-| `RAILPACK_JDK_VERSION` | `21` | Fixa o Java 21 no build do Railway: o Railpack não lê o `system.properties`, e o projeto exige Java 21+. |
+| `RAILPACK_JDK_VERSION` | `21` | Fixa o Java 21 no build do Railway: o projeto exige Java 21+. |
 | `TZ` | `America/Sao_Paulo` | Fuso da máquina. O app já usa o horário de Brasília sozinho (relógio fixo e `TimeZone.setDefault` no `main`); `TZ` deixa logs e ferramentas do contêiner no mesmo horário. |
-| `RAILWAY_HEALTHCHECK_TIMEOUT_SEC` | `300` | Tempo máximo do healthcheck no deploy. Recomendo criar: vale mesmo sem o `railway.json` (veja a seção 2). |
+| `RAILWAY_HEALTHCHECK_TIMEOUT_SEC` | `300` | Tempo máximo do healthcheck no deploy. Recomendo criar (veja a seção 2). |
 
 Ajustes finos, **não precisam** ser definidos (o Spring aceita qualquer
 propriedade `mercadopago.*` por variável): `MERCADOPAGO_URL`
@@ -85,27 +85,18 @@ normalmente são digitados no formulário. Confira e corrija à mão:
 4. Rode a conferência de novo e confira na tela Eventos que nenhum evento se
    sobrepõe ao vizinho. O arquivo da V20 não muda.
 
-## 2. `railway.json` e o painel do Railway
+## 2. Configuração do serviço no Railway
 
-O `railway.json` na raiz define o deploy:
+O deploy é feito pelo CLI (`railway up`) e a configuração do serviço fica no
+`.railway/railway.ts` (Infrastructure as Code), que não vai para o git:
 
+- builder Railpack;
 - healthcheck em `/actuator/health`, com timeout de 300 s (as migrações podem demorar);
-- 1 réplica;
-- reinício só em caso de falha (`ON_FAILURE`, até 10 tentativas).
+- 1 réplica.
 
 O `/actuator/health` responde só `{"status":"UP"}` (sem detalhes) e não pede
 login. O healthcheck do Railway chega pelo host `healthcheck.railway.app`, e o
 app não filtra host.
-
-> **Atenção: Config as Code está sendo descontinuado pelo Railway.** Pelo
-> [changelog de 20/08/2026](https://railway.com/changelog/2026-08-20-railway-anon),
-> serviços de **projetos novos** (criados a partir de 28/08/2026) já não usam o
-> `railway.json`, e o sistema antigo sai do ar em **01/12/2026**. Depois disso o
-> arquivo é ignorado. Para não depender dele, confira as mesmas opções em
-> *Service → Settings*: Healthcheck Path `/actuator/health`, Restart Policy
-> *On Failure*, 1 réplica, e crie `RAILWAY_HEALTHCHECK_TIMEOUT_SEC=300`.
-> O substituto oficial é o
-> [Infrastructure as Code](https://docs.railway.com/infrastructure-as-code#migrating-from-config-as-code).
 
 ## 3. Migrações Flyway
 
@@ -215,9 +206,8 @@ SPRING_PROFILES_ACTIVE=prod SPRING_DATASOURCE_URL=jdbc:postgresql://127.0.0.1:55
 1. Em *Variables* do serviço: confira as da seção 1, incluindo `TZ=America/Sao_Paulo`. Os segredos são `APP_SENHA`,
    `PGPASSWORD`, `MP_ACCESS_TOKEN` e `MP_WEBHOOK_SECRET`; use as **Variable
    References** `${{Postgres.*}}` para o banco. Em produção, `MP_PAYER_NOME` (e o antigo `MP_PAYER_FIRST_NAME`) ficam vazias.
-2. Em *Settings*: Healthcheck Path `/actuator/health`, `RAILWAY_HEALTHCHECK_TIMEOUT_SEC=300`,
-   Restart Policy *On Failure*, 1 réplica (por causa da descontinuação do `railway.json`).
-3. Suba o commit (push da `main`, se o serviço está ligado ao GitHub, ou `railway up`).
+2. Confira no `.railway/railway.ts` o healthcheck `/actuator/health`, o timeout de 300 s e 1 réplica.
+3. Suba com `railway up`.
 4. Acompanhe o log do deploy: Flyway, `Mercado Pago: ...`, `webhook: ...`, `Started CaixaApplication`.
    O deploy só fica ativo quando o healthcheck responde.
 
