@@ -216,7 +216,7 @@ SPRING_PROFILES_ACTIVE=prod SPRING_DATASOURCE_URL=jdbc:postgresql://127.0.0.1:55
      aviso ignorado". Isso confirma a URL e a assinatura (com a assinatura errada
      o log mostra "Webhook do Mercado Pago recusado" e a resposta é 401);
    - faça um Pix de valor baixo de ponta a ponta;
-   - veja o README, seção "Pix automático".
+   - veja a seção 5, "Mercado Pago".
 
 ### 4.5 Rollback
 
@@ -244,3 +244,60 @@ CSVs antes.
 3. Suba o commit anotado no passo 4.1: Deployments → o deploy anterior → *Redeploy*
    (ou `git revert` na `main` e push).
 4. Rode a conferência: tem de bater com `conferencia-antes.txt`.
+
+## 5. Mercado Pago
+
+Opcional. Sem `MP_ACCESS_TOKEN` (ou sem `MP_PAYER_EMAIL`), o Pix automático fica
+desligado e o caixa usa o Pix manual, conferido no app do banco. Se o Mercado
+Pago cair no meio do evento, a tela avisa e o botão **Pix manual** continua
+funcionando.
+
+### 5.1 Criar a aplicação e as credenciais
+
+1. **Chave Pix:** a conta Mercado Pago da LAC precisa ter uma chave Pix
+   cadastrada (app do Mercado Pago → Pix → Minhas chaves). Sem ela a API não
+   gera QR.
+2. **Aplicação:** em [Suas integrações](https://www.mercadopago.com.br/developers/panel/app)
+   → **Criar aplicação** → pagamentos online com **Checkout Transparente**
+   (Orders API).
+3. **Access Token:** na aplicação, menu **Credenciais**. Use o de teste para
+   ensaiar e o de produção no evento (os dois começam com `APP_USR`). Ele vai em
+   `MP_ACCESS_TOKEN`, só nas Variables.
+4. **Webhook:** **Configuração de Webhooks** → Teste ou Produção → URL
+   `https://<seu-app>.up.railway.app/webhooks/mercadopago` → evento **Order
+   (Mercado Pago)** → **Salvar**. A **Assinatura secreta** ("revelar") vai em
+   `MP_WEBHOOK_SECRET`.
+5. No Railway, em Variables: `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET` e
+   `MP_PAYER_EMAIL`. No deploy seguinte o log mostra "Mercado Pago: ligado" e
+   "webhook: assinatura configurada" (sem os valores).
+
+### 5.2 Ensaiar com as credenciais de teste
+
+1. Variables com o Access Token de teste, a assinatura do webhook do modo Teste
+   e `MP_PAYER_NOME=APRO`.
+2. Faça uma venda com **Gerar Pix**: com `APRO`, o Mercado Pago aprova sozinho e
+   a tela mostra "Pix recebido" em poucos segundos.
+3. Confira em Suas integrações → aplicação → **Pagamentos de teste**, e no
+   histórico e no fechamento do caixa (parte marcada como Mercado Pago).
+4. **Simular notificação** no painel manda um aviso assinado com uma order que
+   não existe: o caixa responde 200 e só registra no log que ignorou o aviso.
+5. Antes do evento, troque para as credenciais e o webhook de produção e **apague
+   `MP_PAYER_NOME`**.
+
+### 5.3 No dia do evento
+
+- O QR vale 30 minutos. Se o total mudar depois de gerar, o Pix antigo é
+  cancelado e é preciso gerar outro; um Pix já pago não muda de valor.
+- Pix pago que não virou venda (tela fechada, venda cancelada) aparece no
+  histórico como **Pix recebido sem venda**, com hora, valor e order: lance a
+  venda ou estorne no Mercado Pago e marque como resolvido.
+- No fechamento, o Pix aparece separado em "Pix pelo Mercado Pago" e "Pix
+  manual", para conferir com cada extrato.
+
+## 6. Trocar a senha de acesso
+
+No Railway, serviço do app → **Variables** → edite `APP_SENHA` (mínimo de 8
+caracteres) → aplique. O Railway reimplanta o app e, como as sessões ficam na
+memória do servidor, **todas as sessões abertas caem**: quem estiver usando o
+caixa precisa entrar de novo com a senha nova. Troque fora do horário de vendas
+e avise a equipe antes.

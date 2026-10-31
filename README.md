@@ -1,446 +1,137 @@
-# Caixa LAC 🦫
+# Caixa LAC
 
-Caixa eletrônico da Liga Acadêmica de Computação, em **Java 21 + Spring Boot 4.1**, com
-banco **PostgreSQL** e telas web (Thymeleaf). Tem três áreas: **Abrir caixa**
-(registrar vendas), **Estoque** (produtos e quantidades) e **Histórico** (todas
-as vendas, com filtro e exportação em CSV). A aba **Descontos** gerencia
-promoções por quantidade em uma **categoria** (ex.: a partir de 2 unidades de
-qualquer bóton, cada uma sai por R$ 5). Produtos são organizados em categorias
-com nome padronizado — "BÓTON" e "bóton" são a mesma categoria.
+Sistema de caixa da **Liga Acadêmica de Computação (LAC)** para vender produtos
+(bótons, adesivos, camisetas, canecas...) em feiras, encontros e no dia a dia.
+Roda no navegador (computador, tablet ou celular), registra cada venda com o
+pagamento usado, controla o estoque e mostra as finanças do grupo: receita,
+custo, despesas, lucro e o desempenho de cada evento.
 
-## Como o projeto está organizado
+Feito em **Java 21 + Spring Boot 4.1**, com telas em Thymeleaf e banco
+PostgreSQL em produção (Railway). Os detalhes técnicos estão em
+**[docs/ARQUITETURA.md](docs/ARQUITETURA.md)**.
 
-```
-src/main/java/br/com/lac/caixa/
-├── CaixaApplication.java     liga o servidor
-├── modelo/                   o miolo POO (Produto, ItemVenda, Venda, FormaPagamento)
-├── modelo/pagamento/         padrão Strategy (Pix, Débito, Crédito, Dinheiro, Outro)
-├── consulta/                 os filtros (histórico, finanças, período do evento)
-├── repositorio/              conversa com o Postgres (Spring Data JPA)
-├── servico/                  regras: EstoqueService e CaixaService (são Singletons do Spring)
-├── controle/                 recebe os cliques das telas
-├── controle/csv/             gera e entrega os arquivos .csv (ExportadorCSV, ExportadorFinancas)
-├── util/                     ferramentas soltas (Dinheiro, Rateio, GraficoSvg)
-└── config/DadosIniciais.java popula alguns produtos na primeira execução
+## O que o caixa faz
 
-src/main/resources/
-├── templates/                as telas (HTML Thymeleaf)
-├── static/css/estilo.css     o visual (tema capivara)
-└── application*.properties   configuração (local usa H2, prod usa Postgres)
-```
+**Vender**
+- Tela de venda com busca de produtos, quantidades e o total calculado na hora,
+  já com as promoções aplicadas (o cliente sempre paga o menor total possível).
+- Pagamento em Pix, débito, crédito, dinheiro (com troco) ou "outro" (vale,
+  permuta), e **pagamento dividido** entre várias formas.
+- **Pix automático pelo Mercado Pago** (opcional): a tela mostra o QR Code e
+  confirma sozinha quando o pagamento cai. Sem Mercado Pago, o Pix é conferido
+  à mão no app do banco.
+- Ajuste manual de valor (com motivo) e cortesia.
 
-Os padrões do projeto de POO continuam visíveis: o **Strategy** de pagamento
-está em `modelo/pagamento/` (cada estratégia recebe os dados da parte: forma,
-valor, descrição e troco, em `DadosDaParte`), e cada `@Service` é um **Singleton** mantido pelo Spring
-(sem precisar do `getInstancia()` escrito à mão).
+**Estoque e promoções**
+- Produtos organizados em categorias, com preço, quantidade, custo médio
+  (calculado a partir das compras) e limite de estoque baixo.
+- Entrada por compra, saídas e um livro de movimentos que explica cada mudança.
+- Promoções por categoria: "a partir de N unidades, cada uma sai por R$ X" e
+  pacotes ("3 por R$ 12", combos entre categorias).
 
-## Rodar no seu computador
+**Acompanhar**
+- **Histórico** de vendas com filtros (dia, forma, produto, evento), correção de
+  data, cancelamento com motivo e exportação em CSV.
+- **Fechamento do caixa** por dia ou por evento, com o total de cada forma de
+  pagamento (e o Pix separado entre Mercado Pago e manual) para conferir com os
+  extratos.
+- **Eventos**: "Iniciar evento" com um toque, relatório do evento para imprimir
+  e comparativo entre eventos. O que acontece fora dos eventos é o "dia a dia".
+- **Finanças**: receita, CMV, margem, taxas das maquininhas, despesas e lucro;
+  gráficos, rankings de produtos e categorias, curva ABC, mapa de calor das
+  vendas, giro de estoque e metas por evento. Todas as tabelas exportam CSV.
+- **Despesas** do grupo (material, transporte...) e **taxas** de cada forma de
+  pagamento, com vigência.
+- **Avisos** (o sininho no topo): estoque acabando, produto sem custo, ajustes
+  do dia, fechamento que não bate e evento esquecido aberto.
 
-Precisa de **Java 21+**. O Maven vem junto pelo Maven Wrapper.
+**Proteger**
+- Acesso com uma senha única do grupo, que fica só em variável de ambiente.
+- Freio contra tentativas de senha, sessão de um dia de evento, proteção contra
+  formulários de outros sites e log de auditoria de tudo o que muda dinheiro ou
+  estoque.
 
-```bash
-./mvnw spring-boot:run        # Windows: mvnw.cmd spring-boot:run
-```
+## Tecnologias
 
-Antes, defina uma senha de acesso (mínimo 8 caracteres), de um destes jeitos:
-
-```bash
-# Opção 1: variável de ambiente (vale para esta janela do terminal)
-export APP_SENHA='uma-senha-sua'          # Windows (PowerShell): $env:APP_SENHA='uma-senha-sua'
-
-# Opção 2: arquivo local, lido só no perfil local e fora do git
-cp senha-local.properties.exemplo senha-local.properties   # depois edite o valor
-```
-
-Sem isso a aplicação não sobe e avisa: *Defina a variável APP_SENHA (mínimo 8
-caracteres)*. Abra **http://localhost:8080**. No modo local o banco é um arquivo
-H2 (pasta `./dados/`), e os dados continuam lá entre reinicializações. O console do H2 fica em
-`http://localhost:8080/h2-console` (JDBC URL: `jdbc:h2:file:./dados/caixa`,
-usuário `sa`, senha em branco).
-
-## Subir no Railway (com Postgres que não perde dados)
-
-> **Fuso:** o caixa grava e mostra a hora de Brasília (`America/Sao_Paulo`),
-> qualquer que seja o fuso da máquina. No Railway, crie também
-> `TZ=America/Sao_Paulo` em Variables. As datas antigas gravadas em UTC são
-> convertidas pela V20 (só no Postgres): veja o [docs/DEPLOY.md](docs/DEPLOY.md).
->
-> Roteiro completo, com variáveis, migrações, backup, ensaio, deploy, conferência
-> e rollback: **[docs/DEPLOY.md](docs/DEPLOY.md)**. Conferência só de leitura,
-> para rodar antes e depois: `scripts/conferir-producao.sql`.
-
-1. **Suba o código para um repositório no GitHub.**
-
-2. No [Railway](https://railway.app): **New Project → Deploy from GitHub repo**
-   e escolha este repositório. O Railway detecta que é Spring Boot/Maven e faz o
-   build sozinho.
-
-3. No mesmo projeto, clique em **Add → Database → PostgreSQL**. Isso cria um
-   serviço chamado `Postgres`.
-
-4. Abra o serviço do **app**, vá em **Variables** e adicione:
-
-   ```
-   SPRING_PROFILES_ACTIVE = prod
-   SPRING_DATASOURCE_URL   = jdbc:postgresql://${{Postgres.PGHOST}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}
-   PGUSER                  = ${{Postgres.PGUSER}}
-   PGPASSWORD              = ${{Postgres.PGPASSWORD}}
-   APP_SENHA               = <defina uma senha de acesso>
-   ```
-
-   Esses `${{Postgres.XXX}}` são variáveis de referência do Railway — ele
-   preenche com os dados reais do banco. (Se o serviço do banco tiver outro
-   nome, troque `Postgres` por esse nome.)
-
-5. Em **Settings → Networking** do serviço do app, clique em **Generate Domain**
-   para receber a URL pública. Pronto: o caixa está no ar, e os dados ficam
-   guardados no Postgres mesmo se o app reiniciar ou você subir uma versão nova.
-
-6. **Healthcheck:** em **Settings → Deploy → Healthcheck Path** do serviço do app,
-   coloque `/actuator/health`. O Railway só troca a versão no ar quando esse
-   endereço responde `{"status":"UP"}` (o que inclui conseguir falar com o
-   banco). É o único endpoint do Actuator ligado, não precisa de login e não
-   mostra detalhes.
-
-> As tabelas são versionadas pelo Flyway; o Hibernate usa `ddl-auto=validate`.
-> Consulte [migrações e ordem de deploy](docs/MIGRACOES.md) antes de atualizar uma base existente.
-
-## Imagens (logo e caixa)
-
-Coloque seus PNGs (de preferência sem fundo) em `src/main/resources/static/img/`:
-
-- `logo.png` — aparece nas telas iniciais (início e login)
-- `caixa.png` — aparece na tela "Abrir caixa"
-
-Enquanto os arquivos não existirem, um emoji 🦫 aparece no lugar. As imagens
-ficam dentro de um círculo roxo claro.
-
-## Senha de acesso
-
-A interface exige login com uma senha compartilhada, que **não fica no código**:
-existe só na variável `APP_SENHA`. Em produção ela fica em **Variables** do
-serviço do app no Railway. Em qualquer perfil, se `APP_SENHA` faltar, estiver
-vazia ou tiver menos de 8 caracteres, a aplicação não sobe e o log diz *Defina a
-variável APP_SENHA (mínimo 8 caracteres)*. O valor nunca é escrito no log.
-
-**Para trocar a senha:** no Railway, abra o serviço do app → **Variables** →
-edite `APP_SENHA` → aplique. O Railway reimplanta o app, e como as sessões ficam
-na memória do servidor, **todas as sessões abertas caem** nesse deploy: quem
-estiver usando o caixa precisa entrar de novo com a senha nova. Troque fora do
-horário de vendas e avise a equipe antes. Os testes usam uma senha própria, em
-`src/test/resources/application-test.properties`.
-
-Erro de senha não trava o caixa do evento: cada erro só impõe uma **espera
-progressiva** por IP antes da próxima tentativa (1 s, 2 s, 4 s, 8 s, 16 s e daí
-30 s no máximo), e a tela de login mostra quantos segundos faltam. Tentar durante
-a espera não conta como erro. Só **20 erros em 10 minutos** bloqueiam o IP, por 10
-minutos. Um login correto zera o contador daquele IP e renova o ID da sessão. O
-controle fica em memória e reinicia junto com a aplicação. O endereço
-usado é o IP remoto: no Railway, com `server.forward-headers-strategy=native`, o
-Tomcat lê o `X-Forwarded-For` só quando a conexão vem do proxy (rede privada);
-cabeçalho vindo direto da internet é ignorado. Sem isso, todo mundo apareceria
-com o IP do proxy e cinco erros de qualquer pessoa bloqueariam a todos.
-Em produção, o cookie de sessão exige HTTPS e usa `SameSite=Strict`. **Sair** é
-um POST (um link em outra página não consegue deslogar ninguém). O perfil local
-escuta apenas em `127.0.0.1`, que é o que protege o console do H2: ele é um
-servlet à parte e não passa pelo interceptor de login.
-
-## Pix automático (Mercado Pago)
-
-Opcional. Com as variáveis abaixo, a tela de venda gera o QR do Pix pelo Mercado
-Pago (Orders API) e confirma sozinha quando o pagamento cai. Sem
-`MP_ACCESS_TOKEN`, o recurso fica desligado e tudo continua como antes (Pix
-manual, conferido no app). Se o Mercado Pago cair no meio do evento, a tela
-mostra o aviso e o botão **Pix manual** continua funcionando.
-
-| Variável | Para quê |
+| Parte | O que usa |
 |---|---|
-| `MP_ACCESS_TOKEN` | Access Token da aplicação no Mercado Pago (liga o recurso) |
-| `MP_WEBHOOK_SECRET` | Assinatura secreta dos webhooks (valida os avisos de pagamento) |
-| `MP_PAYER_EMAIL` | E-mail fixo da LAC usado como pagador (a API exige um) |
-| `MP_PAYER_NOME` | Opcional: vai como `payer.first_name` na order Pix. No modo teste, `APRO` faz o Mercado Pago aprovar o Pix sozinho. Vazio em produção (o nome antigo `MP_PAYER_FIRST_NAME` ainda é aceito) |
+| Linguagem e framework | Java 21, Spring Boot 4.1 (Spring MVC, Data JPA, Validation, Actuator) |
+| Telas | Thymeleaf, CSS próprio, JavaScript sem framework, Chart.js para os gráficos |
+| Banco | PostgreSQL em produção, H2 em arquivo no computador, migrações com Flyway |
+| Pagamentos | API de Orders do Mercado Pago (Pix), com webhook assinado |
+| Testes | JUnit 5, MockMvc, Testcontainers (PostgreSQL), Playwright (navegador), ArchUnit |
+| Hospedagem | Railway, com healthcheck em `/actuator/health` |
 
-Ficam só em variável de ambiente (Variables no Railway, ou o
-`senha-local.properties` no computador), nunca no código nem no log.
+## Rodar no computador
 
-### Como funciona no caixa
+Precisa de **Java 21+**. O Maven vem junto (Maven Wrapper).
 
-- Forma **Pix** (única ou uma parte do pagamento dividido): aparecem **Gerar
-  Pix** e **Pix manual**. "Gerar Pix" mostra o QR, o valor, **Copiar código** e
-  "Aguardando pagamento..."; a tela pergunta ao servidor a cada 3 s, e o
-  servidor pergunta ao Mercado Pago. Quando o pagamento cai, a parte fica
-  "Pix recebido" e o **Confirmar** libera (com todas as partes fechadas).
-- O QR vale 30 minutos (mínimo da documentação). Se o total mudar depois de
-  gerar, o Pix antigo é cancelado e é preciso gerar outro; um Pix já pago não
-  muda de valor (ajuste as outras partes).
-- A venda só é aceita com o Pix **pago no Mercado Pago com o mesmo valor**: o
-  servidor confere de novo no momento de confirmar. Cada parte Pix fica gravada
-  como `MERCADO_PAGO` (com o id da order) ou `MANUAL`.
-- O webhook (`/webhooks/mercadopago`) é um reforço: com a assinatura conferida,
-  ele faz o servidor consultar a order e marcar a cobrança como paga, mesmo com a
-  tela fechada.
-- **Pix recebido sem venda:** se alguém pagar e a venda nunca for confirmada
-  (tela fechada), o histórico mostra um aviso com hora, valor e id da order,
-  para alguém resolver à mão (lançar a venda ou estornar no Mercado Pago) e
-  marcar como resolvido. Pix pago com valor diferente do cobrado também aparece.
-- A cada 5 minutos, cobranças pendentes há mais de 20 minutos são conferidas e,
-  se ainda não pagas, canceladas no Mercado Pago.
-- No **fechamento**, o total Pix aparece separado em "Pix pelo Mercado Pago" e
-  "Pix manual", para conferir com o extrato de cada lugar.
+1. Defina a senha de acesso (mínimo de 8 caracteres), de um destes jeitos:
 
-### Configurar no Mercado Pago
+   ```bash
+   # variável de ambiente (vale para esta janela do terminal)
+   export APP_SENHA='uma-senha-sua'          # PowerShell: $env:APP_SENHA='uma-senha-sua'
 
-1. **Conta e chave Pix:** a conta Mercado Pago da LAC precisa ter uma **chave Pix
-   cadastrada** (no app do Mercado Pago, área Pix → Minhas chaves). Sem chave
-   Pix, a API não gera QR.
-2. **Criar a aplicação:** em [Suas integrações](https://www.mercadopago.com.br/developers/panel/app)
-   → **Criar aplicação**; escolha pagamentos online com **Checkout Transparente**
-   (Orders API).
-3. **Access Token:** na aplicação, menu **Credenciais**. Use o de **teste** para
-   ensaiar e o de **produção** no evento; os dois começam com `APP_USR`. Ele vai
-   em `MP_ACCESS_TOKEN`. Nunca no código, nunca no front.
-4. **Webhook:** na aplicação, **Configuração de Webhooks** → escolha Teste ou
-   Produção no seletor → URL HTTPS
-   `https://<seu-app>.up.railway.app/webhooks/mercadopago` → marque o evento
-   **Order (Mercado Pago)** → **Salvar**. A tela passa a mostrar a
-   **Assinatura secreta** ("revelar"): ela vai em `MP_WEBHOOK_SECRET`. Use
-   "Simular notificação" para conferir que o app responde (sem uma order nossa,
-   ele responde 200 e não faz nada; com assinatura errada, 401).
+   # ou um arquivo local, fora do git
+   cp senha-local.properties.exemplo senha-local.properties   # depois edite o valor
+   ```
 
-### Configurar no Railway
+2. Suba a aplicação:
 
-No serviço do app, em **Variables**: `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET` e
-`MP_PAYER_EMAIL` (e, só para ensaio, `MP_PAYER_NOME=APRO`). O deploy
-seguinte liga o recurso; o log de início diz "Mercado Pago: ligado" e
-"webhook: assinatura configurada" (sem mostrar valores). A URL do webhook é o domínio público do serviço
-(Settings → Networking) + `/webhooks/mercadopago`.
+   ```bash
+   ./mvnw spring-boot:run                    # Windows: mvnw.cmd spring-boot:run
+   ```
 
-### Testar com as credenciais de teste
+3. Abra **http://localhost:8080** e entre com a senha.
 
-1. Variables com o Access Token **de teste**, a assinatura do webhook do modo
-   **Teste** e `MP_PAYER_NOME=APRO`.
-2. Faça uma venda com **Gerar Pix**: com `APRO`, o Mercado Pago aprova o Pix de
-   teste sozinho e a tela mostra "Pix recebido" em poucos segundos.
-3. Confira em Suas integrações → aplicação → **Pagamentos de teste**, e no
-   histórico/fechamento do caixa (parte marcada como Mercado Pago).
-4. Antes do evento, troque para as credenciais e o webhook de **produção** e
-   apague `MP_PAYER_NOME`.
-5. O botão **Simular notificação** do painel manda um aviso com assinatura válida
-   e um id de order que não existe: o caixa responde 200 e só registra no log
-   "a order ... não é de nenhuma cobrança deste caixa; aviso ignorado".
+No computador o banco é um arquivo H2 na pasta `./dados/` (os dados ficam entre
+uma execução e outra) e alguns produtos de exemplo são criados na primeira vez.
+O console do H2 fica em `http://localhost:8080/h2-console` (JDBC URL
+`jdbc:h2:file:./dados/caixa`, usuário `sa`, senha em branco). Sem `APP_SENHA`,
+a aplicação não sobe e avisa o que falta.
 
-A suíte de testes nunca chama o Mercado Pago: usa um servidor HTTP falso.
+**Imagens:** coloque `logo.png` (telas de início e login) e `caixa.png` (tela
+"Abrir caixa") em `src/main/resources/static/img/`. Sem elas, aparece um 🦫.
 
-## Editar cadastro
+## Testes
 
-- **Produto** (Estoque → Editar): nome, preço e categoria (escolher uma ou criar
-  nova), num formulário que abre na própria linha. O preço novo vale **só para
-  vendas novas**: cada venda guarda o preço unitário da época, então o histórico
-  e o CSV das vendas antigas não mudam. O nome mostrado nas vendas antigas é o
-  nome atual do produto.
-- **Promoção** (Descontos → Editar): o mesmo formulário da criação, preenchido;
-  muda preço e quantidades por categoria. O tipo não muda (crie outra promoção).
-- **Categoria** (Estoque → Categorias → Renomear): recusa se outra categoria já
-  tiver o mesmo nome padronizado ("BÓTON" = "bóton").
-- Preço maior que zero e nome não vazio são conferidos no servidor.
+```bash
+./mvnw -B verify
+```
 
-## Regras de preço e promoção
+Roda os testes de unidade, de tela (MockMvc), contra PostgreSQL real
+(Testcontainers, precisa de Docker) e no navegador (Playwright, usa o Chromium do
+Playwright ou o Google Chrome da máquina), além do Spotless (formatação), das
+regras de arquitetura e do relatório de cobertura em
+`target/site/jacoco/index.html`. Sem Docker ou sem navegador, esses testes são
+pulados no computador; no CI (GitHub Actions) a falta deles é erro. Se o build
+reclamar de formatação, rode `./mvnw spotless:apply`.
 
-- A calculadora Java é a única fonte dos valores. A tela consulta
-  `POST /venda/previa` e apresenta o orçamento retornado, sem regras de promoção
-  em JavaScript. Produtos sem categoria mantêm o preço normal.
-- **Regra única: o cliente paga o menor total possível, e cada unidade entra em
-  no máximo uma promoção.** `A_PARTIR_DE` e `PACOTE` não se somam na mesma
-  unidade; a calculadora testa todas as combinações e fica com a mais barata.
-- `A_PARTIR_DE`: os mínimos são contados por categoria no carrinho (em combos de
-  várias categorias, todas precisam atingir seus mínimos). Quando usada, todas
-  as unidades das categorias envolvidas saem pelo preço promocional, só nos
-  produtos em que ele é mais barato que o normal; essas unidades não entram em
-  pacote. Com duas na mesma categoria, vale a de menor preço.
-- `PACOTE`: as unidades que não usaram `A_PARTIR_DE` podem formar pacotes; cada
-  pacote leva as unidades mais caras que restam na categoria (é o que mais
-  economiza). O que sobra sai no preço normal.
-- Exemplos, bóton de R$ 6,00, "a partir de 2 por R$ 5,00" e pacote "3 por R$ 12,00":
-  - 3 bótons: 3 × 5 = 15,00 ou o pacote = 12,00 → **R$ 12,00** (só o pacote);
-  - 4 bótons: 4 × 5 = 20,00 ou 12 + 6 = 18,00 → **R$ 18,00**;
-  - 6 bótons: 6 × 5 = 30,00 ou 2 pacotes = 24,00 → **R$ 24,00**;
-  - se a promoção fosse "a partir de 2 por R$ 4,00", 4 bótons: 4 × 4 = **R$ 16,00**.
-- Outro exemplo: 4 bótons de R$ 2,00 com pacotes "3 por R$ 4,00" e "2 por R$ 2,80"
-  custam R$ 5,60 (dois pacotes de 2), não R$ 6,00.
-- Empate entre combinações: vale a que usa menos `A_PARTIR_DE` (e as de menor id);
-  entre pacotes de mesma economia, o de menor id. O resultado não depende da
-  ordem em que as promoções foram cadastradas.
-- Carrinho grande: a busca é exata enquanto cabe no orçamento de trabalho (3
-  milhões de estados; até 12 `A_PARTIR_DE` ligadas a pacotes). `A_PARTIR_DE` que
-  não compartilha categoria com nenhum pacote é aplicada direto, e subconjuntos
-  que deixam as mesmas unidades reaproveitam a busca. Acima do orçamento a venda
-  **não é recusada**: os pacotes saem da melhor de duas heurísticas gulosas, o
-  orçamento é marcado como aproximado (a tela avisa) e o log registra um aviso.
-  Medido: 6 categorias × 10 unidades + 6 `A_PARTIR_DE` em ~40 ms; 7 × 7 em ~30 ms.
-- O orçamento inclui itens com preço unitário aplicado, economias descritas e
-  total. As economias de `A_PARTIR_DE` já estão refletidas nos preços dos itens.
-- O campo **Valor ajustado** é opcional. Vazio, cobra o total calculado; se for
-  diferente, exige motivo. O valor pode ser zero (cortesia) e nunca negativo. Aceita
-  valores como `1.234,56`. A venda guarda total calculado após promoções,
-  desconto das promoções, valor cobrado e motivo do ajuste. O ajuste manual
-  fica separado do desconto promocional. Vendas antigas exibem o total legado.
-- Cada formulário tem um UUID único. Reenviar o mesmo token volta ao histórico,
-  sem criar outra venda nem baixar o estoque novamente. O estoque usa versão
-  otimista e rejeita baixas que ultrapassem o disponível.
+## Colocar no ar
 
-## Pagamento dividido e troco
+O caixa roda no **Railway** com um banco PostgreSQL do próprio Railway. O roteiro
+completo (variáveis, backup, migrações, deploy, conferência e rollback) está em
+**[docs/DEPLOY.md](docs/DEPLOY.md)**. Em resumo, o serviço do app precisa de
+`SPRING_PROFILES_ACTIVE=prod`, do endereço e do usuário do banco, de `APP_SENHA`,
+de `RAILPACK_JDK_VERSION=21` e de `TZ=America/Sao_Paulo`. O Pix automático liga
+com as variáveis do Mercado Pago (`MP_ACCESS_TOKEN`, `MP_PAYER_EMAIL`,
+`MP_WEBHOOK_SECRET`); sem elas, o caixa segue com Pix manual.
 
-- **Caso comum, um toque:** escolha a forma (Pix, Débito, Crédito, Dinheiro ou
-  Outro) e confirme; ela paga o total. Em **Outro**, diga qual (ex.: vale). Em
-  **Dinheiro**, o campo "Recebido" é opcional e mostra o troco na hora.
-- **Dividir pagamento** abre linhas forma + valor (adicione ou remova linhas). A
-  tela mostra ao vivo "Falta R$ X" ou "Sobra R$ X", e **Confirmar** só habilita
-  quando a diferença é zero. Linha de dinheiro tem "Recebido" e mostra o troco.
-- O servidor confere tudo de novo: a soma das partes tem que ser **exatamente**
-  o valor cobrado, ao centavo; cada parte maior que zero; Outro com descrição;
-  recebido só em dinheiro e nunca menor que a parte (troco = recebido − valor).
-  No máximo 10 partes.
-- **Cortesia** (valor ajustado zero, com motivo obrigatório) não tem pagamento.
-- A confirmação sai uma parte por linha, pelo Strategy de pagamento:
-  *"Recebido R$ 10,00 via Pix + R$ 8,00 em dinheiro (troco R$ 2,00)."*
-- No **histórico**, a coluna Pagamento mostra "Pix R$ 10,00 + Dinheiro R$ 8,00
-  (troco R$ 2,00)". O filtro por forma traz a venda se **qualquer** parte usou
-  aquela forma. O **CSV** tem uma coluna por forma (Pix, Débito, Crédito,
-  Dinheiro, Outro) com o valor pago nela, e a coluna "Descrição do Outro".
-- Vendas anteriores ao pagamento dividido viraram uma parte só, com a forma e o
-  valor que tinham (migração V6); as de valor zero viraram cortesias.
+## Documentação
 
-## Verificação e dados
+| Documento | Para quê |
+|---|---|
+| [docs/ARQUITETURA.md](docs/ARQUITETURA.md) | Como o sistema é construído: stack, camadas, domínio, fluxos, segurança, testes e as regras de negócio em detalhe |
+| [docs/DEPLOY.md](docs/DEPLOY.md) | Deploy no Railway, Mercado Pago, troca de senha, backup e rollback |
+| [docs/MIGRACOES.md](docs/MIGRACOES.md) | Mudanças de esquema e o roteiro para migrar um banco existente |
+| [docs/DECISOES.md](docs/DECISOES.md) | Os porquês das decisões que o código não mostra |
 
-Execute a suíte normal com `./mvnw -B verify` (Java 21). Os testes HTTP usam um H2
-em memória, separado do banco local. Com Docker disponível, `PostgresLegadoTest`
-e `PostgresBancoNovoTest` sobem um PostgreSQL 16 (Testcontainers) e repetem a
-migração da produção e a de um banco vazio. No computador, sem Docker, eles são
-pulados; no CI (`CI=true`) falta de Docker é erro. As colunas novas de venda aceitam `null`
-para preservar os registros antigos. O Flyway aplica as migrações antes de
-`ddl-auto=validate`; veja [o roteiro de produção](docs/MIGRACOES.md).
-
-O **ID** da venda é o número da compra. Os CSVs usam ponto e vírgula, BOM UTF-8
-e valores monetários com vírgula decimal, sem separador de milhar (`1234,56`);
-nas telas e mensagens o valor aparece como `R$ 1.234,56`. Os PNGs mantêm
-transparência e têm largura máxima de 512 pixels. CSS e imagens vão com
-`Cache-Control` de um ano; a URL leva o hash do conteúdo
-(`/css/estilo-<hash>.css`), então uma versão nova chega ao navegador na hora.
-
-## Histórico
-
-O histórico filtra no banco (Specification: só entra o filtro preenchido) por forma de pagamento, intervalo de dias (inclusive)
-e trecho literal do nome do produto, sem diferenciar maiúsculas de minúsculas.
-Cada página tem até 50 vendas, ordenadas por data e ID decrescentes. Os
-indicadores e o CSV usam todo o filtro, sem limitar à página visível. A carga dos
-itens é explícita; `spring.jpa.open-in-view=false` em todos os perfis.
-
-
-## Cancelamento e fechamento
-
-No histórico, informe o motivo e confirme **Cancelar venda**. A venda permanece
-riscada, com data e motivo; cada item volta ao estoque uma única vez, inclusive
-quando o produto foi arquivado. Não há exclusão nem estorno de pagamento externo:
-o operador precisa cuidar do reembolso pelo meio utilizado. Canceladas ficam
-fora dos indicadores, do fechamento e do CSV padrão.
-
-Em `/fechamento`, escolha o intervalo de dias (ambos inclusivos); sem datas, a
-tela abre o dia atual. O total por forma vem da **soma das partes de pagamento**
-(uma venda dividida Pix + Dinheiro soma cada parte na sua forma; a coluna Vendas
-conta a venda nas duas). O relatório mostra também o total de vendas e o total
-cobrado, descontos promocionais, ajustes manuais, **vendas com pagamento
-dividido** e cortesias. A soma das formas tem que bater com o total cobrado; se
-não bater, a tela mostra um alerta vermelho (não feche o caixa por ela e confira
-as vendas). **OUTRO** é agrupado como uma única forma, independentemente da
-descrição. Ajuste é `cobrado -
-calculado`, com sinal; a soma pode compensar aumentos e reduções. Vendas antigas
-(anteriores ao cálculo no servidor) têm valor calculado igual ao cobrado desde a
-V7 e contribuem com zero em ajustes; sem desconto registrado, com zero em descontos.
-Os CSVs incluem o intervalo consultado e seguem a mesma regra de exclusão de
-canceladas. As datas usam o horário local do aplicativo, como nas vendas atuais.
-
-Veja [as mudanças de esquema e o roteiro de produção](docs/MIGRACOES.md),
-incluindo backup e interrupção das instâncias antigas antes da migração V3.
-
-
-## Auditoria
-
-O logger `auditoria` escreve uma linha por venda, ajuste de valor, correção de
-data, cancelamento e mudança de cadastro (produto, estoque, promoção, categoria),
-no formato `evento=venda id=12 ip=203.0.113.9 calculado=18.00 cobrado=15.00 ...`,
-com os valores de antes e depois e o IP de quem fez. A linha só é escrita depois
-que a mudança foi gravada (o que foi desfeito não aparece). Senha nunca vai para
-o log. No Railway, filtre os logs do serviço por `evento=`.
-
-## Finanças
-
-No menu, **Finanças** agrupa o painel de finanças, Eventos (com o comparativo),
-Despesas e Taxas; no celular o grupo abre como uma folha no pé da tela.
-
-O painel de **Finanças** mostra receita, lucro, margem, rankings, mapa de calor e
-estoque do período escolhido (atalhos, evento, categoria e forma ficam na URL:
-dá para mandar o link). Os números vêm todos do servidor, em `servico/financas/`:
-`ResumoFinanceiro`, `SerieFinanceira`, `RankingsFinanceiros`, `EstoqueFinanceiro` e
-`OcorrenciasFinanceiras`, montados para a tela pelo `PainelFinancas`;
-os gráficos leem `/financas/dados` (mesmo filtro, exige login).
-
-### Eventos rápidos e dia a dia
-
-- **Iniciar evento** (no topo e na tela inicial) pede só o nome e começa agora,
-  sem fim. Com evento aberto, o topo mostra "Nome, desde 14:00" e o botão
-  **Encerrar** (com confirmação), que grava o fim. Só pode haver um aberto; ele
-  vale até agora (ou até o início do próximo evento marcado, para nunca
-  sobrepor). A tela Eventos continua para horários marcados e eventos passados.
-- **Dia a dia** = vendas fora de qualquer evento (calculado pela data, nada é
-  gravado na venda) e despesas sem evento. Histórico, fechamento e finanças têm
-  "Todos" e "Dia a dia" no seletor de evento; o comparativo de eventos traz o
-  dia a dia como coluna própria; cada venda do histórico mostra a etiqueta do
-  evento ou "Dia a dia".
-
-### Avisos (sininho)
-
-O sino no topo mostra quantos avisos novos há (estoque acabando, produtos sem
-custo, ajustes de hoje, fechamento que não bate, evento aberto há mais de 12 h).
-"Novo" é o que este navegador ainda não viu (guardado no localStorage). O sino
-consulta `/avisos` a cada 60 s enquanto a aba está visível.
-
-### Bibliotecas de terceiros
+## Bibliotecas de terceiros embutidas
 
 | Biblioteca | Versão | Arquivo | Licença |
 |---|---|---|---|
 | [Chart.js](https://www.chartjs.org/) | 4.4.1 (fixa) | `src/main/resources/static/js/vendor/chart-4.4.1.umd.js` | MIT (`chart-4.4.1.LICENSE.md` ao lado) |
 
 O Chart.js fica dentro do projeto (sem CDN) para a tela funcionar com internet
-ruim no evento. Baixado do registro do npm (`chart.js-4.4.1.tgz`, integridade
-sha512 conferida com a publicada pelo npm). Para atualizar, troque o arquivo e o
-nome com a versão nova, e o `<script>` em `templates/financas.html`.
-
-## CI e Maven Wrapper
-
-O GitHub Actions executa `./mvnw -B verify` com Java 21 em pushes e pull requests
-para `main`, sem banco externo nem segredos de produção. A suíte integra Flyway,
-JPA e HTTP usando H2 em memória, e PostgreSQL via Testcontainers (o runner do
-GitHub tem Docker); o H2 local em arquivo é preservado. No CI os testes com
-PostgreSQL **não podem ser pulados**: com `CI=true`, falta de Docker é erro
-(`ExigeDocker`), e um passo final lê os relatórios do surefire e falha se esses
-testes não rodaram; o número de testes com PostgreSQL real aparece no resumo do
-job.
-
-**Testes de sistema (Playwright):** `sistema/VendaNoNavegadorTest` abre a tela
-de venda num Chromium e faz uma venda dividida Pix + Dinheiro com troco do
-início ao fim, e confere o aviso de sessão expirada. Eles não baixam navegador
-sozinhos: usam o Chromium instalado pelo Playwright ou o Google Chrome da
-máquina; sem nenhum dos dois são pulados (no CI, com `CI=true`, é erro). O CI
-instala o Chromium antes do `verify` e confere no fim que eles rodaram.
-
-**Estilo:** o `verify` também roda o Spotless (palantir-java-format, sem imports
-com `*` nem sem uso). Se o build reclamar de formatação, rode
-`./mvnw spotless:apply` e faça o commit do resultado.
-
-**Cobertura:** o `verify` gera o relatório do JaCoCo em
-`target/site/jacoco/index.html` (sem piso mínimo); no CI ele fica como artefato
-`cobertura-jacoco` do job.
-
-O Maven Wrapper oficial 3.3.4 fixa Maven 3.9.9: `./mvnw -B verify` no
-Linux/macOS ou `mvnw.cmd -B verify` no Windows. A primeira execução baixa a
-distribuição Maven se ela ainda não estiver no cache.
+ruim no evento. Para atualizar, troque o arquivo e o nome com a versão nova, e o
+`<script>` em `templates/financas.html`.
