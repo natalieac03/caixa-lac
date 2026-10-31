@@ -11,6 +11,7 @@ import br.com.lac.caixa.repositorio.ConsultasFinanceiras;
 import br.com.lac.caixa.repositorio.ConsultasFinanceiras.SomaCategoria;
 import br.com.lac.caixa.repositorio.ConsultasFinanceiras.SomaForma;
 import br.com.lac.caixa.repositorio.ConsultasFinanceiras.SomaProduto;
+import br.com.lac.caixa.repositorio.ConsultasFinanceiras.SomaPromocao;
 import br.com.lac.caixa.repositorio.PromocaoRepository;
 import br.com.lac.caixa.servico.financas.Financas.ClasseAbc;
 import br.com.lac.caixa.servico.financas.Financas.LinhaAbc;
@@ -24,7 +25,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -173,14 +176,21 @@ public class RankingsFinanceiros {
     }
 
     public List<LinhaPromocao> promocoes(FiltroFinancas f) {
+        var somas = consultas.porPromocao(f);
+        Map<Long, Promocao> porId = new HashMap<>();
+        promocoes
+                .findAllById(somas.stream()
+                        .map(SomaPromocao::promocaoId)
+                        .filter(Objects::nonNull)
+                        .toList())
+                .forEach(p -> porId.put(p.getId(), p));
         List<LinhaPromocao> linhas = new ArrayList<>();
-        for (var s : consultas.porPromocao(f)) {
+        for (var s : somas) {
             String nome = s.promocaoId() == null
                     ? "Promoções apagadas"
-                    : promocoes
-                            .findById(s.promocaoId())
-                            .map(Promocao::getRotuloComPreco)
-                            .orElse("Promoção #" + s.promocaoId());
+                    : porId.containsKey(s.promocaoId())
+                            ? porId.get(s.promocaoId()).getRotuloComPreco()
+                            : "Promoção #" + s.promocaoId();
             linhas.add(
                     new LinhaPromocao(s.promocaoId(), nome, s.vendas(), dinheiro(s.desconto()), dinheiro(s.receita())));
         }

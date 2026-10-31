@@ -1,6 +1,8 @@
 package br.com.lac.caixa.servico.financas;
 
 import br.com.lac.caixa.consulta.FiltroFinancas;
+import br.com.lac.caixa.repositorio.ConsultasFinanceiras.Balde;
+import br.com.lac.caixa.repositorio.ConsultasFinanceiras.SomaProduto;
 import br.com.lac.caixa.servico.financas.Financas.ClasseAbc;
 import br.com.lac.caixa.servico.financas.Financas.Comparacao;
 import br.com.lac.caixa.servico.financas.Financas.LinhaAbc;
@@ -25,10 +27,12 @@ import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -95,39 +99,74 @@ public class PainelFinancas {
             Grafico formasValor,
             Grafico formasVendas) {}
 
+    public enum Parte {
+        RESUMO,
+        SERIE,
+        PRODUTOS,
+        CATEGORIAS,
+        FORMAS,
+        MAPA,
+        PROMOCOES,
+        GIRO,
+        PARADOS
+    }
+
     public Painel montar(FiltroFinancas f, Metrica metrica) {
-        Comparacao comparacao = resumos.comparar(f);
-        Resumo r = comparacao.atual();
+        return montar(f, metrica, EnumSet.allOf(Parte.class), true);
+    }
+
+    public Painel tabela(FiltroFinancas f, Metrica metrica, Parte parte) {
+        return montar(f, metrica, EnumSet.of(parte), false);
+    }
+
+    private Painel montar(FiltroFinancas f, Metrica metrica, Set<Parte> partes, boolean tela) {
+        Comparacao comparacao = tela ? resumos.comparar(f) : null;
+        Resumo r = tela ? comparacao.atual() : partes.contains(Parte.RESUMO) ? resumos.resumo(f) : null;
+        List<Balde> baldes = partes.contains(Parte.SERIE) || partes.contains(Parte.MAPA) ? series.baldes(f) : List.of();
+        List<SomaProduto> somas = partes.contains(Parte.PRODUTOS) || partes.contains(Parte.CATEGORIAS)
+                ? rankings.somasPorProduto(f)
+                : List.of();
+        return new Painel(
+                r != null && r.vendas() == 0,
+                r,
+                comparacao,
+                tela ? cartoes(comparacao) : List.of(),
+                r == null ? List.of() : resumos.demonstrativo(r),
+                partes.contains(Parte.SERIE) ? series.serie(f, baldes) : null,
+                metrica,
+                partes.contains(Parte.PRODUTOS) ? produtosComAbc(somas, metrica) : List.of(),
+                partes.contains(Parte.CATEGORIAS) ? rankings.rankingCategorias(f, metrica, somas) : List.of(),
+                partes.contains(Parte.FORMAS) ? rankings.formasDePagamento(f) : List.of(),
+                partes.contains(Parte.MAPA) ? mapa(baldes) : List.of(),
+                partes.contains(Parte.PROMOCOES) ? rankings.promocoes(f) : List.of(),
+                partes.contains(Parte.GIRO) ? giroOrdenado(f) : List.of(),
+                partes.contains(Parte.PARADOS) ? estoque.parados(f) : List.of(),
+                tela ? estoque.valorDoEstoque(f) : null,
+                tela ? resumos.metas(f, r) : List.of());
+    }
+
+    private List<ProdutoAbc> produtosComAbc(List<SomaProduto> somas, Metrica metrica) {
+        List<LinhaProduto> porReceita = rankings.rankingProdutos(somas, Metrica.RECEITA);
         Map<Long, ClasseAbc> abc = new HashMap<>();
-        for (LinhaAbc l : rankings.curvaAbc(f)) abc.put(l.produtoId(), l.classe());
-        List<ProdutoAbc> produtos = rankings.rankingProdutos(f, metrica).stream()
+        for (LinhaAbc l : rankings.curvaAbc(porReceita)) abc.put(l.produtoId(), l.classe());
+        List<LinhaProduto> produtos =
+                metrica == Metrica.RECEITA ? porReceita : rankings.rankingProdutos(somas, metrica);
+        return produtos.stream()
                 .map(p -> new ProdutoAbc(p, abc.get(p.produtoId())))
                 .toList();
+    }
+
+    private List<LinhaGiro> giroOrdenado(FiltroFinancas f) {
         List<LinhaGiro> giro = new ArrayList<>(estoque.giro(f));
         giro.sort(Comparator.comparing(
                         LinhaGiro::diasAteAcabar, Comparator.nullsLast(Comparator.<BigDecimal>naturalOrder()))
                 .thenComparing(LinhaGiro::nome));
-        return new Painel(
-                r.vendas() == 0,
-                r,
-                comparacao,
-                cartoes(comparacao),
-                resumos.demonstrativo(r),
-                series.serie(f),
-                metrica,
-                produtos,
-                rankings.rankingCategorias(f, metrica),
-                rankings.formasDePagamento(f),
-                mapa(f),
-                rankings.promocoes(f),
-                giro,
-                estoque.parados(f),
-                estoque.valorDoEstoque(f),
-                resumos.metas(f, r));
+        return giro;
     }
 
     public Dados dados(FiltroFinancas f, Metrica metrica) {
         var serie = series.serie(f);
+        var somas = rankings.somasPorProduto(f);
         DateTimeFormatter rotulo = switch (serie.granularidade()) {
             case HORA -> HORA;
             case DIA, SEMANA -> DIA;
@@ -144,13 +183,13 @@ public class PainelFinancas {
             receita.add(p.receitaLiquida());
             lucro.add(p.lucroBruto());
         }
-        var top = rankings.rankingProdutos(f, metrica).stream().limit(10).toList();
+        var top = rankings.rankingProdutos(somas, metrica).stream().limit(10).toList();
         List<BigDecimal> valoresTop =
                 top.stream().map(p -> valorDaMetrica(p, metrica)).toList();
         List<String> textosTop = metrica == Metrica.QUANTIDADE
                 ? top.stream().map(p -> p.quantidade() + " un.").toList()
                 : valoresTop.stream().map(Dinheiro::reais).toList();
-        var categorias = rankings.rankingCategorias(f, Metrica.RECEITA);
+        var categorias = rankings.rankingCategorias(f, Metrica.RECEITA, somas);
         var formas = rankings.formasDePagamento(f);
         boolean vazio = serie.pontos().stream().allMatch(p -> p.vendas() == 0);
         return new Dados(
@@ -266,8 +305,8 @@ public class PainelFinancas {
         return (valor.signum() > 0 ? "+" : "") + new DecimalFormat("0.00", SIMBOLOS).format(valor);
     }
 
-    private List<LinhaMapa> mapa(FiltroFinancas f) {
-        var celulas = series.mapaDeCalor(f);
+    private List<LinhaMapa> mapa(List<Balde> baldes) {
+        var celulas = series.mapaDeCalor(baldes);
         long maximo = celulas.stream().mapToLong(Financas.Celula::vendas).max().orElse(0);
         Map<DayOfWeek, List<CelulaMapa>> porDia = new EnumMap<>(DayOfWeek.class);
         for (var c : celulas) {

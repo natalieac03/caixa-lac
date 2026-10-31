@@ -97,9 +97,10 @@ public class FinancasController {
             @RequestParam(required = false) Long categoria,
             @RequestParam(required = false) FormaPagamento forma,
             @RequestParam(required = false) String metrica) {
-        if (!ExportadorFinancas.TABELAS.contains(tabela)) throw new RegraDeNegocioException("Tabela desconhecida.");
+        var parte = ExportadorFinancas.parte(tabela);
+        if (parte == null) throw new RegraDeNegocioException("Tabela desconhecida.");
         var resolvido = filtros.resolver(atalho, inicio, fim, evento, categoria, forma);
-        var dados = painel.montar(resolvido.filtro(), metrica(metrica));
+        var dados = painel.tabela(resolvido.filtro(), metrica(metrica), parte);
         return RespostaCsv.arquivo(
                 ExportadorFinancas.gerar(tabela, dados, resolvido.periodo()), "financas-" + tabela + ".csv");
     }

@@ -2,10 +2,14 @@ package br.com.lac.caixa.controle.csv;
 
 import br.com.lac.caixa.servico.financas.Financas.LinhaGiro;
 import br.com.lac.caixa.servico.financas.PainelFinancas.Painel;
+import br.com.lac.caixa.servico.financas.PainelFinancas.Parte;
 import br.com.lac.caixa.util.Dinheiro;
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /** Gera o texto do CSV de cada tabela da tela de Finanças. */
 public final class ExportadorFinancas {
@@ -13,8 +17,27 @@ public final class ExportadorFinancas {
 
     private ExportadorFinancas() {}
 
-    public static final List<String> TABELAS = List.of(
-            "demonstrativo", "serie", "produtos", "categorias", "formas", "mapa", "promocoes", "giro", "parados");
+    private static final Map<String, Parte> PARTES = tabelas();
+
+    public static final List<String> TABELAS = List.copyOf(PARTES.keySet());
+
+    public static Parte parte(String tabela) {
+        return PARTES.get(tabela);
+    }
+
+    private static Map<String, Parte> tabelas() {
+        Map<String, Parte> m = new LinkedHashMap<>();
+        m.put("demonstrativo", Parte.RESUMO);
+        m.put("serie", Parte.SERIE);
+        m.put("produtos", Parte.PRODUTOS);
+        m.put("categorias", Parte.CATEGORIAS);
+        m.put("formas", Parte.FORMAS);
+        m.put("mapa", Parte.MAPA);
+        m.put("promocoes", Parte.PROMOCOES);
+        m.put("giro", Parte.GIRO);
+        m.put("parados", Parte.PARADOS);
+        return Collections.unmodifiableMap(m);
+    }
 
     public static String gerar(String tabela, Painel painel, String periodo) {
         String p = ExportadorCSV.campo(periodo) + ";";
