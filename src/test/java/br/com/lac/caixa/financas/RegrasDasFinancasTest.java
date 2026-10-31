@@ -28,7 +28,9 @@ import br.com.lac.caixa.servico.financas.Financas.Granularidade;
 import br.com.lac.caixa.servico.financas.Financas.LinhaProduto;
 import br.com.lac.caixa.servico.financas.Financas.Metrica;
 import br.com.lac.caixa.servico.financas.Financas.Ponto;
-import br.com.lac.caixa.servico.financas.FinancasService;
+import br.com.lac.caixa.servico.financas.RankingsFinanceiros;
+import br.com.lac.caixa.servico.financas.ResumoFinanceiro;
+import br.com.lac.caixa.servico.financas.SerieFinanceira;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
@@ -71,7 +73,13 @@ class RegrasDasFinancasTest {
     Clock relogio;
 
     @Autowired
-    FinancasService financas;
+    RankingsFinanceiros rankings;
+
+    @Autowired
+    ResumoFinanceiro resumos;
+
+    @Autowired
+    SerieFinanceira series;
 
     @Autowired
     FiltrosDaTelaFinancas filtros;
@@ -179,12 +187,12 @@ class RegrasDasFinancasTest {
         vender("2024-02-09T10:00", cat, "4.00");
         vender("2024-05-20T10:00", cat, "5.00");
 
-        var noventa = financas.serie(FiltroFinancas.periodo(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 3, 30))
+        var noventa = series.serie(FiltroFinancas.periodo(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 3, 30))
                 .comCategoria(cat.getId()));
         assertEquals(Granularidade.DIA, noventa.granularidade());
         assertEquals(90, noventa.pontos().size());
 
-        var semanas = financas.serie(FiltroFinancas.periodo(LocalDate.of(2024, 1, 3), LocalDate.of(2024, 6, 30))
+        var semanas = series.serie(FiltroFinancas.periodo(LocalDate.of(2024, 1, 3), LocalDate.of(2024, 6, 30))
                 .comCategoria(cat.getId()));
         assertEquals(Granularidade.SEMANA, semanas.granularidade());
         assertFalse(semanas.porHora());
@@ -200,7 +208,7 @@ class RegrasDasFinancasTest {
         assertEquals(2, semanaDe5.vendas());
         assertValor("15.00", soma(semanas.pontos()));
 
-        var meses = financas.serie(FiltroFinancas.periodo(LocalDate.of(2023, 6, 15), LocalDate.of(2024, 12, 31))
+        var meses = series.serie(FiltroFinancas.periodo(LocalDate.of(2023, 6, 15), LocalDate.of(2024, 12, 31))
                 .comCategoria(cat.getId()));
         assertEquals(Granularidade.MES, meses.granularidade());
         assertEquals(
@@ -213,7 +221,7 @@ class RegrasDasFinancasTest {
 
         assertEquals(
                 Granularidade.SEMANA,
-                financas.serie(FiltroFinancas.periodo(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31)))
+                series.serie(FiltroFinancas.periodo(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31)))
                         .granularidade());
     }
 
@@ -254,7 +262,7 @@ class RegrasDasFinancasTest {
         vender("2026-02-02T09:30", cat, "8.00");
 
         var hoje = filtros.resolver("hoje", null, null, null, cat.getId(), null);
-        var comparacao = financas.comparar(hoje.filtro());
+        var comparacao = resumos.comparar(hoje.filtro());
         assertValor("8.00", comparacao.atual().receitaLiquida());
         assertValor("6.00", comparacao.anterior().receitaLiquida());
         assertEquals("01/02/2026 até 10:00", comparacao.periodoAnterior());
@@ -269,13 +277,13 @@ class RegrasDasFinancasTest {
         vender("2024-03-03T11:00", cat, "1.00", "0.0050", dinheiro);
         var f = FiltroFinancas.periodo(LocalDate.of(2024, 3, 3), LocalDate.of(2024, 3, 3))
                 .comCategoria(cat.getId());
-        BigDecimal ranking = financas.rankingProdutos(f, Metrica.RECEITA).stream()
+        BigDecimal ranking = rankings.rankingProdutos(f, Metrica.RECEITA).stream()
                 .map(LinhaProduto::cmv)
                 .reduce(BigDecimal.ZERO.setScale(2), BigDecimal::add);
         assertValor("0.02", ranking);
-        assertEquals(ranking, financas.resumo(f).cmv());
+        assertEquals(ranking, resumos.resumo(f).cmv());
         assertEquals(
-                ranking, financas.rankingCategorias(f, Metrica.RECEITA).get(0).cmv());
+                ranking, rankings.rankingCategorias(f, Metrica.RECEITA).get(0).cmv());
     }
 
     @Test
@@ -293,10 +301,9 @@ class RegrasDasFinancasTest {
                         new PagamentoInformado(FormaPagamento.PIX, r("4"), null, null),
                         new PagamentoInformado(FormaPagamento.CREDITO, r("6"), null, null)));
         var dia = FiltroFinancas.periodo(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 1));
-        assertValor("0.64", financas.resumo(dia).taxas());
-        assertValor("0.04", financas.resumo(dia.comForma(FormaPagamento.PIX)).taxas());
-        assertValor(
-                "0.60", financas.resumo(dia.comForma(FormaPagamento.CREDITO)).taxas());
+        assertValor("0.64", resumos.resumo(dia).taxas());
+        assertValor("0.04", resumos.resumo(dia.comForma(FormaPagamento.PIX)).taxas());
+        assertValor("0.60", resumos.resumo(dia.comForma(FormaPagamento.CREDITO)).taxas());
     }
 
     @Test

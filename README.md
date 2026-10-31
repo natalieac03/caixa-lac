@@ -379,8 +379,9 @@ Despesas e Taxas; no celular o grupo abre como uma folha no pé da tela.
 
 O painel de **Finanças** mostra receita, lucro, margem, rankings, mapa de calor e
 estoque do período escolhido (atalhos, evento, categoria e forma ficam na URL:
-dá para mandar o link). Os números vêm todos do servidor (`FinancasService` para o
-painel, `EstoqueFinanceiro`, `RelatorioDoEvento` e `ComparativoDeEventos`);
+dá para mandar o link). Os números vêm todos do servidor, em `servico/financas/`:
+`ResumoFinanceiro`, `SerieFinanceira`, `RankingsFinanceiros`, `EstoqueFinanceiro` e
+`OcorrenciasFinanceiras`, montados para a tela pelo `PainelFinancas`;
 os gráficos leem `/financas/dados` (mesmo filtro, exige login).
 
 ### Eventos rápidos e dia a dia

@@ -4,7 +4,11 @@ import br.com.lac.caixa.modelo.FormaPagamento;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 
 /** Os resultados das finanças: resumo, série, rankings, formas, giro, demonstrativo e metas. */
 public final class Financas {
@@ -31,8 +35,31 @@ public final class Financas {
             long vendasSemItens,
             BigDecimal valorVendasSemItens) {
 
+        public static final Map<String, Function<Resumo, BigDecimal>> INDICADORES = indicadores();
+
         public boolean isLucroParcial() {
             return cobertura.parcial();
+        }
+
+        private static Map<String, Function<Resumo, BigDecimal>> indicadores() {
+            Map<String, Function<Resumo, BigDecimal>> m = new LinkedHashMap<>();
+            m.put("receitaBruta", Resumo::receitaBruta);
+            m.put("descontosPromocionais", Resumo::descontosPromocionais);
+            m.put("ajustes", Resumo::ajustes);
+            m.put("receitaLiquida", Resumo::receitaLiquida);
+            m.put("taxas", Resumo::taxas);
+            m.put("cmv", Resumo::cmv);
+            m.put("margemBruta", Resumo::margemBruta);
+            m.put("margemBrutaPercentual", Resumo::margemBrutaPercentual);
+            m.put("despesas", Resumo::despesas);
+            m.put("lucroLiquido", Resumo::lucroLiquido);
+            m.put("lucroLiquidoPercentual", Resumo::lucroLiquidoPercentual);
+            m.put("vendas", r -> BigDecimal.valueOf(r.vendas()));
+            m.put("itensVendidos", r -> BigDecimal.valueOf(r.itensVendidos()));
+            m.put("ticketMedio", Resumo::ticketMedio);
+            m.put("itensPorVenda", Resumo::itensPorVenda);
+            m.put("cortesias", r -> BigDecimal.valueOf(r.cortesias()));
+            return Collections.unmodifiableMap(m);
         }
     }
 
@@ -94,7 +121,25 @@ public final class Financas {
             BigDecimal lucroBruto,
             BigDecimal margemPercentual,
             BigDecimal participacaoPercentual,
-            long unidadesSemCusto) {}
+            long unidadesSemCusto)
+            implements Ranqueavel<LinhaProduto> {
+        @Override
+        public LinhaProduto comPosicao(int nova) {
+            return new LinhaProduto(
+                    nova,
+                    produtoId,
+                    nome,
+                    categoria,
+                    arquivado,
+                    quantidade,
+                    receitaLiquida,
+                    cmv,
+                    lucroBruto,
+                    margemPercentual,
+                    participacaoPercentual,
+                    unidadesSemCusto);
+        }
+    }
 
     public record LinhaCategoria(
             int posicao,
@@ -108,7 +153,37 @@ public final class Financas {
             BigDecimal margemPercentual,
             BigDecimal participacaoPercentual,
             long unidadesSemCusto,
-            List<LinhaProduto> produtos) {}
+            List<LinhaProduto> produtos)
+            implements Ranqueavel<LinhaCategoria> {
+        @Override
+        public LinhaCategoria comPosicao(int nova) {
+            return new LinhaCategoria(
+                    nova,
+                    categoriaId,
+                    categoria,
+                    quantidade,
+                    vendas,
+                    receitaLiquida,
+                    cmv,
+                    lucroBruto,
+                    margemPercentual,
+                    participacaoPercentual,
+                    unidadesSemCusto,
+                    produtos);
+        }
+    }
+
+    public interface Ranqueavel<T extends Ranqueavel<T>> {
+        long quantidade();
+
+        BigDecimal receitaLiquida();
+
+        BigDecimal lucroBruto();
+
+        BigDecimal margemPercentual();
+
+        T comPosicao(int posicao);
+    }
 
     public enum ClasseAbc {
         A,
@@ -177,5 +252,12 @@ public final class Financas {
             BigDecimal percentual,
             BigDecimal barra,
             boolean atingida,
-            boolean parcial) {}
+            boolean parcial) {
+
+        public static Meta de(String id, String rotulo, BigDecimal meta, BigDecimal atual, boolean parcial) {
+            BigDecimal p = Contas.percentual(atual, meta);
+            BigDecimal barra = p.max(BigDecimal.ZERO).min(Contas.CEM.setScale(2));
+            return new Meta(id, rotulo, meta, atual, p, barra, atual.compareTo(meta) >= 0, parcial);
+        }
+    }
 }

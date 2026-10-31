@@ -24,7 +24,6 @@ import br.com.lac.caixa.servico.EventoService;
 import br.com.lac.caixa.servico.FechamentoService;
 import br.com.lac.caixa.servico.PromocaoService;
 import br.com.lac.caixa.servico.TaxaService;
-import br.com.lac.caixa.servico.financas.ComparativoDeEventos;
 import br.com.lac.caixa.servico.financas.EstoqueFinanceiro;
 import br.com.lac.caixa.servico.financas.Financas.ClasseAbc;
 import br.com.lac.caixa.servico.financas.Financas.LinhaAbc;
@@ -35,8 +34,10 @@ import br.com.lac.caixa.servico.financas.Financas.LinhaProduto;
 import br.com.lac.caixa.servico.financas.Financas.Metrica;
 import br.com.lac.caixa.servico.financas.Financas.Ponto;
 import br.com.lac.caixa.servico.financas.Financas.Resumo;
-import br.com.lac.caixa.servico.financas.FinancasService;
-import br.com.lac.caixa.servico.financas.RelatorioDoEvento;
+import br.com.lac.caixa.servico.financas.OcorrenciasFinanceiras;
+import br.com.lac.caixa.servico.financas.RankingsFinanceiros;
+import br.com.lac.caixa.servico.financas.ResumoFinanceiro;
+import br.com.lac.caixa.servico.financas.SerieFinanceira;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -53,16 +54,19 @@ import org.springframework.context.ApplicationContext;
 /** Massa fixa das finanças com os resultados calculados à mão, para H2 e Postgres. */
 abstract class MassaFinanceira {
     @Autowired
-    FinancasService financas;
+    RankingsFinanceiros rankings;
+
+    @Autowired
+    ResumoFinanceiro resumos;
+
+    @Autowired
+    SerieFinanceira series;
 
     @Autowired
     EstoqueFinanceiro estoqueFinanceiro;
 
     @Autowired
-    ComparativoDeEventos comparativo;
-
-    @Autowired
-    RelatorioDoEvento relatorio;
+    OcorrenciasFinanceiras ocorrencias;
 
     @Autowired
     FechamentoService fechamento;
@@ -136,7 +140,7 @@ abstract class MassaFinanceira {
     @Test
     @DisplayName("Resumo da Feira 1: V1, V2, V3 e V5 (V4 cancelada, V6 às 18:00 fora)")
     void resumoDaFeira1() {
-        Resumo x = financas.resumo(evento("Feira 1"));
+        Resumo x = resumos.resumo(evento("Feira 1"));
         assertValor("159.00", x.receitaBruta());
         assertValor("3.00", x.descontosPromocionais());
         assertValor("-21.00", x.ajustes());
@@ -163,7 +167,7 @@ abstract class MassaFinanceira {
     @Test
     @DisplayName("Resumo de 01 a 15/03: todas as vendas válidas; despesa de evento no dia em que ele começa")
     void resumoDoMes() {
-        Resumo x = financas.resumo(MARCO);
+        Resumo x = resumos.resumo(MARCO);
         assertValor("257.00", x.receitaBruta());
         assertValor("8.00", x.descontosPromocionais());
         assertValor("-20.00", x.ajustes());
@@ -188,7 +192,7 @@ abstract class MassaFinanceira {
     @Test
     @DisplayName("Filtro de categoria e de forma: métricas da venda inteira e despesas ficam nulas")
     void filtroDeCategoriaOuFormaDeixaDespesasELucroNulos() {
-        Resumo caneca = financas.resumo(MARCO.comCategoria(c.get("Caneca").getId()));
+        Resumo caneca = resumos.resumo(MARCO.comCategoria(c.get("Caneca").getId()));
         assertValor("85.00", caneca.receitaBruta());
         assertValor("81.67", caneca.receitaLiquida());
         assertValor("34.00", caneca.cmv());
@@ -202,7 +206,7 @@ abstract class MassaFinanceira {
         assertNull(caneca.lucroLiquido());
         assertFalse(caneca.isLucroParcial());
 
-        Resumo pix = financas.resumo(MARCO.comForma(FormaPagamento.PIX));
+        Resumo pix = resumos.resumo(MARCO.comForma(FormaPagamento.PIX));
         assertEquals(3, pix.vendas());
         assertValor("67.00", pix.receitaLiquida());
         assertValor("0.67", pix.taxas());
@@ -213,7 +217,7 @@ abstract class MassaFinanceira {
     @Test
     @DisplayName("Comparação: evento anterior, período anterior de mesmo tamanho e evento sem anterior")
     void comparaComEventoAnteriorOuPeriodoDeMesmoTamanho() {
-        var feira2 = financas.comparar(evento("Feira 2"));
+        var feira2 = resumos.comparar(evento("Feira 2"));
         assertValor("29.00", feira2.atual().receitaLiquida());
         assertValor("135.00", feira2.anterior().receitaLiquida());
         assertEquals("evento Feira 1", feira2.periodoAnterior());
@@ -225,7 +229,7 @@ abstract class MassaFinanceira {
         assertValor("-78.52", receita.percentual());
         assertValor("5.37", feira2.atual().lucroLiquido());
 
-        var semana = financas.comparar(FiltroFinancas.periodo(LocalDate.of(2025, 3, 8), LocalDate.of(2025, 3, 14)));
+        var semana = resumos.comparar(FiltroFinancas.periodo(LocalDate.of(2025, 3, 8), LocalDate.of(2025, 3, 14)));
         assertEquals("01/03/2025 a 07/03/2025", semana.periodoAnterior());
         assertValor("200.00", semana.anterior().receitaLiquida());
         var vendasVar = semana.variacoes().stream()
@@ -235,7 +239,7 @@ abstract class MassaFinanceira {
         assertValor("-4", vendasVar.diferenca());
         assertValor("-66.67", vendasVar.percentual());
 
-        var feira3 = financas.comparar(evento("Feira 3"));
+        var feira3 = resumos.comparar(evento("Feira 3"));
         assertValor("0.00", feira3.atual().receitaLiquida());
         var r3 = feira3.variacoes().stream()
                 .filter(v -> v.indicador().equals("receitaLiquida"))
@@ -243,13 +247,13 @@ abstract class MassaFinanceira {
                 .orElseThrow();
         assertValor("-100.00", r3.percentual());
 
-        assertNull(financas.comparar(evento("Feira 1")).anterior());
+        assertNull(resumos.comparar(evento("Feira 1")).anterior());
     }
 
     @Test
     @DisplayName("Série: por hora num evento de 9 h, por dia num período longo, zeros onde não vendeu")
     void seriePorHoraNoEventoEPorDiaNoPeriodoComZeros() {
-        var feira1 = financas.serie(evento("Feira 1"));
+        var feira1 = series.serie(evento("Feira 1"));
         assertTrue(feira1.porHora());
         assertEquals(9, feira1.pontos().size());
         Ponto nove = feira1.pontos().get(0);
@@ -263,7 +267,7 @@ abstract class MassaFinanceira {
         assertValor(
                 "135.00", feira1.pontos().stream().map(Ponto::receitaLiquida).reduce(BigDecimal.ZERO, BigDecimal::add));
 
-        var mes = financas.serie(MARCO);
+        var mes = series.serie(MARCO);
         assertFalse(mes.porHora());
         assertEquals(15, mes.pontos().size());
         assertValor("160.00", mes.pontos().get(0).receitaLiquida());
@@ -273,7 +277,7 @@ abstract class MassaFinanceira {
         assertValor("40.00", mes.pontos().get(4).receitaLiquida());
         assertValor("29.00", mes.pontos().get(7).receitaLiquida());
 
-        var doisDias = financas.serie(FiltroFinancas.periodo(LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 2)));
+        var doisDias = series.serie(FiltroFinancas.periodo(LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 2)));
         assertTrue(doisDias.porHora());
         assertEquals(48, doisDias.pontos().size());
     }
@@ -281,7 +285,7 @@ abstract class MassaFinanceira {
     @Test
     @DisplayName("Mapa de calor: sábado e quarta, por hora")
     void mapaDeCalor() {
-        var mapa = financas.mapaDeCalor(MARCO);
+        var mapa = series.mapaDeCalor(MARCO);
         assertEquals(7 * 24, mapa.size());
         var sabado11 = mapa.stream()
                 .filter(x -> x.diaDaSemana() == DayOfWeek.SATURDAY && x.hora() == 11)
@@ -301,7 +305,7 @@ abstract class MassaFinanceira {
     @Test
     @DisplayName("Ranking de produtos por receita, lucro e quantidade, com posição e selo de arquivado")
     void rankingProdutos() {
-        var porReceita = financas.rankingProdutos(MARCO, Metrica.RECEITA);
+        var porReceita = rankings.rankingProdutos(MARCO, Metrica.RECEITA);
         assertEquals(
                 List.of(
                         "Camiseta 1",
@@ -333,11 +337,11 @@ abstract class MassaFinanceira {
         assertNull(adesivo1.margemPercentual());
         assertEquals(1, porReceita.get(1).unidadesSemCusto());
 
-        var porLucro = financas.rankingProdutos(MARCO, Metrica.LUCRO);
+        var porLucro = rankings.rankingProdutos(MARCO, Metrica.LUCRO);
         assertEquals("Camiseta 3", porLucro.get(0).nome());
         assertEquals("Adesivo 1", porLucro.get(porLucro.size() - 1).nome());
 
-        var porQuantidade = financas.rankingProdutos(MARCO, Metrica.QUANTIDADE);
+        var porQuantidade = rankings.rankingProdutos(MARCO, Metrica.QUANTIDADE);
         assertEquals(
                 List.of("Bóton 1", "Adesivo 1", "Adesivo 3"),
                 porQuantidade.subList(0, 3).stream().map(LinhaProduto::nome).toList());
@@ -346,7 +350,7 @@ abstract class MassaFinanceira {
     @Test
     @DisplayName("Categorias com drill-down dos produtos e participação dentro da categoria")
     void rankingCategorias() {
-        var linhas = financas.rankingCategorias(MARCO, Metrica.RECEITA);
+        var linhas = rankings.rankingCategorias(MARCO, Metrica.RECEITA);
         assertEquals(
                 List.of("Camiseta", "Caneca", "Bóton", "Adesivo", "Pôster"),
                 linhas.stream().map(LinhaCategoria::categoria).toList());
@@ -371,7 +375,7 @@ abstract class MassaFinanceira {
     @Test
     @DisplayName("Curva ABC por receita líquida")
     void curvaAbc() {
-        var abc = financas.curvaAbc(MARCO);
+        var abc = rankings.curvaAbc(MARCO);
         assertEquals(
                 List.of(
                         ClasseAbc.A,
@@ -397,7 +401,7 @@ abstract class MassaFinanceira {
     @Test
     @DisplayName("Formas de pagamento pelas partes e promoções (a apagada aparece junta)")
     void formasEPromocoes() {
-        var formas = financas.formasDePagamento(MARCO);
+        var formas = rankings.formasDePagamento(MARCO);
         Map<FormaPagamento, LinhaForma> f = new HashMap<>();
         formas.forEach(l -> f.put(l.forma(), l));
         assertValor("67.00", f.get(FormaPagamento.PIX).valor());
@@ -411,7 +415,7 @@ abstract class MassaFinanceira {
         assertValor("0.90", f.get(FormaPagamento.DEBITO).taxas());
         assertValor("0.00", f.get(FormaPagamento.OUTRO).valor());
 
-        var promos = financas.promocoes(MARCO);
+        var promos = rankings.promocoes(MARCO);
         assertEquals(2, promos.size());
         assertNull(promos.get(0).promocaoId());
         assertEquals("Promoções apagadas", promos.get(0).promocao());
@@ -465,14 +469,14 @@ abstract class MassaFinanceira {
                 FiltroFinancas.periodo(LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 1)),
                 FiltroFinancas.periodo(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 12, 31)));
         for (FiltroFinancas f : filtros) {
-            BigDecimal receita = financas.resumo(f).receitaLiquida();
-            BigDecimal produtosSoma = financas.rankingProdutos(f, Metrica.RECEITA).stream()
+            BigDecimal receita = resumos.resumo(f).receitaLiquida();
+            BigDecimal produtosSoma = rankings.rankingProdutos(f, Metrica.RECEITA).stream()
                     .map(LinhaProduto::receitaLiquida)
                     .reduce(BigDecimal.ZERO.setScale(2), BigDecimal::add);
-            BigDecimal categoriasSoma = financas.rankingCategorias(f, Metrica.RECEITA).stream()
+            BigDecimal categoriasSoma = rankings.rankingCategorias(f, Metrica.RECEITA).stream()
                     .map(LinhaCategoria::receitaLiquida)
                     .reduce(BigDecimal.ZERO.setScale(2), BigDecimal::add);
-            BigDecimal formasSoma = financas.formasDePagamento(f).stream()
+            BigDecimal formasSoma = rankings.formasDePagamento(f).stream()
                     .map(LinhaForma::valor)
                     .reduce(BigDecimal.ZERO.setScale(2), BigDecimal::add);
             var periodo = f.evento() != null
@@ -484,19 +488,19 @@ abstract class MassaFinanceira {
             assertEquals(receita, fechado, "fechamento " + f);
             assertEquals(receita, formasSoma, "formas " + f);
             assertEquals(
-                    financas.resumo(f).margemBruta(),
-                    financas.rankingProdutos(f, Metrica.LUCRO).stream()
+                    resumos.resumo(f).margemBruta(),
+                    rankings.rankingProdutos(f, Metrica.LUCRO).stream()
                             .map(LinhaProduto::lucroBruto)
                             .reduce(BigDecimal.ZERO.setScale(2), BigDecimal::add));
         }
-        assertTrue(financas
+        assertTrue(rankings
                 .rankingProdutos(
                         FiltroFinancas.periodo(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 12, 31)), Metrica.RECEITA)
                 .stream()
                 .noneMatch(l -> l.nome().equals("Pôster 1")));
         assertEquals(
                 8,
-                financas.resumo(FiltroFinancas.periodo(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 12, 31)))
+                resumos.resumo(FiltroFinancas.periodo(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 12, 31)))
                         .vendas());
     }
 
@@ -508,7 +512,7 @@ abstract class MassaFinanceira {
             "Dia a dia: V6 (18:00, fora da Feira 1) e V9 (05/03); despesa sem evento; no histórico e no fechamento")
     void diaADia() {
         var agora = LocalDateTime.now();
-        Resumo x = financas.resumo(FiltroFinancas.diaADia(LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 15), agora));
+        Resumo x = resumos.resumo(FiltroFinancas.diaADia(LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 15), agora));
         assertValor("65.00", x.receitaLiquida());
         assertEquals(2, x.vendas());
         assertValor("20.00", x.despesas());
@@ -523,15 +527,14 @@ abstract class MassaFinanceira {
     @DisplayName("Invariante: soma de todos os eventos + dia a dia = total do período (receita, vendas, itens, CMV)")
     void eventosMaisDiaADia() {
         var agora = LocalDateTime.now();
-        Resumo total = financas.resumo(MARCO);
-        Resumo dia =
-                financas.resumo(FiltroFinancas.diaADia(LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 15), agora));
+        Resumo total = resumos.resumo(MARCO);
+        Resumo dia = resumos.resumo(FiltroFinancas.diaADia(LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 15), agora));
         BigDecimal receita = dia.receitaLiquida();
         BigDecimal cmv = dia.cmv();
         long vendas = dia.vendas();
         long itens = dia.itensVendidos();
         for (String nome : List.of("Feira 1", "Feira 2", "Feira 3")) {
-            Resumo r = financas.resumo(evento(nome));
+            Resumo r = resumos.resumo(evento(nome));
             receita = receita.add(r.receitaLiquida());
             cmv = cmv.add(r.cmv());
             vendas += r.vendas();
@@ -542,7 +545,7 @@ abstract class MassaFinanceira {
         assertEquals(total.vendas(), vendas);
         assertEquals(total.itensVendidos(), itens);
 
-        var linhas = comparativo.eventos();
+        var linhas = resumos.comparativoDeEventos();
         var ultimo = linhas.get(linhas.size() - 1);
         assertEquals("Dia a dia", ultimo.nome());
         assertEquals(LocalDate.of(2025, 3, 1).atStartOfDay(), ultimo.inicio());
@@ -555,18 +558,18 @@ abstract class MassaFinanceira {
     void despesaUmaRegra() {
         assertValor(
                 "0.00",
-                financas.resumo(FiltroFinancas.periodo(LocalDate.of(2025, 2, 28), LocalDate.of(2025, 2, 28)))
+                resumos.resumo(FiltroFinancas.periodo(LocalDate.of(2025, 2, 28), LocalDate.of(2025, 2, 28)))
                         .despesas());
         assertValor(
                 "80.00",
-                financas.resumo(FiltroFinancas.periodo(LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 1)))
+                resumos.resumo(FiltroFinancas.periodo(LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 1)))
                         .despesas());
-        var linhas = comparativo.eventos();
+        var linhas = resumos.comparativoDeEventos();
         BigDecimal soma =
                 linhas.stream().map(l -> l.resumo().despesas()).reduce(BigDecimal.ZERO.setScale(2), BigDecimal::add);
         var dia = linhas.get(linhas.size() - 1);
         assertEquals(
-                financas.resumo(FiltroFinancas.periodo(
+                resumos.resumo(FiltroFinancas.periodo(
                                 dia.inicio().toLocalDate(),
                                 dia.fim().minusNanos(1).toLocalDate()))
                         .despesas(),
@@ -579,19 +582,19 @@ abstract class MassaFinanceira {
     void filtroDeFormaRecortaAsPartes() {
         var credito = MARCO.comForma(FormaPagamento.CREDITO);
         Map<FormaPagamento, LinhaForma> f = new HashMap<>();
-        financas.formasDePagamento(credito).forEach(l -> f.put(l.forma(), l));
+        rankings.formasDePagamento(credito).forEach(l -> f.put(l.forma(), l));
         assertValor("67.00", f.get(FormaPagamento.CREDITO).valor());
         assertValor("0.00", f.get(FormaPagamento.DINHEIRO).valor());
         assertValor("100.00", f.get(FormaPagamento.CREDITO).participacaoPercentual());
-        assertValor("2.01", financas.resumo(credito).taxas());
+        assertValor("2.01", resumos.resumo(credito).taxas());
     }
 
     @Test
     @DisplayName("Filtro de categoria: sem tabela de formas, e a promoção conta só a receita dos itens da categoria")
     void filtroDeCategoria() {
         var caneca = MARCO.comCategoria(c.get("Caneca").getId());
-        assertTrue(financas.formasDePagamento(caneca).isEmpty());
-        var promos = financas.promocoes(caneca);
+        assertTrue(rankings.formasDePagamento(caneca).isEmpty());
+        var promos = rankings.promocoes(caneca);
         assertEquals(1, promos.size());
         assertValor("26.67", promos.get(0).receitaLiquida());
     }
@@ -599,11 +602,11 @@ abstract class MassaFinanceira {
     @Test
     @DisplayName("Relatório da Feira 1: a cancelada (V4) e os ajustes manuais (V3 e V5), com o motivo")
     void relatorioDoEvento() {
-        var cancelamentos = relatorio.cancelamentos(evento("Feira 1"));
+        var cancelamentos = ocorrencias.cancelamentos(evento("Feira 1"));
         assertEquals(1, cancelamentos.size());
         assertValor("30.00", cancelamentos.get(0).valor());
         assertEquals("Ensaio", cancelamentos.get(0).motivo());
-        var ajustes = relatorio.ajustesManuais(evento("Feira 1"));
+        var ajustes = ocorrencias.ajustesManuais(evento("Feira 1"));
         assertEquals(2, ajustes.size());
         assertValor("-16.00", ajustes.get(0).diferenca());
         assertValor("-5.00", ajustes.get(1).diferenca());

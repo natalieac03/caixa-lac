@@ -1,7 +1,6 @@
 package br.com.lac.caixa.repositorio;
 
 import br.com.lac.caixa.modelo.Despesa;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -19,14 +18,6 @@ public interface DespesaRepository extends JpaRepository<Despesa, Long> {
             order by d.data desc, d.id desc
             """)
     List<Despesa> filtrar(@Param("evento") Long evento, @Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim);
-
-    @Query("""
-            select coalesce(sum(d.valor), 0) from Despesa d
-            where (:evento is null or d.evento.id = :evento)
-              and (cast(:inicio as LocalDate) is null or d.data >= :inicio)
-              and (cast(:fim as LocalDate) is null or d.data <= :fim)
-            """)
-    BigDecimal total(@Param("evento") Long evento, @Param("inicio") LocalDate inicio, @Param("fim") LocalDate fim);
 
     boolean existsByCategoriaId(Long categoriaId);
 }

@@ -23,7 +23,7 @@ import br.com.lac.caixa.servico.EventoService;
 import br.com.lac.caixa.servico.FechamentoService;
 import br.com.lac.caixa.servico.PagamentoInformado;
 import br.com.lac.caixa.servico.TaxaService;
-import br.com.lac.caixa.servico.financas.FinancasService;
+import br.com.lac.caixa.servico.financas.ResumoFinanceiro;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -242,7 +242,7 @@ class PostgresBancoNovoTest {
     ConsultaHistorico consultaHistorico;
 
     @Autowired
-    FinancasService financas;
+    ResumoFinanceiro resumos;
 
     @Test
     @DisplayName(
@@ -281,9 +281,9 @@ class PostgresBancoNovoTest {
                     .map(v -> v.getId())
                     .getContent();
             assertTrue(ids.contains(antes.getId()) && !ids.contains(durante.getId()), ids.toString());
-            var r = financas.resumo(FiltroFinancas.diaADia(desde, hoje, agora));
+            var r = resumos.resumo(FiltroFinancas.diaADia(desde, hoje, agora));
             assertTrue(r.vendas() >= 1);
-            var doEvento = financas.resumo(FiltroFinancas.doEvento(eventos.periodo(feira.getId())));
+            var doEvento = resumos.resumo(FiltroFinancas.doEvento(eventos.periodo(feira.getId())));
             assertEquals(1, doEvento.vendas());
             assertEquals(0, new BigDecimal("12.00").compareTo(doEvento.receitaLiquida()));
             Assertions.assertThrows(

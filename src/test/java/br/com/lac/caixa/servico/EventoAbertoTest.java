@@ -22,7 +22,7 @@ import br.com.lac.caixa.modelo.FormaPagamento;
 import br.com.lac.caixa.modelo.Produto;
 import br.com.lac.caixa.modelo.Venda;
 import br.com.lac.caixa.repositorio.VendaRepository;
-import br.com.lac.caixa.servico.financas.FinancasService;
+import br.com.lac.caixa.servico.financas.ResumoFinanceiro;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -81,7 +81,7 @@ class EventoAbertoTest {
     FechamentoService fechamento;
 
     @Autowired
-    FinancasService financas;
+    ResumoFinanceiro resumos;
 
     @Autowired
     AlertasService alertas;
@@ -198,7 +198,7 @@ class EventoAbertoTest {
         var f = fechamento.consultar(new FiltroHistorico(null, INICIO.toLocalDate(), INICIO.toLocalDate(), "")
                 .comDiaADia(LocalDateTime.now(relogio)));
         assertEquals(2, f.quantidade());
-        var r = financas.resumo(
+        var r = resumos.resumo(
                 FiltroFinancas.diaADia(INICIO.toLocalDate(), INICIO.toLocalDate(), LocalDateTime.now(relogio)));
         assertEquals(2, r.vendas());
         assertEquals(0, new BigDecimal("12").compareTo(r.receitaLiquida()));
@@ -339,13 +339,13 @@ class EventoAbertoTest {
         assertEquals(List.of(naPalestra.getId()), idsDoEvento(palestra));
         assertEquals(List.of(depois.getId()), idsDoDiaADia(de, ate));
         assertTrue(eventos.doMomento(depois.getDataHora()).isEmpty(), "13/10 10h não é de nenhum evento");
-        var diaADia = financas.resumo(FiltroFinancas.diaADia(de, ate, agora));
+        var diaADia = resumos.resumo(FiltroFinancas.diaADia(de, ate, agora));
         assertEquals(1, diaADia.vendas());
-        var total = financas.resumo(FiltroFinancas.periodo(de, ate));
+        var total = resumos.resumo(FiltroFinancas.periodo(de, ate));
         BigDecimal soma = diaADia.receitaLiquida()
-                .add(financas.resumo(FiltroFinancas.doEvento(eventos.periodo(feira.getId())))
+                .add(resumos.resumo(FiltroFinancas.doEvento(eventos.periodo(feira.getId())))
                         .receitaLiquida())
-                .add(financas.resumo(FiltroFinancas.doEvento(eventos.periodo(palestra.getId())))
+                .add(resumos.resumo(FiltroFinancas.doEvento(eventos.periodo(palestra.getId())))
                         .receitaLiquida());
         assertEquals(total.receitaLiquida(), soma);
         assertEquals(3, total.vendas());

@@ -7,7 +7,7 @@ import br.com.lac.caixa.repositorio.EventoRepository;
 import br.com.lac.caixa.servico.financas.EstoqueFinanceiro;
 import br.com.lac.caixa.servico.financas.Financas.LinhaAjuste;
 import br.com.lac.caixa.servico.financas.Financas.LinhaGiro;
-import br.com.lac.caixa.servico.financas.RelatorioDoEvento;
+import br.com.lac.caixa.servico.financas.OcorrenciasFinanceiras;
 import br.com.lac.caixa.util.Dinheiro;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -28,7 +28,7 @@ public class AlertasService {
     private final EstoqueService estoque;
     private final EventoRepository eventos;
     private final EstoqueFinanceiro estoqueFinanceiro;
-    private final RelatorioDoEvento relatorio;
+    private final OcorrenciasFinanceiras ocorrencias;
     private final FechamentoService fechamento;
     private final Clock relogio;
     private final EventoService servicoDeEventos;
@@ -37,14 +37,14 @@ public class AlertasService {
             EstoqueService estoque,
             EventoRepository eventos,
             EstoqueFinanceiro estoqueFinanceiro,
-            RelatorioDoEvento relatorio,
+            OcorrenciasFinanceiras ocorrencias,
             FechamentoService fechamento,
             Clock relogio,
             EventoService servicoDeEventos) {
         this.estoque = estoque;
         this.eventos = eventos;
         this.estoqueFinanceiro = estoqueFinanceiro;
-        this.relatorio = relatorio;
+        this.ocorrencias = ocorrencias;
         this.fechamento = fechamento;
         this.relogio = relogio;
         this.servicoDeEventos = servicoDeEventos;
@@ -193,7 +193,7 @@ public class AlertasService {
                 .filter(Produto::isSemCusto)
                 .map(p -> new SemCusto(p.getId(), p.getNome()))
                 .toList();
-        var ajustes = relatorio.ajustesManuais(FiltroFinancas.periodo(hoje, hoje));
+        var ajustes = ocorrencias.ajustesManuais(FiltroFinancas.periodo(hoje, hoje));
         var fechado = fechamento.consultar(hoje, hoje);
         var esquecidos = servicoDeEventos
                 .aberto()

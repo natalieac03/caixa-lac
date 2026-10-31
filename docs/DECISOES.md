@@ -72,10 +72,11 @@ Os porquês que o código não mostra. Uma linha por decisão, com a classe ou a
 - `CaixaService.alterarDataHora`: recusa data futura e venda cancelada, e recalcula a taxa pela vigente no novo dia.
 - `CaixaService.alterarDataHora`: se o minuto não mudou, mantém os segundos originais, para não embaralhar vendas do mesmo minuto.
 - `ConsultasFinanceiras.despesas`: despesa ligada a evento conta no dia em que o evento começa; sem evento, na data dela; assim eventos + dia a dia somam o mesmo que o período.
-- `FinancasService.formasDePagamento`: com filtro de categoria a tabela de formas some, porque o pagamento é da venda inteira e não se separa por item.
+- `DespesaService.total`: na tela de Despesas o total é a soma das linhas listadas (pela data ou pelo vínculo do filtro), por isso é somado da própria lista; as contas financeiras (painel, relatório, comparativo) usam só `ConsultasFinanceiras.despesas`.
+- `RankingsFinanceiros.formasDePagamento`: com filtro de categoria a tabela de formas some, porque o pagamento é da venda inteira e não se separa por item.
 - `FiltrosDaTelaFinancas`: período personalizado de no máximo 3 anos, para um pedido enorme não travar o servidor.
 - `FiltroFinancas.fimConsulta`: um período que ainda não acabou termina 1 µs depois de agora (a precisão do banco), para a venda feita agora entrar.
-- `FinancasService.comparar`: o período anterior é cortado no mesmo recorte de horas ("hoje até 10:00" contra "ontem até 10:00").
+- `ResumoFinanceiro.comparar`: o período anterior é cortado no mesmo recorte de horas ("hoje até 10:00" contra "ontem até 10:00").
 - `Dinheiro.numero`: o CSV usa número sem separador de milhar, para o Excel ler como número.
 - `RespostaCsv`: BOM UTF-8 no começo do CSV, para o Excel mostrar os acentos.
 - `ExportadorCSV`: separador ';', porque o Excel em pt-BR abre direto.

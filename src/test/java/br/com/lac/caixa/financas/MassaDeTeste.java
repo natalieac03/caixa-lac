@@ -19,7 +19,6 @@ import br.com.lac.caixa.servico.FechamentoService;
 import br.com.lac.caixa.servico.PagamentoInformado;
 import br.com.lac.caixa.servico.PromocaoService;
 import br.com.lac.caixa.servico.TaxaService;
-import br.com.lac.caixa.servico.financas.FinancasService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -32,7 +31,6 @@ import org.springframework.context.ApplicationContext;
 
 /** Monta a massa fixa das finanças pelos serviços de verdade. */
 public class MassaDeTeste {
-    final FinancasService financas;
     final FechamentoService fechamento;
     final CaixaService caixa;
     final EstoqueService estoque;
@@ -51,7 +49,6 @@ public class MassaDeTeste {
     public final Map<String, Categoria> c = new HashMap<>();
 
     public MassaDeTeste(ApplicationContext ctx) {
-        financas = ctx.getBean(FinancasService.class);
         fechamento = ctx.getBean(FechamentoService.class);
         caixa = ctx.getBean(CaixaService.class);
         estoque = ctx.getBean(EstoqueService.class);

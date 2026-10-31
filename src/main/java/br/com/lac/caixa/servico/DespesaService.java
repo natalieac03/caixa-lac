@@ -55,7 +55,7 @@ public class DespesaService {
 
     @Transactional(readOnly = true)
     public BigDecimal total(Filtro f) {
-        return despesas.total(f.evento(), f.inicio(), f.fim());
+        return filtrar(f).stream().map(Despesa::getValor).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     @Transactional(readOnly = true)

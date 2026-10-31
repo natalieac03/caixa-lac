@@ -1,6 +1,7 @@
 package br.com.lac.caixa.modelo;
 
 import br.com.lac.caixa.dominio.RegraDeNegocioException;
+import br.com.lac.caixa.util.Dinheiro;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -61,6 +62,16 @@ public class Promocao {
 
     public Map<Long, Integer> getQuantidadePorCategoria() {
         return itens.stream().collect(Collectors.toMap(i -> i.getCategoria().getId(), PromocaoItem::getQuantidade));
+    }
+
+    public String getRotuloComPreco() {
+        String prefixo = tipo == null
+                ? ""
+                : switch (tipo) {
+                    case A_PARTIR_DE -> "A partir de: ";
+                    case PACOTE -> "Pacote: ";
+                };
+        return prefixo + getNomesCategorias() + " por " + Dinheiro.reais(preco);
     }
 
     public String getNomesCategorias() {

@@ -8,13 +8,13 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** O que só o relatório do evento mostra: vendas canceladas e ajustes manuais. */
+/** Vendas canceladas e ajustes manuais do período, para o relatório do evento e os alertas. */
 @Service
 @Transactional(readOnly = true)
-public class RelatorioDoEvento {
+public class OcorrenciasFinanceiras {
     private final ConsultasFinanceiras consultas;
 
-    public RelatorioDoEvento(ConsultasFinanceiras consultas) {
+    public OcorrenciasFinanceiras(ConsultasFinanceiras consultas) {
         this.consultas = consultas;
     }
 

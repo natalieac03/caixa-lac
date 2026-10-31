@@ -42,11 +42,16 @@ public class PainelFinancas {
     private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH'h'");
     private static final DateTimeFormatter MES = DateTimeFormatter.ofPattern("MM/yyyy");
 
-    private final FinancasService financas;
+    private final ResumoFinanceiro resumos;
+    private final SerieFinanceira series;
+    private final RankingsFinanceiros rankings;
     private final EstoqueFinanceiro estoque;
 
-    public PainelFinancas(FinancasService financas, EstoqueFinanceiro estoque) {
-        this.financas = financas;
+    public PainelFinancas(
+            ResumoFinanceiro resumos, SerieFinanceira series, RankingsFinanceiros rankings, EstoqueFinanceiro estoque) {
+        this.resumos = resumos;
+        this.series = series;
+        this.rankings = rankings;
         this.estoque = estoque;
     }
 
@@ -91,11 +96,11 @@ public class PainelFinancas {
             Grafico formasVendas) {}
 
     public Painel montar(FiltroFinancas f, Metrica metrica) {
-        Comparacao comparacao = financas.comparar(f);
+        Comparacao comparacao = resumos.comparar(f);
         Resumo r = comparacao.atual();
         Map<Long, ClasseAbc> abc = new HashMap<>();
-        for (LinhaAbc l : financas.curvaAbc(f)) abc.put(l.produtoId(), l.classe());
-        List<ProdutoAbc> produtos = financas.rankingProdutos(f, metrica).stream()
+        for (LinhaAbc l : rankings.curvaAbc(f)) abc.put(l.produtoId(), l.classe());
+        List<ProdutoAbc> produtos = rankings.rankingProdutos(f, metrica).stream()
                 .map(p -> new ProdutoAbc(p, abc.get(p.produtoId())))
                 .toList();
         List<LinhaGiro> giro = new ArrayList<>(estoque.giro(f));
@@ -107,22 +112,22 @@ public class PainelFinancas {
                 r,
                 comparacao,
                 cartoes(comparacao),
-                financas.demonstrativo(r),
-                financas.serie(f),
+                resumos.demonstrativo(r),
+                series.serie(f),
                 metrica,
                 produtos,
-                financas.rankingCategorias(f, metrica),
-                financas.formasDePagamento(f),
+                rankings.rankingCategorias(f, metrica),
+                rankings.formasDePagamento(f),
                 mapa(f),
-                financas.promocoes(f),
+                rankings.promocoes(f),
                 giro,
                 estoque.parados(f),
                 estoque.valorDoEstoque(f),
-                financas.metas(f, r));
+                resumos.metas(f, r));
     }
 
     public Dados dados(FiltroFinancas f, Metrica metrica) {
-        var serie = financas.serie(f);
+        var serie = series.serie(f);
         DateTimeFormatter rotulo = switch (serie.granularidade()) {
             case HORA -> HORA;
             case DIA, SEMANA -> DIA;
@@ -139,14 +144,14 @@ public class PainelFinancas {
             receita.add(p.receitaLiquida());
             lucro.add(p.lucroBruto());
         }
-        var top = financas.rankingProdutos(f, metrica).stream().limit(10).toList();
+        var top = rankings.rankingProdutos(f, metrica).stream().limit(10).toList();
         List<BigDecimal> valoresTop =
                 top.stream().map(p -> valorDaMetrica(p, metrica)).toList();
         List<String> textosTop = metrica == Metrica.QUANTIDADE
                 ? top.stream().map(p -> p.quantidade() + " un.").toList()
                 : valoresTop.stream().map(Dinheiro::reais).toList();
-        var categorias = financas.rankingCategorias(f, Metrica.RECEITA);
-        var formas = financas.formasDePagamento(f);
+        var categorias = rankings.rankingCategorias(f, Metrica.RECEITA);
+        var formas = rankings.formasDePagamento(f);
         boolean vazio = serie.pontos().stream().allMatch(p -> p.vendas() == 0);
         return new Dados(
                 vazio,
@@ -262,7 +267,7 @@ public class PainelFinancas {
     }
 
     private List<LinhaMapa> mapa(FiltroFinancas f) {
-        var celulas = financas.mapaDeCalor(f);
+        var celulas = series.mapaDeCalor(f);
         long maximo = celulas.stream().mapToLong(Financas.Celula::vendas).max().orElse(0);
         Map<DayOfWeek, List<CelulaMapa>> porDia = new EnumMap<>(DayOfWeek.class);
         for (var c : celulas) {
