@@ -19,7 +19,7 @@ dados/
 # Cópias compactadas do projeto
 *.zip
 
-# Senha do desenvolvimento local (veja senha-local.properties.exemplo)
+# Senha do desenvolvimento local (APP_SENHA=...)
 senha-local.properties
 
 # Dumps e backups de banco (produção ou ensaio): nunca no git

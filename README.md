@@ -246,7 +246,7 @@ Precisa de **Java 21+**. O Maven vem junto (Maven Wrapper).
 ```bash
 # 1. a senha de acesso (mínimo de 8 caracteres)
 export APP_SENHA='uma-senha-sua'      # PowerShell: $env:APP_SENHA='uma-senha-sua'
-# ou: cp senha-local.properties.exemplo senha-local.properties  (e edite)
+# ou: echo "APP_SENHA=uma-senha-sua" > senha-local.properties
 
 # 2. subir
 ./mvnw spring-boot:run                # Windows: mvnw.cmd spring-boot:run
